@@ -164,6 +164,17 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 <section id="login" class="login-screen" aria-label="Local sign-in" hidden>
 <div class="login-card">
 <h1>Pokemon Arena</h1>
+<details id="arena-cloud-panel">
+<summary>Online sign-in and cloud saves</summary>
+<form id="arena-cloud-form">
+<label>Email <input type="email" id="arena-cloud-email" required autocomplete="email"></label>
+<button type="submit">Send sign-in link</button>
+</form>
+<button id="arena-cloud-save">Upload local save</button>
+<button id="arena-cloud-load">Download cloud save</button>
+<button id="arena-cloud-signout">Sign out online</button>
+<p id="arena-cloud-status" role="status"></p>
+</details>
 <div id="login-sprite" class="feature-orb"></div>
 <label for="profile-select">Local profile</label>
 <select id="profile-select"></select>
@@ -4725,4 +4736,4 @@ try {
 if(enterSelectedProfile) openMenu();
 else openLogin();
 requestAnimationFrame(frame);
-</script></html>
+</script><script src="./cloud.js"></script></html>
