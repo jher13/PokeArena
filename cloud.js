@@ -94,3 +94,64 @@ function installArenaCloud() {
  });
 }
 installArenaCloud();
+
+function installAccountGate() {
+ const gate=byId('account-gate');
+ const status=byId('account-status');
+ const form=byId('account-form');
+ const login=byId('account-login');
+ const signup=byId('account-signup');
+ const submit=byId('account-submit');
+ let creating=false;
+ function proceed() {
+  gate.hidden=true;
+  openLogin();
+ }
+ function selectMode(create) {
+  creating=create;
+  login.setAttribute('aria-pressed',String(!create));
+  signup.setAttribute('aria-pressed',String(create));
+  submit.textContent=create?'Send signup link':'Send login link';
+  status.textContent='';
+ }
+ login.onclick=()=>selectMode(false);
+ signup.onclick=()=>selectMode(true);
+ byId('account-offline').onclick=proceed;
+ form.onsubmit=async event=>{
+  event.preventDefault();
+  if(submit.disabled) return;
+  submit.disabled=true;
+  status.textContent='Sending email link…';
+  try {
+   const client=await cloudClient();
+   const {error}=await client.auth.signInWithOtp({
+    email:byId('account-email').value.trim(),
+    options:{emailRedirectTo:cloudRedirect,shouldCreateUser:creating}
+   });
+   if(error) throw error;
+   status.textContent='Check your email and open the link to continue.';
+  } catch(error) {status.textContent=error.message || 'Could not send the link.';}
+  finally {submit.disabled=false;}
+ };
+ byId('toolbar-logout').onclick=async()=>{
+  try {
+   if(arenaCloudClient) {
+    const client=await arenaCloudClient;
+    const {error}=await client.auth.signOut();
+    if(error) throw error;
+   }
+   openLogin();
+   byId('login').hidden=true;
+   gate.hidden=false;
+   selectMode(false);
+   byId('arena-cloud-status').textContent='Sign in to use cloud saves.';
+  } catch(error) {
+   openHomeDialog('Log out',element('p',error.message || 'Could not sign out.'));
+  }
+ };
+ if(!gate.hidden && location.protocol==='https:') cloudClient().then(async client=>{
+  const {data}=await client.auth.getSession();
+  if(data.session && !gate.hidden) proceed();
+ }).catch(()=>{});
+}
+installAccountGate();

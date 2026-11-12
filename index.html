@@ -159,8 +159,37 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 #rogue-choices .gym-card{min-height:76px}
 .home-multiplayer{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:min(100%,220px);margin:8px auto 0}
 .home-multiplayer .home-link{justify-content:center;min-width:0;width:100%}
+#account-gate{position:fixed;inset:0;z-index:40;display:grid;place-items:center;overflow:auto;padding:24px;background:radial-gradient(ellipse at 50% 45%,#453063,#16152e 58%,#080a15)}
+#account-gate[hidden]{display:none}
+.account-card{width:min(100%,420px);padding:28px;border:1px solid #554367;border-radius:16px;background:#100e1b;box-shadow:0 18px 65px #0008;text-align:center}
+.account-card h1{font-size:clamp(30px,7vw,45px);color:#ffd875;text-shadow:0 3px #956127}
+.account-subtitle{letter-spacing:.22em;color:#ecad67;font-size:12px}
+.account-modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:22px 0 16px}
+.account-modes button,.account-card #account-offline{background:#211a33;border-color:#59476d}
+.account-modes [aria-pressed="true"]{background:#44345c;border-color:#ba96e8}
+#account-form{display:grid;gap:8px;text-align:left}
+#account-email{width:100%;padding:12px;border:1px solid #655578;border-radius:8px;background:#161223;color:white;font:inherit}
+#account-submit{width:100%;margin-top:8px}
+#account-status{font-size:13px;color:#e6cfed}
 </style>
 <main><header id="arena-header"><h1>Pokemon Arena</h1><span id="score"></span></header>
+<section id="account-gate" aria-label="Account access">
+<div class="account-card">
+<h1>Pokemon Arena</h1>
+<p class="account-subtitle">AUTO BATTLER</p>
+<div class="account-modes" aria-label="Account mode">
+<button id="account-login" type="button" aria-pressed="true">Log in</button>
+<button id="account-signup" type="button" aria-pressed="false">Sign up</button>
+</div>
+<form id="account-form">
+<label for="account-email">Email</label>
+<input id="account-email" type="email" autocomplete="email" required>
+<button id="account-submit" class="home-play" type="submit">Send login link</button>
+</form>
+<p id="account-status" role="status"></p>
+<button id="account-offline" type="button">Continue offline</button>
+</div>
+</section>
 <section id="login" class="login-screen" aria-label="Local sign-in" hidden>
 <div class="login-card">
 <h1>Pokemon Arena</h1>
@@ -4735,5 +4764,7 @@ try {
 } catch {}
 if(enterSelectedProfile) openMenu();
 else openLogin();
+if(enterSelectedProfile) byId('account-gate').hidden=true;
+else byId('login').hidden=true;
 requestAnimationFrame(frame);
 </script><script src="./cloud.js"></script></html>
