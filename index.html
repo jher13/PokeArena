@@ -168,7 +168,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 .account-modes button,.account-card #account-offline{background:#211a33;border-color:#59476d}
 .account-modes [aria-pressed="true"]{background:#44345c;border-color:#ba96e8}
 #account-form{display:grid;gap:8px;text-align:left}
-#account-email{width:100%;padding:12px;border:1px solid #655578;border-radius:8px;background:#161223;color:white;font:inherit}
+#account-email,#account-password{width:100%;padding:12px;border:1px solid #655578;border-radius:8px;background:#161223;color:white;font:inherit}
 #account-submit{width:100%;margin-top:8px}
 #account-status{font-size:13px;color:#e6cfed}
 </style>
@@ -184,26 +184,18 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 <form id="account-form">
 <label for="account-email">Email</label>
 <input id="account-email" type="email" autocomplete="email" required>
-<button id="account-submit" class="home-play" type="submit">Send login link</button>
+<label for="account-password">Password</label>
+<input id="account-password" type="password" autocomplete="current-password" required>
+<button id="account-submit" class="home-play" type="submit">Log in</button>
 </form>
 <p id="account-status" role="status"></p>
-<button id="account-offline" type="button">Continue offline</button>
+<button id="account-offline" type="button">Guest login</button>
 </div>
 </section>
 <section id="login" class="login-screen" aria-label="Local sign-in" hidden>
 <div class="login-card">
 <h1>Pokemon Arena</h1>
-<details id="arena-cloud-panel">
-<summary>Online sign-in and cloud saves</summary>
-<form id="arena-cloud-form">
-<label>Email <input type="email" id="arena-cloud-email" required autocomplete="email"></label>
-<button type="submit">Send sign-in link</button>
-</form>
-<button id="arena-cloud-save">Upload local save</button>
-<button id="arena-cloud-load">Download cloud save</button>
-<button id="arena-cloud-signout">Sign out online</button>
-<p id="arena-cloud-status" role="status"></p>
-</details>
+
 <div id="login-sprite" class="feature-orb"></div>
 <label for="profile-select">Local profile</label>
 <select id="profile-select"></select>
@@ -4754,17 +4746,17 @@ byId('toolbar-settings').onclick=()=>{
  const sfx=element('button',sfxButton.textContent);
  music.onclick=()=>{musicButton.onclick();music.textContent=musicButton.textContent;updateHomeSound();};
  sfx.onclick=()=>{sfxButton.onclick();sfx.textContent=sfxButton.textContent;updateHomeSound();};
- openHomeDialog('Settings',music,sfx);
+ openHomeDialog('Settings',music,sfx,byId('arena-cloud-panel'));
 };
 byId('toolbar-logout').onclick=openLogin;
-let enterSelectedProfile=false;
-try {
- enterSelectedProfile=sessionStorage.getItem('pokemon-arena-enter-profile')===currentPlayer.id;
- sessionStorage.removeItem('pokemon-arena-enter-profile');
-} catch {}
-if(enterSelectedProfile) openMenu();
-else openLogin();
-if(enterSelectedProfile) byId('account-gate').hidden=true;
-else byId('login').hidden=true;
+phase='login';
+showScreen('login');
+byId('login').hidden=true;
 requestAnimationFrame(frame);
-</script><script src="./cloud.js"></script></html>
+</script><details id="arena-cloud-panel">
+<summary>Cloud saves</summary>
+<button id="arena-cloud-save">Link guest / upload save</button>
+<button id="arena-cloud-load">Download cloud save</button>
+<button id="arena-cloud-signout">Sign out online</button>
+<p id="arena-cloud-status" role="status"></p>
+</details><script src="./cloud.js"></script></html>

@@ -7,7 +7,7 @@ let arenaCloudClient;
 function cloudClient() {
  return arenaCloudClient ??= import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
   .then(({createClient})=>createClient('https://ckgcuhaiuwlccyaxewbv.supabase.co',
-   'sb_publishable_NftRvgvLu2zPCvsAcIUqGA_GzNcyYxz'))
+   'sb_publishable_NftRvgvLu2zPCvsAcIUqGA_GzNcyYxz',{auth:{detectSessionInUrl:false}}))
   .catch(error=>{arenaCloudClient=null;throw error;});
 }
 function readArenaSave() {
@@ -35,8 +35,6 @@ function restoreArenaSave(save) {
 function installArenaCloud() {
  const panel=byId('arena-cloud-panel');
  const status=byId('arena-cloud-status');
- const email=byId('arena-cloud-email');
- const form=byId('arena-cloud-form');
  const saveButton=byId('arena-cloud-save');
  const loadButton=byId('arena-cloud-load');
  const logout=byId('arena-cloud-signout');
@@ -57,14 +55,6 @@ function installArenaCloud() {
   if(error) throw error;
   return data;
  }
- form.onsubmit=event=>{
-  event.preventDefault();
-  perform(async client=>{
-   const {error}=await client.auth.signInWithOtp({email:email.value.trim(),options:{emailRedirectTo:cloudRedirect}});
-   if(error) throw error;
-   status.textContent='Check your email for the sign-in link.';
-  });
- };
  saveButton.onclick=()=>perform(async client=>{
   if(!team.length) throw new Error('Enter the arena and choose a starter before uploading a save.');
   const user=await userFor(client);
@@ -86,15 +76,13 @@ function installArenaCloud() {
  logout.onclick=()=>perform(async client=>{
   const {error}=await client.auth.signOut();
   if(error) throw error;
-  status.textContent='Signed out of Supabase.';
+  returnToAccountGate();
  });
- if(location.protocol==='https:') perform(async client=>{
-  const {data}=await client.auth.getSession();
-  status.textContent=data.session?'Signed in as '+data.session.user.email:'Sign in to use cloud saves.';
- });
+
 }
 installArenaCloud();
 
+let returnToAccountGate;
 function installAccountGate() {
  const gate=byId('account-gate');
  const status=byId('account-status');
@@ -102,21 +90,32 @@ function installAccountGate() {
  const login=byId('account-login');
  const signup=byId('account-signup');
  const submit=byId('account-submit');
+ const password=byId('account-password');
  let creating=false;
  function proceed() {
   gate.hidden=true;
-  openLogin();
+  openMenu();
  }
  function selectMode(create) {
   creating=create;
   login.setAttribute('aria-pressed',String(!create));
   signup.setAttribute('aria-pressed',String(create));
-  submit.textContent=create?'Send signup link':'Send login link';
+  submit.textContent=create?'Sign up':'Log in';
+  password.autocomplete=create?'new-password':'current-password';
   status.textContent='';
  }
  login.onclick=()=>selectMode(false);
  signup.onclick=()=>selectMode(true);
- byId('account-offline').onclick=proceed;
+ byId('account-offline').onclick=async()=>{
+  if(arenaCloudClient) {
+   try {
+    const client=await arenaCloudClient;
+    const {error}=await client.auth.signOut({scope:'local'});
+    if(error) throw error;
+   } catch(error) {status.textContent=error.message;return;}
+  }
+  proceed();
+ };
  form.onsubmit=async event=>{
   event.preventDefault();
   if(submit.disabled) return;
@@ -124,14 +123,25 @@ function installAccountGate() {
   status.textContent='Sending email link…';
   try {
    const client=await cloudClient();
-   const {error}=await client.auth.signInWithOtp({
-    email:byId('account-email').value.trim(),
-    options:{emailRedirectTo:cloudRedirect,shouldCreateUser:creating}
-   });
+   const credentials={email:byId('account-email').value.trim(),password:password.value};
+   const {data,error}=creating
+    ? await client.auth.signUp({...credentials,options:{emailRedirectTo:cloudRedirect}})
+    : await client.auth.signInWithPassword(credentials);
    if(error) throw error;
-   status.textContent='Check your email and open the link to continue.';
+   password.value='';
+   if(data.session) proceed();
+   else status.textContent='Confirm your email, then log in with your password.';
   } catch(error) {status.textContent=error.message || 'Could not send the link.';}
   finally {submit.disabled=false;}
+ };
+ returnToAccountGate=()=>{
+  cancelWildRepeat();
+  phase='login';
+  showScreen('login');
+  byId('login').hidden=true;
+  gate.hidden=false;
+  password.value='';
+  selectMode(false);
  };
  byId('toolbar-logout').onclick=async()=>{
   try {
@@ -140,18 +150,10 @@ function installAccountGate() {
     const {error}=await client.auth.signOut();
     if(error) throw error;
    }
-   openLogin();
-   byId('login').hidden=true;
-   gate.hidden=false;
-   selectMode(false);
-   byId('arena-cloud-status').textContent='Sign in to use cloud saves.';
+   returnToAccountGate();
   } catch(error) {
    openHomeDialog('Log out',element('p',error.message || 'Could not sign out.'));
   }
  };
- if(!gate.hidden && location.protocol==='https:') cloudClient().then(async client=>{
-  const {data}=await client.auth.getSession();
-  if(data.session && !gate.hidden) proceed();
- }).catch(()=>{});
 }
 installAccountGate();
