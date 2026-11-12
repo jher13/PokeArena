@@ -13,7 +13,7 @@ function cloudClient() {
 function readArenaSave() {
  return {version:1,entries:Object.fromEntries(arenaSaveKeys.map(key=>[key,playerStorage.getItem(key)]))};
 }
-function restoreArenaSave(save) {
+function restoreArenaSave(save,writeKey=playerSaveKey) {
  if(save?.version!==1 || !save.entries || !arenaSaveKeys.every(key=>
   Object.hasOwn(save.entries,key) && (save.entries[key]===null || typeof save.entries[key]==='string')))
   throw new Error('This is not a supported Pokemon Arena save.');
@@ -21,67 +21,94 @@ function restoreArenaSave(save) {
   const value=save.entries[key];
   if(value!==null && !['pokemon-arena-music','pokemon-arena-sfx'].includes(key)) JSON.parse(value);
  }
- const previous=readArenaSave().entries;
+ const previous=Object.fromEntries(arenaSaveKeys.map(key=>[key,localStorage.getItem(writeKey(key))]));
  function write(entries) {
   for(const key of arenaSaveKeys) {
-   if(entries[key]===null) localStorage.removeItem(playerSaveKey(key));
-   else playerStorage.setItem(key,entries[key]);
+   if(entries[key]===null) localStorage.removeItem(writeKey(key));
+   else localStorage.setItem(writeKey(key),entries[key]);
   }
  }
  try {write(save.entries);}
  catch(error) {write(previous);throw error;}
- window.location.reload();
+
 }
-function installArenaCloud() {
- const panel=byId('arena-cloud-panel');
- const status=byId('arena-cloud-status');
- const saveButton=byId('arena-cloud-save');
- const loadButton=byId('arena-cloud-load');
- const logout=byId('arena-cloud-signout');
- async function perform(action) {
-  if(panel.inert) return;
-  panel.inert=true;
-  try {await action(await cloudClient());}
-  catch(error) {status.textContent=error.message || 'Cloud request failed.';}
-  finally {panel.inert=false;}
- }
- async function userFor(client) {
-  const {data,error}=await client.auth.getUser();
-  if(error || !data.user) throw new Error('Sign in with your email first.');
-  return data.user;
- }
- async function getSave(client,user) {
-  const {data,error}=await client.from('arena_saves').select('save_data,updated_at').eq('user_id',user.id).maybeSingle();
-  if(error) throw error;
-  return data;
- }
- saveButton.onclick=()=>perform(async client=>{
-  if(!team.length) throw new Error('Enter the arena and choose a starter before uploading a save.');
-  const user=await userFor(client);
-  const existing=await getSave(client,user);
-  if(existing && !window.confirm('Replace your cloud save with the selected local profile?')) return;
+let cloudAccount=null;
+let cloudRevision=null;
+let saveTimer;
+let saving=false;
+let dirty=false;
+const cloudStatus=byId('arena-cloud-status');
+async function fetchArenaSave(client,id) {
+ const {data,error}=await client.from('arena_saves').select('save_data,updated_at').eq('user_id',id).maybeSingle();
+ if(error) throw error;
+ return data;
+}
+async function flushArenaSave() {
+ if(!cloudAccount || !team.length || saving || !dirty) return;
+ saving=true;
+ dirty=false;
+ try {
+  const client=await cloudClient();
   const values={save_data:readArenaSave(),updated_at:new Date().toISOString()};
   const query=client.from('arena_saves');
-  const {data,error}=await (existing?query.update(values).eq('user_id',user.id).eq('updated_at',existing.updated_at):
-   query.insert({...values,user_id:user.id})).select('user_id');
+  const {data,error}=await (cloudRevision
+   ?query.update(values).eq('user_id',cloudAccount).eq('updated_at',cloudRevision)
+   :query.insert({...values,user_id:cloudAccount})).select('updated_at');
   if(error) throw error;
-  if(!data.length) throw new Error('The cloud save changed. Check it before trying again.');
-  status.textContent='Profile saved to the cloud.';
- });
- loadButton.onclick=()=>perform(async client=>{
-  const existing=await getSave(client,await userFor(client));
-  if(!existing) throw new Error('This account has no cloud save.');
-  if(window.confirm('Replace the selected local profile with the cloud save?')) restoreArenaSave(existing.save_data);
- });
- logout.onclick=()=>perform(async client=>{
-  const {error}=await client.auth.signOut();
-  if(error) throw error;
-  returnToAccountGate();
- });
-
+  if(!data?.length) throw new Error('Cloud progress changed on another device. Download that save before continuing.');
+  cloudRevision=data[0].updated_at;
+  cloudStatus.textContent='Saved to the cloud.';
+  if(dirty) window.queueArenaSave();
+ } catch(error) {
+  dirty=true;
+  cloudStatus.textContent='Cloud save failed. '+error.message;
+  throw error;
+ } finally {saving=false;}
 }
-installArenaCloud();
-
+window.queueArenaSave=()=>{
+ if(!cloudAccount) return;
+ dirty=true;
+ clearTimeout(saveTimer);
+ cloudStatus.textContent='Saving progress…';
+ saveTimer=setTimeout(()=>flushArenaSave().catch(()=>{}),350);
+};
+async function enterCloudAccount(client,user,proceed,allowGuestImport=false) {
+ const id=user.id;
+ let row=await fetchArenaSave(client,id);
+ if(!row && allowGuestImport && !onlineSaveId && team.length &&
+    window.confirm('Link this browser’s guest progress to your account?')) {
+  const {error}=await client.from('arena_saves').insert({user_id:id,save_data:readArenaSave()});
+  if(error) throw error;
+  row=await fetchArenaSave(client,id);
+ }
+ if(onlineSaveId!==id) {
+  if(row) restoreArenaSave(row.save_data,key=>'arena-online:'+id+':'+key);
+  sessionStorage.setItem('arena-online-user',id);
+  window.location.reload();
+  return;
+ }
+ cloudAccount=id;
+ cloudRevision=row?.updated_at ?? null;
+ cloudStatus.textContent=row?'Cloud save connected.':'Cloud saves start after you choose a starter.';
+ proceed();
+}
+byId('arena-cloud-save').onclick=()=>{
+ if(!cloudAccount) {cloudStatus.textContent='Log in to enable cloud saves.';return;}
+ dirty=true;
+ flushArenaSave().catch(()=>{});
+};
+byId('arena-cloud-load').onclick=async()=>{
+ try {
+  if(!cloudAccount || saving) return;
+  const row=await fetchArenaSave(await cloudClient(),cloudAccount);
+  if(!row) throw new Error('No cloud save exists yet.');
+  if(window.confirm('Replace this device’s progress with the cloud save?')) {
+   clearTimeout(saveTimer);
+   restoreArenaSave(row.save_data);
+   window.location.reload();
+  }
+ } catch(error) {cloudStatus.textContent=error.message;}
+};
 let returnToAccountGate;
 function installAccountGate() {
  const gate=byId('account-gate');
@@ -114,6 +141,7 @@ function installAccountGate() {
     if(error) throw error;
    } catch(error) {status.textContent=error.message;return;}
   }
+  if(onlineSaveId) {sessionStorage.removeItem('arena-online-user');window.location.reload();return;}
   proceed();
  };
  form.onsubmit=async event=>{
@@ -129,7 +157,7 @@ function installAccountGate() {
     : await client.auth.signInWithPassword(credentials);
    if(error) throw error;
    password.value='';
-   if(data.session) proceed();
+   if(data.session) await enterCloudAccount(client,data.session.user,proceed,true);
    else status.textContent='Confirm your email, then log in with your password.';
   } catch(error) {status.textContent=error.message || 'Could not send the link.';}
   finally {submit.disabled=false;}
@@ -145,15 +173,24 @@ function installAccountGate() {
  };
  byId('toolbar-logout').onclick=async()=>{
   try {
+   if(saving) throw new Error('Wait for your cloud save to finish.');
+   await flushArenaSave();
    if(arenaCloudClient) {
     const client=await arenaCloudClient;
     const {error}=await client.auth.signOut();
     if(error) throw error;
    }
+   if(onlineSaveId) {sessionStorage.removeItem('arena-online-user');window.location.reload();return;}
    returnToAccountGate();
   } catch(error) {
    openHomeDialog('Log out',element('p',error.message || 'Could not sign out.'));
   }
  };
+ byId('arena-cloud-signout').onclick=()=>byId('toolbar-logout').onclick();
+ if(onlineSaveId) cloudClient().then(async client=>{
+  const {data,error}=await client.auth.getUser();
+  if(error || !data.user || data.user.id!==onlineSaveId) throw new Error('Log in again to load your cloud save.');
+  await enterCloudAccount(client,data.user,proceed);
+ }).catch(error=>{status.textContent=error.message;});
 }
 installAccountGate();

@@ -379,7 +379,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 
 <section id="choices" class="choices" aria-label="Team and upgrades"></section>
 <div class="toolbar"><div><button id="start">Start battle</button> <button id="battle-sfx" aria-pressed="true">SFX: On</button> <button id="battle-music" aria-pressed="true">Music: On</button> <button id="speed" aria-pressed="false">1× speed</button> <button id="battle-auto-start" aria-pressed="false" hidden>Auto Start: Off</button> <button id="battle-auto-capture" aria-pressed="false" hidden>Auto capture: Off</button> <button id="battle-auto-repeat" aria-pressed="false" hidden>Auto repeat: Off</button> <button id="auto-reserve" aria-pressed="false" hidden>Auto send-out: Off</button></div><button id="next-gym" class="campaign-next" hidden>Next gym</button><button id="reset">Main menu</button></div></div></main>
-<script type="text/javascript" nonce="835b0cff279143378aec95cba68" src="//local.adguard.org?ts=1794514302156&amp;type=content-script&amp;dmn=chatgpt.com&amp;url=https%3A%2F%2Fchatgpt.com%2Fbackend-api%2Festuary%2Fcontent%3Fid%3Dfile_000000006720822f970bdd99e7e25e94%26fn%3DPokemon_Arena.html%26cd%3Dattachment%26ts%3D498477%26p%3Dfs%26cid%3D1%26sig%3Dc4008eaa3d40fc7ab76f00d4eb8af2ea378061f1cd73ca34e8af01ea9be2d9d3%26v%3D0&amp;app=chrome.exe&amp;css=2&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1&amp;stealth=1&amp;st-loc&amp;st-dnt"></script><script type="text/javascript" nonce="835b0cff279143378aec95cba68" src="//local.adguard.org?ts=1794514302156&amp;name=AdGuard%20Extra&amp;name=AdGuard%20Popup%20Blocker&amp;name=Web%20of%20Trust&amp;type=user-script"></script><script>
+<script>
 const byId = id => document.getElementById(id);
 const profileIndexKey='pokemon-arena-player-index';
 const defaultPlayer={id:'default',name:'Player 1'};
@@ -392,12 +392,14 @@ try {
    new Set(saved.players.map(player=>player.id)).size===saved.players.length) playerIndex=saved;
 } catch {}
 const currentPlayer=playerIndex.players.find(player=>player.id===playerIndex.active);
+const onlineSaveId=sessionStorage.getItem('arena-online-user');
 function playerSaveKey(key) {
+ if(onlineSaveId) return 'arena-online:'+onlineSaveId+':'+key;
  return currentPlayer.id==='default'?key:'pokemon-arena-player:'+currentPlayer.id+':'+key;
 }
 const playerStorage={
  getItem:key=>localStorage.getItem(playerSaveKey(key)),
- setItem:(key,value)=>localStorage.setItem(playerSaveKey(key),value)
+ setItem:(key,value)=>{localStorage.setItem(playerSaveKey(key),value);window.queueArenaSave?.();}
 };
 const profileSelect=byId('profile-select');
 const profileName=byId('profile-name');
@@ -4755,7 +4757,7 @@ byId('login').hidden=true;
 requestAnimationFrame(frame);
 </script><details id="arena-cloud-panel">
 <summary>Cloud saves</summary>
-<button id="arena-cloud-save">Link guest / upload save</button>
+<button id="arena-cloud-save">Save now</button>
 <button id="arena-cloud-load">Download cloud save</button>
 <button id="arena-cloud-signout">Sign out online</button>
 <p id="arena-cloud-status" role="status"></p>
