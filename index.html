@@ -1674,6 +1674,9 @@ const unsupportedMoveNote='This move has no additional effect implemented in the
 for(const type of [...new Set(referenceMoveOptions.map(move=>moveReferences[move][1]))].sort()) {
  appendFilterOption('skillset-type',type);
 }
+function skillHealingPercent(move,rules) {
+ return (rules.healing || (move==='Aqua Ring'?20:0))/4;
+}
 function skillDescription(move) {
  const [type,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
  const rules=moveRules(move);
@@ -1684,7 +1687,7 @@ function skillDescription(move) {
  const notes=[status?'Targets '+target+'.':
   'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage to '+target+'.'];
  if(status && rules.scope==='ally' && (rules.healing || move==='Aqua Ring'))
-  notes.push('Restores '+(rules.healing || 20)+'% of maximum HP.');
+  notes.push('Restores '+skillHealingPercent(move,rules)+'% of maximum HP.');
  if(status && rules.scope==='ally' && guardMoves.has(move)) {
   notes.push('Halves incoming damage for '+(['Protect','Detect'].includes(move)?'1 second.':'2.5 seconds.'));
  }
@@ -3694,7 +3697,7 @@ function tickAbility(actor,dt) {
  }
  if((ability==='Rain Dish'||ability==='Dry Skin') && weather==='Rain') healActor(actor,actor.max/(ability==='Dry Skin'?8:16));
  if(ability==='Ice Body' && weather==='Snow') healActor(actor,actor.max/16);
- if(battleTerrain==='Grass' && isGrounded(actor)) healActor(actor,actor.max/16);
+ if(battleTerrain==='Grass' && isGrounded(actor)) healActor(actor,actor.max/64);
  if(weather==='Sun' && ['Solar Power','Dry Skin'].includes(ability)) actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8))));
 }
 let lastDamageClock=0;
@@ -3876,7 +3879,7 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   return total+Math.abs(clamp(current+change,-6,6)-current)/(1+Math.abs(current)*0.35);
  },0);
  if(status) {
-  const healing=Math.min(1-health,(rules.healing || (move==='Aqua Ring'?20:0))/100);
+  const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
   const guard=guardMoves.has(move) && !actor.guard && target.charge<0.35 && gap<90;
   const ailment=rules.ailment && !target.ailment && !ally;
   const field=(weatherMoves[move] && weatherMoves[move]!==abilityWeather()) ||
@@ -4062,8 +4065,8 @@ function act(actor, opponents, dt, teammates=[actor]) {
   for(const recipient of recipients) {
    applyChanges(recipient,rules.changes,actor);
    if(move==='Tailwind') {applyChanges(recipient,[[6,2]]);if(activeAbility(recipient)==='Wind Rider') applyChanges(recipient,[[2,1]]);}
-   const healing = rules.healing || (move==='Aqua Ring' ? 20 : 0);
-   if(healing) recipient.hp=Math.min(recipient.max,recipient.hp+Math.round(recipient.max*healing/100));
+   const healing=skillHealingPercent(move,rules);
+   if(healing) healActor(recipient,Math.round(recipient.max*healing/100));
    const guard=guardMoves.has(move);
    if(guard) recipient.guard=move==='Protect' || move==='Detect' ? 1 : 2.5;
    effect(recipient,rules.changes.length ? 'Buff' : healing ? 'Heal' : guard ? 'Guard' : '',1,{status:true});
@@ -4611,10 +4614,12 @@ function drawUnit(actor) {
  ctx.font = '600 13px system-ui';
  const caught=registeredPokemon.has(name);
  const plateWidth=ctx.measureText(name).width+(caught?29:14);
- ctx.fillStyle='#142138';
- ctx.fillRect(x-plateWidth/2,ground+6,plateWidth,18);
  ctx.fillStyle='#f0f6e7';
+ ctx.save();
+ ctx.strokeStyle='#101b20';ctx.lineWidth=3;ctx.lineJoin='round';
+ ctx.strokeText(name,x+(caught?6:0),ground+18);
  ctx.fillText(name,x+(caught?6:0),ground+18);
+ ctx.restore();
  if(caught){ctx.save();ctx.translate(x-plateWidth/2+9,ground+14);ctx.scale(.55,.55);drawSwitchBall(0,0,0);ctx.restore();}
 
 
@@ -4736,7 +4741,8 @@ function drawMoveBubbles(actors) {
   }
   occupied.push({x,y,width});
   ctx.globalAlpha = Math.min(1,actor.labelTime/0.2);
-  ctx.fillStyle = actor.friendly ? '#eff8df' : '#ffe8dd';
+  const color=moveColors[moveCatalog[actor.moveLabel]?.[0]] ?? '#eff8df';
+  ctx.fillStyle=color;
   ctx.beginPath();
   ctx.roundRect(x,y,width,27,8);
   ctx.fill();
@@ -4746,7 +4752,9 @@ function drawMoveBubbles(actors) {
   ctx.lineTo(tail+5,y+26);
   ctx.lineTo(tail,y+34);
   ctx.fill();
-  ctx.fillStyle = '#16251d';
+  ctx.fillStyle='#101827';
+  ctx.strokeStyle='#ffffffb8';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.strokeText(actor.moveLabel,x+width/2,y+14);
   ctx.fillText(actor.moveLabel,x+width/2,y+14);
  }
  ctx.restore();
