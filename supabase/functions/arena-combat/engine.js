@@ -438,10 +438,13 @@ function pokemonNameplate(name,suffix='',tag='span') {
   plate.append(ball);
  }
  plate.append(name+suffix);
- const types=element('small',dex[name].slice(1,3).filter(Boolean).join(' / '));
- types.style.cssText='display:block;color:#c4d6ee;font-size:.72em';
- plate.append(types);
  return plate;
+}
+function battleRosterIdentity(name,level) {
+ const identity=element('div',null,'battle-identity');
+ const types=element('span',dex[name].slice(1,3).filter(Boolean).join(' / '),'battle-types');
+ identity.append(element('span',name,'battle-name'),element('span','Lv. '+level,'battle-level'),types);
+ return identity;
 }
 function pokemonPortrait(name,className,fullSize=false) {
  const thumb=element('canvas',null,className);
@@ -782,7 +785,7 @@ function vitaminControls(name) {
 }
 function battleAIControls(name) {
  const ai=normalizeBattleAI(wildProgress.ai[name]);
- const section=element('fieldset');
+ const section=element('fieldset',null,'battle-ai-settings');
  section.append(element('legend','Battle AI'));
  const setting=(label,values,current,apply)=>{
   const group=element('label',label+' ');
@@ -1824,7 +1827,7 @@ function scheduleTrainerRepeat() {
   startBattle();
  },1800);
 }
-function wildVictoryExperience(level) {return Math.floor((25+level*6)/2);}
+function wildVictoryExperience(level) {return Math.floor((25+level*6)/2+level*level*0.12);}
 function applyDefeatRewards() {
  if(selectedWild) {
   const xp=Math.floor(wildVictoryExperience(selectedWild.level)/10);
@@ -1844,8 +1847,12 @@ function finishWildBattle() {
  const gained=wildVictoryExperience(enemy.level);
  wildProgress.wins++;
  const rewards=[];
- for(const [interval,ball] of [[2,0],[4,1],[10,2],[7,3],[6,4],[8,5],[25,6]]) {
-  if(wildProgress.wins%interval===0) {
+ // The chances total between one and two, so a shared roll awards one or two distinct balls.
+ let dropRoll=onlineRandom();
+ for(const [ball,chance] of [0.5,0.25,0.1,1/7,1/6,0.125,0.01].entries()) {
+  dropRoll-=chance;
+  if(dropRoll<0) {
+   dropRoll+=1;
    wildProgress.balls[ball]++;
    rewards.push(ballTypes[ball].name);
   }
@@ -2695,7 +2702,15 @@ const castWindup=1;
 const lineSkills=new Set(['Hyper Beam','Ice Beam','Aurora Beam','Bubble Beam','Psybeam',
  'Signal Beam','Solar Beam','Charge Beam','Flash Cannon','Dragon Pulse','Dark Pulse',
  'Water Pulse','Origin Pulse','Photon Geyser','Dynamax Cannon','Eternabeam']);
-const dashSkills=new Set(['Quick Attack','Volt Tackle','Extreme Speed','Aqua Jet','Flame Charge','Wild Charge','Take Down','Double Edge','Flare Blitz']);
+const dashSkills=new Set([
+ 'Quick Attack','Bullet Punch','Mach Punch','Jet Punch','Extreme Speed','Aqua Jet','Accelerock',
+ 'Volt Tackle','Flame Charge','Wild Charge','Take Down','Double Edge','Flare Blitz','Tackle','Headbutt',
+ 'Head Smash','Zen Headbutt','Iron Head','Skull Bash','Body Slam','High Horsepower','Horn Attack',
+ 'Megahorn','Drill Run','Aerial Ace','Brave Bird','Dragon Rush','Dragon Ascent','Lunge','First Impression',
+ 'Pounce','Trailblaze','Aqua Step','High Jump Kick','Jump Kick','Flying Press',
+ 'Flame Wheel','Steamroller','Heat Crash','Heavy Slam','Wave Crash','Raging Bull',
+ 'Collision Course','Electro Drift','Psyshield Bash','Zing Zap','Flip Turn',
+]);
 const coneSkills=new Set(['Flamethrower','Icy Wind','Incinerate','Heat Wave','Dragon Breath','Snarl']);
 const landingSkills=new Set(['Fly','Bounce']);
 const projectileSkills=new Set(['Shadow Ball','Aura Sphere','Energy Ball','Focus Blast','Weather Ball','Electro Ball','Sludge Bomb']);
@@ -2962,7 +2977,7 @@ function updateActivePanels(onlineFields) {
 function renderBattleRosters() {
  rosterCards = [];
  for(const [id,title,roster,friendly] of [
-  ['player-roster','Your team',allies,true],['enemy-roster','Opponent',enemies,false]
+  ['player-roster','Your team',allies,true],['enemy-roster',selectedGym?.name ?? 'Opponent',enemies,false]
  ]) {
   const container=byId(id);
   container.replaceChildren(element('h2',title));
@@ -2973,8 +2988,7 @@ function renderBattleRosters() {
    const hp=element('progress');
    hp.max=actor.max;
    hp.setAttribute('aria-label',actor.name+' HP');
-   const identity=element('div',null,'battle-identity');
-   identity.append(element('span',actor.name,'battle-name'),element('span','Lv. '+actor.level,'battle-level'));
+   const identity=battleRosterIdentity(actor.name,actor.level);
    card.append(pokemonPortrait(actor.name),identity,hp);
    const xp=friendly && !rogueRun ? element('progress',null,'battle-xp') : null;
    if(xp) card.append(xp);
@@ -3093,7 +3107,9 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
   stages:[0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
 }
+let nextGymSwitchCheck=0;
 function prepare() {
+ nextGymSwitchCheck=4;
  battleWeather=null;weatherTime=0;battleTerrain=null;terrainTime=0;
  lastDamageClock=0;
  allies = rogueRun ? rogueRun.members.map(member=>unit(member.name,sendOut.player.x,sendOut.player.y,true,member.level,member)) :
@@ -3372,7 +3388,7 @@ function movePower(move,power,actor,victim) {
  return power || 55;
 }
 function scaledBattleDamage(damage) {
- return damage>0 ? Math.max(1,Math.round(damage/2)) : 0;
+ return damage>0 ? Math.max(1,Math.round(damage/8)) : 0;
 }
 function battleDamage(actor,victim,power,multiplier,physical,element,move,critical=false) {
  if(multiplier===0) return 0;
@@ -3678,7 +3694,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  const center=selfCentered ? actor : target;
  if(shape || rules.radius) {
-  const warning=shape==='dash' ? (move==='Quick Attack'?0.35:0.55) : shape==='arc'?0.45:
+  const warning=shape==='dash' ? (priority>0?0.35:0.55) : shape==='arc'?0.45:
    shape==='projectile'?0.55:castWindup;
   const halfAngle=shape==='cone'?Math.PI/7:shape==='arc'?Math.PI/3:0;
   const line=shape && shape!=='landing' ? skillLane(actor,target,range,shape,halfAngle) : null;
@@ -3913,6 +3929,43 @@ function awardKnockoutEVs() {
  }
  if(changed)playerStorage.setItem(profileStorage,JSON.stringify(profiles));
 }
+function gymOffense(attacker,defender) {
+ const ability=targetAbility(attacker,defender);
+ return Math.max(0,...attacker.moves.map(move=>{
+  const [type,power,,,status]=moveCatalog[move];
+  if(status || abilityAbsorptions[ability]===type || abilityImmunities[ability]?.[0]===type)return 0;
+  const multiplier=effectiveness(type,defender);
+  if(ability==='Wonder Guard' && multiplier<=1)return 0;
+  return Math.min(120,Math.max(35,power))*multiplier*(type===attacker.type || type===extraTypes[attacker.name]?1.25:1);
+ }));
+}
+function gymMatchup(actor,opponent) {
+ return (gymOffense(actor,opponent)-gymOffense(opponent,actor)*0.9)/100+
+  actor.hp/actor.max*0.75-(actor.ailment?0.35:0);
+}
+function gymReserve(opponent,outgoing) {
+ let best=null,bestScore=-Infinity;
+ for(const reserve of enemies) {
+  if(reserve===outgoing || reserve.hp<=0)continue;
+  const score=gymMatchup(reserve,opponent);
+  if(score>bestScore){best=reserve;bestScore=score;}
+ }
+ return best;
+}
+function considerGymSwitch() {
+ if(!selectedGym || enemySwitch || playerSwitch || !(activePlayer?.hp>0) || !(activeEnemy?.hp>0) ||
+  clock<nextGymSwitchCheck || activeEnemy.attack>0 ||
+  pendingCasts.some(cast=>cast.actor===activeEnemy))return;
+ nextGymSwitchCheck=clock+1;
+ const reserve=gymReserve(activePlayer,activeEnemy);
+ if(!reserve)return;
+ const current=gymMatchup(activeEnemy,activePlayer);
+ const advantage=gymMatchup(reserve,activePlayer)-current;
+ const underPressure=current<0.65 || activeEnemy.hp/activeEnemy.max<=0.3 || activeEnemy.ailment;
+ if(advantage<0.7 || !underPressure)return;
+ enemySwitch=startSwitch(activeEnemy,reserve);
+ nextGymSwitchCheck=clock+10;
+}
 function advance(dt,realDt=dt) {
  refreshBerriesAfterKnockout();
  sendNextTrainerReserve();
@@ -3973,7 +4026,12 @@ function advance(dt,realDt=dt) {
    if(selectedWild) sendNextWildReserve();
    else if(!selectedGym && !selectedTrainer && !rogueRun) playerSwitch=startSwitch(activePlayer,playerReserve);
   }
-  if(!enemySwitch && activeEnemy?.hp<=0) enemySwitch=startSwitch(activeEnemy,enemyReserve);
+  if(!enemySwitch && activeEnemy?.hp<=0) {
+   const opponent=playerSwitch?.incoming ?? activePlayer;
+   const replacement=selectedGym && opponent?.hp>0?gymReserve(opponent,activeEnemy) ?? enemyReserve:enemyReserve;
+   enemySwitch=startSwitch(activeEnemy,replacement);
+   if(selectedGym)nextGymSwitchCheck=clock+6;
+  } else considerGymSwitch();
  }
  updateScore();
  updateBattleRosters();
@@ -4173,17 +4231,14 @@ function drawUnit(actor) {
  ctx.fillRect(x-25,healthY,50*actor.hp/actor.max,5);
  ctx.fillStyle = '#f0f6e7';
  ctx.font = '600 13px system-ui';
- const types=dex[name].slice(1,3).filter(Boolean);
  const caught=registeredPokemon.has(name);
- const plateWidth=Math.max(ctx.measureText(name).width+(caught?29:14),types.join(' / ').length*8+14);
+ const plateWidth=ctx.measureText(name).width+(caught?29:14);
  ctx.fillStyle='#142138';
- ctx.fillRect(x-plateWidth/2,ground+6,plateWidth,29);
+ ctx.fillRect(x-plateWidth/2,ground+6,plateWidth,18);
  ctx.fillStyle='#f0f6e7';
  ctx.fillText(name,x+(caught?6:0),ground+18);
  if(caught){ctx.save();ctx.translate(x-plateWidth/2+9,ground+14);ctx.scale(.55,.55);drawSwitchBall(0,0,0);ctx.restore();}
- ctx.font='600 10px system-ui';
- ctx.fillStyle=moveColors[types[0]] ?? '#f0f6e7';
- ctx.fillText(types.join(' / '),x,ground+30);
+
 
 }
 function paint() {
