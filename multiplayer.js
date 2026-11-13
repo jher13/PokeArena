@@ -10,7 +10,7 @@
    recallSlotOnline=null;battleSnapshot=null;trainerFields=[[],[]];trainerPanels=null;
    phase='online-battle';speed=1;
    effects=[];pendingCasts=[];playerSwitch=enemySwitch=null;
-   battleWeather=battleTerrain=null;arenaMap=null;weatherTime=0;
+   battleWeather=battleTerrain=null;arenaMap=null;weatherTime=0;onlineMatchDuration=0;
    showScreen('battle');
    for(const id of ['start','auto-reserve','battle-auto-repeat','battle-auto-start','battle-auto-capture','next-gym'])byId(id).hidden=true;
    for(const id of ['player-active','enemy-active','player-roster','enemy-roster','choices'])byId(id).replaceChildren();
@@ -82,7 +82,7 @@
   pendingCasts=data.casts.map(cast=>({...cast,actor:actorFor(cast.actor),
    center:cast.center?{...cast.center,x:mx(cast.center.x)}:null,line:lineView(cast.line)}));
   battleWeather=data.weather;battleTerrain=data.terrain;weatherTime=data.weatherTime ?? 0;
-  arenaMap=data.arenaMap?{...data.arenaMap,rocks:data.arenaMap.rocks.map(rock=>({...rock,x:mx(rock.x)})),
+  arenaMap=data.arenaMap?{...data.arenaMap,rocks:data.arenaMap.rocks.map(rock=>({...rock,x:mx(rock.x),fall:rock.fall?{...rock.fall,x:mx(rock.fall.x),dx:dx(rock.fall.dx)}:null})),
    zones:data.arenaMap.zones.map(zone=>({...zone,x:mx(zone.x)}))}:null;
   byId('score').textContent='Online battle · 1×'+(data.weather?' · '+data.weather+' '+Math.ceil(data.weatherTime ?? 0)+'s'+(abilityWeather()?'':' (suppressed)'):'');
   const freshSounds=new Set();
@@ -93,6 +93,7 @@
   }
   soundsPlayed=freshSounds;
   battleSnapshot=data;
+  onlineMatchDuration=data.clock;
   renderBattleDps(data.clock,data.damageBuckets ?? [],mirror);
   frameAge=0;
   updateOnlineRoster(send);
