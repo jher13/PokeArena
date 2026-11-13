@@ -22,6 +22,7 @@ function onlineActor(name,entries,side,index,bossLevel) {
  const held=progress.held?.[name];
  const equipped=Object.entries(progress.held ?? {}).filter(([,item])=>item===held).map(([holder])=>holder);
  actor.heldItem=Object.hasOwn(heldItems,held) && equipped.indexOf(name)<progress.items?.[held]?held:null;
+ if(!bossLevel)actor.ai=normalizeBattleAI(progress.ai?.[name]);
  actor.onlineId=side+':'+index;
  actor.side=side;
  actor.revealed=false;
@@ -49,6 +50,7 @@ function initializeOnline(match) {
     placeOnline(slot,actor);
     return slot;
    }));
+ damageBuckets=[];
  clock=lastDamageClock=weatherTime=terrainTime=recallCooldown=0;
  battleWeather=battleTerrain=null;
  effects=[];pendingCasts=[];onlineSounds=[];onlineRecalls={};
@@ -64,11 +66,12 @@ function saveOnlineState() {
     incoming:slot.transition.incoming.onlineId}:null}))),
   casts:pendingCasts.map(cast=>({...cast,actor:cast.actor.onlineId})),effects,
   clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime,
-  recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
+  damageBuckets,recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
  };
 }
 function loadOnlineState(state) {
  ({allies,enemies,effects,clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime}=state);
+ damageBuckets=state.damageBuckets ?? [];
  onlineRecalls=state.recalls;
  onlineSounds=state.sounds ?? [];
  onlineRandomState=state.random;
@@ -153,7 +156,7 @@ export function onlineView(state,side) {
   if(!transition || ids.has(transition.incoming))return slot;
   return {...slot,transition:{...transition,incoming:null}};
  }));
- return {actors:visible,fields,casts:state.casts,effects:state.effects,
-  weather:state.battleWeather,terrain:state.battleTerrain,clock:state.clock,
+ return {actors:visible,fields,damageBuckets:state.damageBuckets ?? [],casts:state.casts,effects:state.effects,
+  weather:state.battleWeather,weatherTime:state.weatherTime,terrain:state.battleTerrain,clock:state.clock,
   recall:Math.max(0,(state.recalls[side] ?? 0)-state.clock),sounds:state.sounds};
 }
