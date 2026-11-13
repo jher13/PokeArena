@@ -801,7 +801,23 @@ function vitaminControls(name) {
 function battleAIControls(name) {
  const ai=normalizeBattleAI(wildProgress.ai[name]);
  const section=element('fieldset',null,'battle-ai-settings');
- section.append(element('legend','Battle AI'));
+ const legend=element('legend','Battle AI');
+ const gambit=element('button','Gambit');
+ gambit.type='button';
+ gambit.onclick=()=>openGambits(name,ai,refresh);
+ legend.append(gambit);
+ section.append(legend);
+ const refresh=()=>{
+  basic.hidden=ai.mode==='Advanced';
+  mode.value=ai.mode;
+ };
+ const persist=()=>{wildProgress.ai[name]=ai;saveWildProgress();};
+ const modeLabel=element('label','Mode ');
+ const mode=gambitSelect('Mode',gambitModes,ai.mode,value=>{ai.mode=value;persist();refresh();});
+ modeLabel.append(mode);
+ section.append(modeLabel);
+ const basic=element('div');
+ section.append(basic);
  const setting=(label,values,current,apply)=>{
   const group=element('label',label+' ');
   const select=element('select');
@@ -811,9 +827,9 @@ function battleAIControls(name) {
    select.append(option);
   });
   select.value=String(current);
-  select.onchange=()=>{apply(Number(select.value));wildProgress.ai[name]=ai;saveWildProgress();};
+  select.onchange=()=>{apply(Number(select.value));persist();};
   group.append(select);
-  section.append(group);
+  basic.append(group);
  };
  const styles=['Balanced','Aggressive','Defensive'];
  setting('Targeting',battleTargeting,battleTargeting.indexOf(ai.target),i=>{ai.target=battleTargeting[i];});
@@ -821,7 +837,104 @@ function battleAIControls(name) {
  const positions=Object.keys(battlePositions);
  setting('Preferred position',positions,positions.indexOf(ai.position),i=>{ai.position=positions[i];});
  movesFor(name).forEach((move,i)=>setting(move,['Low','Normal','High'],ai.priorities[i],value=>{ai.priorities[i]=value;}));
+ refresh();
  return section;
+}
+function gambitSelect(label,values,current,change) {
+ const select=element('select');
+ select.setAttribute('aria-label',label);
+ for(const value of values) {
+  const option=element('option',gambitLabels[value] ?? (value || 'Select an action'));
+  option.value=value;
+  select.append(option);
+ }
+ select.value=current;
+ select.onchange=()=>change(select.value);
+ return select;
+}
+function openGambits(name,ai,onClose) {
+ const dialog=element('dialog',null,'gambit-dialog');
+ const title=element('h2',name+' Gambits');
+ const description=element('p','Advanced checks rules from top to bottom. A rule runs when its equipped move is ready and in range. If no rule can run, the Pokémon uses Basic settings. Ally and Self conditions can trigger attacks against the current enemy. Do not Attack holds fire for as long as the condition matches.');
+ const list=element('ol',null,'gambit-list');
+ const empty=element('p','Add a Gambit to set your first priority.');
+ const equipped=movesFor(name);
+ const persist=()=>{wildProgress.ai[name]=ai;saveWildProgress();};
+ const modeLabel=element('label','Battle AI mode ');
+ modeLabel.append(gambitSelect('Battle AI mode',gambitModes,ai.mode,value=>{ai.mode=value;persist();}));
+ const control=(label,handler)=>{
+  const button=element('button',label);
+  button.type='button';
+  button.onclick=handler;
+  return button;
+ };
+ const render=(focusIndex,focusAction)=>{
+  empty.hidden=ai.gambits.length>0;
+  const rows=ai.gambits.map((rule,index)=>{
+   const row=element('li');
+   const fields=element('div',null,'gambit-fields');
+   const field=(label,options,key,onChange)=>{
+    const group=element('label',label);
+    group.append(gambitSelect('Gambit '+(index+1)+' '+label,options,rule[key],value=>{
+     rule[key]=value;
+     onChange?.();
+     persist();
+    }));
+    fields.append(group);
+   };
+   field('Target',gambitTargets,'target');
+   field('If',Object.keys(gambitConditions),'condition',()=>{
+    rule.operator=gambitConditions[rule.condition].operators[0];
+    rule.value=gambitConditions[rule.condition].values[0];
+    render(index,'condition');
+   });
+   const condition=gambitConditions[rule.condition];
+   field('Is',condition.operators,'operator');
+   field('Value',gambitValues(condition,rule.value),'value');
+   const unavailable=rule.move && !gambitActions.includes(rule.move) && !equipped.includes(rule.move);
+   field('Action',['',...gambitActions,...equipped,...(unavailable?[rule.move]:[])],'move',()=>render(index,'move'));
+   if(unavailable)row.append(element('p',rule.move+' is no longer equipped. This rule is skipped.','gambit-unavailable'));
+   const actions=element('div',null,'gambit-actions');
+   const reorder=(offset,action)=>{
+    const to=index+offset;
+    [ai.gambits[to],ai.gambits[index]]=[ai.gambits[index],ai.gambits[to]];
+    persist();
+    render(to,action);
+   };
+   const up=control('Move up',()=>reorder(-1,'up'));
+   const down=control('Move down',()=>reorder(1,'down'));
+   up.disabled=index===0;
+   down.disabled=index===ai.gambits.length-1;
+   actions.append(up,down,control('Remove',()=>{
+    ai.gambits.splice(index,1);
+    persist();
+    render(Math.min(index,ai.gambits.length-1),'remove');
+   }));
+   row.prepend(fields);
+   row.append(actions);
+   if(index===focusIndex)queueMicrotask(()=>{
+    const action={condition:fields.children[1].firstElementChild,move:fields.children[4].firstElementChild,
+     up,down,remove:actions.lastElementChild}[focusAction];
+    (action?.disabled?actions.lastElementChild:action ?? fields.firstElementChild.firstElementChild).focus();
+   });
+   return row;
+  });
+  list.replaceChildren(...rows);
+  if(focusAction==='remove' && !rows.length)add.focus();
+ };
+ const add=control('Add Gambit',()=>{
+  ai.gambits.push({target:'Any',condition:'Always',operator:'Equal',value:'True',move:''});
+  persist();
+  render(ai.gambits.length-1);
+ });
+ const footer=element('div',null,'gambit-actions');
+ footer.append(add,control('Done',()=>dialog.close()));
+ dialog.append(title,description,modeLabel,empty,list,footer);
+ dialog.setAttribute('aria-label',name+' Gambits');
+ dialog.addEventListener('close',()=>{dialog.remove();onClose();},{once:true});
+ render();
+ document.body.append(dialog);
+ dialog.showModal();
 }
 function pcCollectionControls(name) {
  const section=element('fieldset');
@@ -1084,6 +1197,38 @@ function skillItem(move) {
 const progressKey='pokemon-arena-wild-progress';
 const capsulePrice=5000;
 const battlePositions={Auto:null,Melee:14,'Mid-Range':75,Ranged:140,Frontline:28,Backline:180};
+const gambitModes=['Basic','Advanced'];
+const gambitTargetOrder=['Nearest','Farthest','Lowest HP','Highest HP'];
+const gambitTargets=['Any','Self',...['Enemy','Ally'].flatMap(side=>[
+ ...gambitTargetOrder.map(order=>side+' '+order),
+ ...Array.from({length:6},(_,i)=>side+' '+(i+1)),
+])];
+const gambitActions=['Attack','Do not Attack','Any'];
+const gambitLabels={Nearest:'Closest', 'Not Equal':'Do Not Equal','At Most':'Less Than or Equal',
+ 'At Least':'Greater Than or Equal',Poison:'PSN (Poison)',Burn:'BRN (Burn)',Sleep:'SLP (Sleep)',
+ Paralysis:'PAR (Paralysis)',Confusion:'Confused',Freeze:'FRZ (Freeze)'};
+for(const side of ['Enemy','Ally']) {
+ gambitLabels[side+' Nearest']='Closest '+side;
+ gambitLabels[side+' Farthest']='Farthest '+side;
+ gambitLabels[side+' Lowest HP']='Weakest '+side+' (lowest HP %)';
+ gambitLabels[side+' Highest HP']='Strongest '+side+' (highest HP %)';
+}
+const gambitStatuses=['None','Paralysis','Sleep','Freeze','Burn','Poison','Confusion'];
+const gambitComparisons=['Equal','Not Equal','Less Than','Greater Than','At Most','At Least'];
+const gambitStats={ATK:[1,2],DEF:[2,3],SATK:[5,4],SDEF:[4,5],SPD:[3,6],ACC:[null,7],EVA:[null,8]};
+const gambitConditions={
+ Always:{operators:['Equal'],values:['True']},
+ Status:{operators:gambitComparisons.slice(0,2),values:gambitStatuses},
+ 'HP %':{operators:gambitComparisons,values:Array.from({length:11},(_,i)=>i*10+'%')},
+ ...Object.fromEntries(Object.keys(gambitStats).map(stat=>[stat,{
+  operators:gambitComparisons,values:Array.from({length:255},(_,i)=>String(i+1)),
+ }])),
+ Distance:{operators:gambitComparisons,values:Array.from({length:31},(_,i)=>String(i*25))},
+ 'Move effectiveness':{operators:gambitComparisons,values:['0','0.25','0.5','1','2','4']},
+};
+function gambitValues(condition,current) {
+ return current && !condition.values.includes(current)?[...condition.values,current]:condition.values;
+}
 const battleTargeting=['Nearest','Type weakness','Frontline','Backline','Farthest','Lowest HP','Highest HP','Ranged attacks'];
 const trainingItems=Object.fromEntries([
  ...['HP Up','Protein','Iron','Carbos','Zinc','Calcium'].map((name,stat)=>
@@ -1144,7 +1289,21 @@ function saveWildProgress() {
  try {playerStorage.setItem(progressKey,JSON.stringify(wildProgress));} catch {}
 }
 function normalizeBattleAI(ai) {
+ const gambits=Array.isArray(ai?.gambits)?ai.gambits.flatMap(rule=>{
+  if(!rule || !Object.hasOwn(gambitConditions,rule.condition))return [];
+  const target=gambitTargetOrder.includes(rule.target)?'Enemy '+rule.target:rule.target;
+  if(!gambitTargets.includes(target))return [];
+  const {operators,values}=gambitConditions[rule.condition];
+  const {condition,operator}=rule;
+  const hp=condition==='HP %' && typeof rule.value==='string' && /^\d{1,3}%?$/.test(rule.value);
+  const value=hp?parseInt(rule.value,10)+'%':rule.value;
+  if(!operators.includes(operator) || !(values.includes(value) || hp && parseInt(value,10)<=100))return [];
+  const move=gambitActions.includes(rule.move) || Object.hasOwn(moveCatalog,rule.move)?rule.move:'';
+  return [{target,condition,operator,value,move}];
+ }):[];
  return {
+  mode:ai?.mode==='Advanced'?'Advanced':'Basic',
+  gambits,
   target:battleTargeting.includes(ai?.target)?ai.target:'Nearest',
   style:['Balanced','Aggressive','Defensive'].includes(ai?.style)?ai.style:'Balanced',
   position:Object.hasOwn(battlePositions,ai?.position)?ai.position:'Auto',
@@ -4192,7 +4351,7 @@ function entryAbility(actor,opponent) {
  }
  if(ability==='Screen Cleaner') {actor.guard=0;opponent.guard=0;clearScreens(actor);clearScreens(opponent);}
 }
-function tryAilment(victim,condition,source) {
+function canInflictAilment(victim,condition,source) {
  if(source!==victim && victim.safeguardUntil>clock)return false;
  if(victim.hp<=0 || victim.ailment || ![1,2,3,4,5,6].includes(condition)) return false;
  const types=[victim.type,extraTypes[victim.name]];
@@ -4203,6 +4362,11 @@ function tryAilment(victim,condition,source) {
   (condition===3 && types.includes('Ice')) ||
   (condition===4 && types.includes('Fire')) ||
   (condition===5 && types.some(type=>type==='Poison'||type==='Steel') && activeAbility(source)!=='Corrosion')) return false;
+ return true;
+}
+function tryAilment(victim,condition,source) {
+ if(!canInflictAilment(victim,condition,source))return false;
+ const ability=targetAbility(source,victim);
  victim.ailment=condition;
  victim.ailmentSource=source;
  victim.ailmentTime=({2:null,3:5,4:3,5:5,6:6})[condition];
@@ -5333,6 +5497,77 @@ function escapeCrowding(actor,opponents,dt) {
  moveActor(actor,dx/distance,dy/distance,distance,dt,true);
  return true;
 }
+function gambitMatches(rule,subject,move,distance) {
+ const stat=gambitStats[rule.condition];
+ if(rule.condition==='Move effectiveness' && !move)return false;
+ const actual=stat?Math.round((stat[0]===null?100:subject.stats[stat[0]])*stageFactor(subject,stat[1])):
+  rule.condition==='Status'?gambitStatuses[subject.ailment ?? 0]:
+  rule.condition==='HP %'?Math.round(100*subject.hp/subject.max):
+  rule.condition==='Distance'?Math.round(distance):
+  rule.condition==='Move effectiveness'?effectiveness(moveCatalog[move][0],subject):'True';
+ const expected=typeof actual==='number'?parseFloat(rule.value):rule.value;
+ switch(rule.operator) {
+  case 'Not Equal':return actual!==expected;
+  case 'Less Than':return actual<expected;
+  case 'Greater Than':return actual>expected;
+  case 'At Most':return actual<=expected;
+  case 'At Least':return actual>=expected;
+  default:return actual===expected;
+ }
+}
+function gambitChoice(actor,opponents,defaultTarget) {
+ if(actor.ai?.mode!=='Advanced' || !actor.ai.gambits?.length)return null;
+ const living=opponents.filter(target=>target.hp>0 && target.friendly!==actor.friendly);
+ const redirected=living.filter(target=>targetPreference(actor,target,0)<=-1e6);
+ const enemiesOnField=redirected.length?redirected:living;
+ const teammates=activeTeammates(actor).filter(member=>member!==actor);
+ const measure=target=>{
+  const distance=Math.hypot(actor.x-target.x,actor.y-target.y);
+  return {target,distance,gap:distance-bodyRadius(actor)-bodyRadius(target)};
+ };
+ const enemyFallback=redirected.includes(defaultTarget) || !redirected.length && living.includes(defaultTarget)?
+  defaultTarget:enemiesOnField[0];
+ for(const rule of actor.ai.gambits) {
+  const ally=rule.target.startsWith('Ally ');
+  const self=rule.target==='Self';
+  const selector=rule.target.replace(/^(Enemy|Ally) /,'');
+  const pool=self?[actor]:ally?teammates:enemiesOnField;
+  const roster=(ally===actor.friendly)?allies:enemies;
+  const candidates=(/^\d$/.test(selector)?pool.filter(member=>roster[Number(selector)-1]===member):pool).map(measure);
+  candidates.sort((a,b)=>{
+   switch(selector) {
+    case 'Farthest':return b.distance-a.distance;
+    case 'Lowest HP':return a.target.hp/a.target.max-b.target.hp/b.target.max || a.distance-b.distance;
+    case 'Highest HP':return b.target.hp/b.target.max-a.target.hp/a.target.max || a.distance-b.distance;
+    default:return a.distance-b.distance;
+   }
+  });
+  for(const subject of (selector==='Any'?candidates:candidates.slice(0,1))) {
+   if(rule.move==='Do not Attack') {
+    if(gambitMatches(rule,subject.target,null,subject.distance))return {hold:true};
+    continue;
+   }
+   const target=ally || self?enemyFallback:subject.target;
+   if(!target)continue;
+   const {gap,distance}=measure(target);
+   let choice=null;
+   for(const [slot,move] of actor.moves.entries()) {
+    if(move!==rule.move && rule.move!=='Any' && !(rule.move==='Attack' && moveCatalog[move][1]>0))continue;
+    if(actor.moveTimers[slot]>0 || moveRestricted(actor,move))continue;
+    const rules=moveRules(move);
+    const {shape,selfCentered,range}=arenaMoveGeometry(move,rules);
+    if(!gambitMatches(rule,subject.target,move,subject.distance))continue;
+    if(moveCatalog[move][4] && rules.ailment && rules.scope!=='ally' &&
+       !canInflictAilment(target,rules.ailment,actor))continue;
+    if(rules.scope!=='ally' && (gap>range || !selfCentered && firstPillar(actor.x,actor.y,target.x,target.y)))continue;
+    const score=tacticalMoveScore(actor,target,move,rules,gap);
+    if(score>0 && (!choice || score>choice.score))choice={slot,move,rules,shape,range,selfCentered,remaining:0,score};
+   }
+   if(choice)return {target,distance,gap,choice};
+  }
+ }
+ return null;
+}
 function act(actor, opponents, dt) {
  actor.gait = null;
  if(actor.hp<=0) return;
@@ -5378,15 +5613,18 @@ function act(actor, opponents, dt) {
    target=opponent;gap=separation;distance=centerDistance;targetRank=rank;
   }
  }
- actor.committedTarget=target?battleActorId(target):null;
  if(!target) return;
+ const gambit=gambitChoice(actor,opponents,target);
+ if(gambit?.hold)return;
+ if(gambit)({target,distance,gap}=gambit);
+ actor.committedTarget=battleActorId(target);
  if(actor.attack>0 || pendingCasts.some(cast=>cast.actor===actor && !cast.flight &&
    (cast.shape==='dash' || cast.shape==='landing' || sacrificeProfiles.has(cast.move)))) return;
  if(distance>1) {
   actor.direction=pmdDirection(target.x-actor.x,target.y-actor.y);
   if(Math.abs(target.x-actor.x)>3) actor.facing=Math.sign(target.x-actor.x);
  }
- let choice=null;
+ let choice=gambit?.choice ?? null;
  let rangedReadyIn=Infinity;
  let attackReach=0;
  const position=actor.ai?.position ?? 'Auto';
@@ -5394,7 +5632,7 @@ function act(actor, opponents, dt) {
  const preferredGap=formation?null:battlePositions[position];
  const close=preferredGap!==null && preferredGap<=28;
  let usableAttack=false;
- for(let slot=0;slot<actor.moves.length;slot++) {
+ for(let slot=0;!gambit && slot<actor.moves.length;slot++) {
   const move=actor.moves[slot];
   if(moveRestricted(actor,move))continue;
   const rules=moveRules(move);
@@ -5469,7 +5707,7 @@ function act(actor, opponents, dt) {
  }
  const retreat=preferredGap===null && (actor.ai?.style!=='Aggressive' || actor.ai?.target==='Ranged attacks') && meleeThreat && gap<48 && rangedReadyIn>0 && rangedReadyIn<=1.2 &&
   (!choice || actor.charge>0) && distance>1;
- const route=retreat?retreatRoute(actor,target,opponents):null;
+ const route=retreat && !gambit?retreatRoute(actor,target,opponents):null;
  if(route) {
   moveActor(actor,route.dx,route.dy,48-gap,dt,true);
   return;
