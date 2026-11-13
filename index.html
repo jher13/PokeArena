@@ -2583,24 +2583,53 @@ try {
 function gymDifficulty(gym) {
  const progress=gymTeams.indexOf(gym)/(gymTeams.length-1);
  const level=12+Math.floor(84*progress);
- return {level,aceLevel:level+4,iv:20+Math.floor(11*progress),training:4*Math.floor(8+34*progress)};
+ return {level,aceLevel:level+4};
 }
-function gymProfile(name,gym) {
- const {iv,training}=gymDifficulty(gym);
- const base=dexStats[dex[name][0]-1];
- const offense=base[1]>=base[5]?1:5;
- const evs=Array(6).fill(0);
- evs[0]=evs[3]=evs[offense]=training;
- return {ivs:Array(6).fill(iv),evs,pid:0};
+function gymRole(name) {
+ const [hp,attack,defense,speed,specialDefense,specialAttack]=dexStats[dex[name][0]-1];
+ const physical=attack>=specialAttack;
+ const tank=speed<75 && hp+(defense+specialDefense)/2>=155;
+ return {physical,tank};
 }
-function gymMoves(name,gym) {
- const [,primary,secondary]=dex[name];
- const type=[primary,secondary].find(value=>gym.specialties.includes(value)) ?? gym.type;
- const choices=legalMoves(name).filter(move=>moveCatalog[move][0]===type && moveCatalog[move][1]>=45 &&
-  moveCatalog[move][1]<=105 && moveCatalog[move][2]>=85);
- const quick=choices.find(move=>moveCatalog[move][1]<=65);
- const strong=choices.find(move=>moveCatalog[move][1]>=75);
- return legalLoadout(name,[quick,strong,'Bite','Tackle']);
+function gymProfile(name) {
+ const {physical,tank}=gymRole(name);
+ const evs=[0,0,0,0,0,0];
+ evs[physical?1:5]=252;
+ evs[tank?0:3]=252;
+ evs[tank?3:0]=6;
+ const nature=tank?(physical?'Adamant':'Modest'):(physical?'Jolly':'Timid');
+ return {ivs:Array(6).fill(31),evs,pid:natureNames.indexOf(nature)};
+}
+function gymMoves(name) {
+ const {physical,tank}=gymRole(name);
+ const types=dex[name].slice(1,3).filter(Boolean);
+ const legal=legalMoves(name).filter(isVisibleArenaMove);
+ const attacks=legal.filter(move=>moveCatalog[move][1]>0 && !sacrificeProfiles.has(move));
+ const attackValue=move=>{
+  const [type,power,accuracy,priority,,,recoil]=moveCatalog[move];
+  const rules=moveRules(move);
+  return power*(accuracy ?? 100)/100*(types.includes(type)?1.45:1)*
+   ((rules.category===2)===physical?1:0.72)/(1+rules.cooldown*0.10)+priority*8-recoil*25;
+ };
+ const selected=[];
+ const best=pool=>pool.filter(move=>!selected.includes(move)).sort((a,b)=>attackValue(b)-attackValue(a))[0];
+ const add=move=>{if(move)selected.push(move);};
+ add(best(attacks));
+ const firstType=moveCatalog[selected[0]]?.[0];
+ add(best(attacks.filter(move=>moveCatalog[move][0]!==firstType && types.includes(moveCatalog[move][0]))) ??
+  best(attacks.filter(move=>moveCatalog[move][0]!==firstType)));
+ const support=(tank?['Recover','Roost','Slack Off','Synthesis','Morning Sun','Moonlight','Strength Sap','Will-O-Wisp','Thunder Wave','Protect']:
+  physical?['Dragon Dance','Swords Dance','Bulk Up','Hone Claws','Agility','Protect']:
+  ['Quiver Dance','Nasty Plot','Calm Mind','Agility','Protect']).find(move=>legal.includes(move));
+ if(selected.length>=2)add(support);
+ const usedTypes=new Set(selected.map(move=>moveCatalog[move][0]));
+ add(best(attacks.filter(move=>!usedTypes.has(moveCatalog[move][0]))));
+ return legalLoadout(name,[...selected,...attacks.sort((a,b)=>attackValue(b)-attackValue(a))]);
+}
+function gymHeldItem(name) {
+ const {physical,tank}=gymRole(name);
+ if(tank)return canEvolveIds.has(dex[name][0])?'Eviolite':'Leftovers';
+ return physical?'Muscle Band':'Wise Glasses';
 }
 function awardBadge(gym) {
  if(gymTeams[clearedGyms.length]!==gym) return false;
@@ -3681,9 +3710,9 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  const defaults=species[name];
  const pace=defaults?.[4] ?? Math.min(105,42+baseSpeed*0.36);
  const cooldown=defaults?.[5] ?? Math.max(0.75,1.36-baseSpeed*0.003);
- const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name,selectedGym) :
+ const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name) :
   selectedWild || selectedTrainer || rogueRun ? wildMoves(name) : legalLoadout(name,[defaults?.[6],secondaryMoves[name]]);
- const profile=runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name,selectedGym) : rollProfile();
+ const profile=runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name) : rollProfile();
  if(!friendly && selectedTrainer) {
   const size=selectedTrainer.roster.length;
   profile.ivs.fill(35-4*size);
@@ -3702,7 +3731,9 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  }
  const hp=stats[0];
  const speedFactor=clamp(0.65+stats[3]/200,0.65,1.7);
- return {name,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):null,heldItem:friendly && !rogueRun?wildProgress.held[name]:null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
+ return {name,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
+  !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness'}):null,
+  heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?gymHeldItem(name):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
   moveCooldowns:moves.map(skill=>moveRules(skill).cooldown),moveTimers:moves.map(()=>0),
   stages:[0,0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
