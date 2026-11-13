@@ -55,6 +55,7 @@ function initializeOnline(match) {
  battleWeather=battleTerrain=null;
  effects=[];pendingCasts=[];onlineSounds=[];onlineRecalls={};
  onlineRandomState=Number.parseInt(match.id.slice(0,8),16)>>>0;
+ arenaMap=randomArenaMap();
 }
 const actorReferences=['ailmentSource','lastDamageBy'];
 function saveOnlineState() {
@@ -66,11 +67,12 @@ function saveOnlineState() {
     incoming:slot.transition.incoming.onlineId}:null}))),
   casts:pendingCasts.map(cast=>({...cast,actor:cast.actor.onlineId})),effects,
   clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime,
-  damageBuckets,recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
+  arenaMap,damageBuckets,recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
  };
 }
 function loadOnlineState(state) {
  ({allies,enemies,effects,clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime}=state);
+ arenaMap=state.arenaMap ?? null;
  damageBuckets=state.damageBuckets ?? [];
  onlineRecalls=state.recalls;
  onlineSounds=state.sounds ?? [];
@@ -123,12 +125,10 @@ function onlineFrame(dt) {
  const a=allies.some(actor=>actor.hp>0);
  const b=enemies.some(actor=>actor.hp>0);
  if(!a || !b)return a?'host':b?'guest':'draw';
- if(clock>900) {
-  const waiting=sides.map(side=>!side.length);
-  if(waiting[0]!==waiting[1])return waiting[0]?'guest':'host';
-  return 'draw';
+ if(clock>=battleTimeLimit-1e-8) {
+  const result=compareTeamHP(allies,enemies);
+  return result>0?'host':result<0?'guest':'draw';
  }
- if(clock-lastDamageClock>60)return 'draw';
  return null;
 }
 export function simulateOnline(match,state,steps,command,side) {
@@ -145,10 +145,10 @@ export function onlineView(state,side) {
  const visible=[...state.allies,...state.enemies].filter(allowed).map(actor=>{
   const {name,side,onlineId,hp,max,level,ability,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime}=actor;
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment}=actor;
   return {name,side,onlineId,hp,max,level,ability,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime};
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment};
  });
  const ids=new Set(visible.map(actor=>actor.onlineId));
  const fields=state.fields.map(slots=>slots.map(slot=>{
@@ -156,7 +156,7 @@ export function onlineView(state,side) {
   if(!transition || ids.has(transition.incoming))return slot;
   return {...slot,transition:{...transition,incoming:null}};
  }));
- return {actors:visible,fields,damageBuckets:state.damageBuckets ?? [],casts:state.casts,effects:state.effects,
+ return {actors:visible,fields,arenaMap:state.arenaMap ?? null,damageBuckets:state.damageBuckets ?? [],casts:state.casts,effects:state.effects,
   weather:state.battleWeather,weatherTime:state.weatherTime,terrain:state.battleTerrain,clock:state.clock,
   recall:Math.max(0,(state.recalls[side] ?? 0)-state.clock),sounds:state.sounds};
 }

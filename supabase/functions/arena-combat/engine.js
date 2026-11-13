@@ -1916,8 +1916,8 @@ function applyDefeatRewards() {
  }
  return '';
 }
-function finishWildBattle() {
- const enemy=activeEnemy;
+function finishWildBattle(timedOut=false) {
+ const enemy=activeEnemy ?? enemies[0];
  const gained=wildVictoryExperience(enemy.level);
  wildProgress.wins++;
  const rewards=[];
@@ -1940,7 +1940,7 @@ function finishWildBattle() {
  const growth=awards.flatMap(award=>gainWildExperience(award.name,award.xp));
  growth.push(...evolveStoneHolders());
  wildResult={name:enemy.name,level:enemy.level,duration:clock,region:selectedWild.region,tier:selectedWild.tier,
-  message:[finisher.name+' earned '+gained+' XP.',rewardMessage,...allies.flatMap(actor=>actor.evRewards ?? []),...growth].filter(Boolean).join(' '),awards,resolved:false};
+  message:[finisher.name+' earned '+gained+' XP.',rewardMessage,...allies.flatMap(actor=>actor.evRewards ?? []),...growth].filter(Boolean).join(' '),awards,timedOut,resolved:timedOut};
  captureMenu=false;
  difficultyMenu=false;
  saveWildProgress();
@@ -2033,7 +2033,7 @@ function renderWildResult() {
  const {name,level,message,region,tier,resolved,capture:animation}=wildResult;
  const label=element('p',animation?.pending ? 'Attempting capture with '+ballTypes[animation.index].name+'…' : message);
  label.setAttribute('role','status');
- panel.replaceChildren(element('h2','Wild Pokémon defeated'),captureArtwork(name,animation),
+ panel.replaceChildren(element('h2',wildResult.timedOut?'Won on remaining HP':'Wild Pokémon defeated'),captureArtwork(name,animation),
   pokemonNameplate(name,' · Lv. '+level+(isLegendaryEncounter(name)?' · Legendary or Mythical':''),'h3'),
   element('p',region+' · Difficulty '+tier),label);
  if(animation?.pending) return;
@@ -3225,47 +3225,116 @@ const arenaBiomes=[
 let arenaMap=null;
 function randomArenaMap() {
  const biome=arenaBiomes[Math.floor(onlineRandom()*arenaBiomes.length)];
- return {...biome,
-  zones:[{x:320+onlineRandom()*45,y:100,r:83},{x:595+onlineRandom()*45,y:380,r:83}],
-  rocks:[{x:450+onlineRandom()*60,y:115+onlineRandom()*40,r:28+onlineRandom()*10},
-   {x:430+onlineRandom()*85,y:305+onlineRandom()*55,r:29+onlineRandom()*12},
-   ...(onlineRandom()<0.5?[{x:455+onlineRandom()*50,y:232,r:24}]:[])]};
+ const zones=Array.from({length:3},(_,i)=>({
+  x:155+i*325+onlineRandom()*125,y:95+onlineRandom()*290,
+  shape:['ellipse','rectangle','diamond'][Math.floor(onlineRandom()*3)],
+  w:55+onlineRandom()*35,h:40+onlineRandom()*40,
+ }));
+ const rocks=[115,240,355].map(y=>({
+  x:360+onlineRandom()*240,y:y+onlineRandom()*30-15,r:24+onlineRandom()*10,hp:24,maxHp:24,
+ }));
+ return {...biome,zones,rocks};
 }
 function arenaBonus(actor,type) {
- return arenaMap?.type===type && arenaMap.zones.some(zone=>Math.hypot(actor.x-zone.x,actor.y-zone.y)<zone.r);
+ return arenaMap?.type===type && arenaMap.zones.some(zone=>{
+  const x=Math.abs(actor.x-zone.x)/(zone.w ?? zone.r);
+  const y=Math.abs(actor.y-zone.y)/(zone.h ?? zone.r);
+  return zone.shape==='rectangle'?Math.max(x,y)<=1:zone.shape==='diamond'?x+y<=1:x*x+y*y<=1;
+ });
 }
-function rockIntersection(x,y,tx,ty,padding=0) {
+function firstPillar(x,y,tx,ty,padding=0) {
  const dx=tx-x,dy=ty-y,length=dx*dx+dy*dy;
- if(!length)return 1;
- let hit=1;
+ if(!length)return null;
+ let hit=1,obstacle=null;
  for(const rock of arenaMap?.rocks ?? []) {
+  if(rock.hp<=0)continue;
   const ox=x-rock.x,oy=y-rock.y,r=rock.r+padding;
   const b=ox*dx+oy*dy,c=ox*ox+oy*oy-r*r;
   if(c<=0 && b>=0)continue;
   const d=b*b-length*c;
   if(d<0)continue;
   const t=(-b-Math.sqrt(d))/length;
-  if(t>=0 && t<hit)hit=t;
-  else if(c<0)hit=0;
+  const entry=c<0?0:t;
+  if(entry>=0 && entry<hit){hit=entry;obstacle=rock;}
  }
- return hit;
+ return obstacle?{rock:obstacle,t:hit}:null;
+}
+function rockIntersection(x,y,tx,ty,padding=0) {
+ return firstPillar(x,y,tx,ty,padding)?.t ?? 1;
+}
+function pillarPath(rock,actor) {
+ const angle=Math.atan2(rock.y-actor.y,rock.x-actor.x);
+ return {x:rock.x,y:rock.y,dx:Math.cos(angle),dy:Math.sin(angle),length:145,radius:rock.r};
+}
+function damagePillar(rock,actor,power) {
+ if(!rock || !(rock.hp>0))return;
+ rock.hp=Math.max(0,rock.hp-Math.max(1,Math.round(power/12)));
+ if(!rock.hp)rock.fall={...pillarPath(rock,actor),elapsed:0,source:actor.onlineId ?? null,
+  sourceSide:actor.friendly,sourceSlot:(actor.friendly?allies:enemies).indexOf(actor),resolved:false};
+}
+function tickPillars(dt) {
+ for(const rock of arenaMap?.rocks ?? []) {
+  const fall=rock.fall;
+  if(!fall)continue;
+  fall.elapsed+=dt;
+  if(fall.resolved || fall.elapsed<0.65)continue;
+  fall.resolved=true;
+  const source=(fall.sourceSide?allies:enemies)[fall.sourceSlot];
+  for(const victim of fieldActors()) {
+   if(!victim || victim.hp<=0 || !inSkill(victim,null,0,fall))continue;
+   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12)));
+   victim.hp-=dealt;
+   recordOpponentDamage(source,victim,dealt);
+  }
+ }
+}
+function bodyRadius(actor) {
+ const box=hitbox(actor);
+ return clamp(Math.max(box.x,box.y),8,34);
+}
+function movementClearance(actor,x,y,tx,ty) {
+ const radius=bodyRadius(actor);
+ let clear=rockIntersection(x,y,tx,ty,radius);
+ const dx=tx-x,dy=ty-y,length=dx*dx+dy*dy;
+ if(!length)return clear;
+ for(const other of combatSides().flat()) {
+  if(other===actor)continue;
+  const ox=x-other.x,oy=y-other.y;
+  const size=radius+bodyRadius(other);
+  const b=ox*dx+oy*dy,c=ox*ox+oy*oy-size*size;
+  if(b>=0)continue;
+  const discriminant=b*b-length*c;
+  if(discriminant>=0)clear=Math.min(clear,Math.max(0,(-b-Math.sqrt(discriminant))/length));
+ }
+ return clear;
+}
+function moveToClearPoint(actor,x,y) {
+ x=clamp(x,28,canvas.width-28);y=clamp(y,28,canvas.height-28);
+ const clear=movementClearance(actor,actor.x,actor.y,x,y);
+ const fraction=clear<1?Math.max(0,clear-0.001):1;
+ actor.x+=(x-actor.x)*fraction;
+ actor.y+=(y-actor.y)*fraction;
 }
 function terrainMovement(actor,dx,dy,step) {
- if(!arenaMap || step<=0)return {dx,dy,step};
+ if(step<=0)return {dx,dy,step};
  const angle=Math.atan2(dy,dx);
- const padding=Math.min(14,hitbox(actor).x);
- const probe=36;
- const routes=[0,1,-1,2,-2,3,-3,4].map(turn=>{
-  const heading=angle+turn*Math.PI/4;
-  const vx=Math.cos(heading),vy=Math.sin(heading);
-  const x=actor.x+vx*probe,y=actor.y+vy*probe;
-  const clear=rockIntersection(actor.x,actor.y,x,y,padding);
-  const score=clear*3+Math.cos(turn*Math.PI/4);
-  return {dx:vx,dy:vy,score};
- }).sort((a,b)=>b.score-a.score);
- const route=routes[0];
- const clear=rockIntersection(actor.x,actor.y,actor.x+route.dx*step,actor.y+route.dy*step,padding);
- return {...route,step:Math.max(0,step*clear-(clear<1?0.1:0))};
+ const probe=56;
+ let best=null;
+ for(const turn of [0,1,-1,2,-2,3,-3]) {
+  const heading=angle+turn*Math.PI/6;
+  const x=clamp(actor.x+Math.cos(heading)*probe,28,canvas.width-28);
+  const y=clamp(actor.y+Math.sin(heading)*probe,28,canvas.height-28);
+  const distance=Math.hypot(x-actor.x,y-actor.y);
+  if(distance<0.01)continue;
+  const clear=movementClearance(actor,actor.x,actor.y,x,y);
+  const score=clear*distance+Math.cos(turn*Math.PI/6)*22+
+   (turn && Math.sign(turn)===actor.detourSide?5:0);
+  if(!best || score>best.score)best={dx:(x-actor.x)/distance,dy:(y-actor.y)/distance,
+   step:Math.max(0,Math.min(step,clear*distance-0.05)),score,turn};
+ }
+ if(!best)return {dx,dy,step:0};
+ actor.detourSide=Math.sign(best.turn);
+ return best;
 }
 function prepare() {
  arenaMap=randomArenaMap();
@@ -3773,7 +3842,7 @@ function tryDashDodge(actor,hazard,angle) {
   const heading=angle+turn*Math.PI/4;
   return {x:clamp(actor.x+Math.cos(heading)*90,28,canvas.width-28),
    y:clamp(actor.y+Math.sin(heading)*90,28,canvas.height-28)};
- }).find(point=>rockIntersection(actor.x,actor.y,point.x,point.y,12)===1 && threats.every(area=>!inSkill({...actor,...point},area.center,area.radius,area.line)));
+ }).find(point=>movementClearance(actor,actor.x,actor.y,point.x,point.y)===1 && threats.every(area=>!inSkill({...actor,...point},area.center,area.radius,area.line)));
  if(!endpoint)return false;
  attempts.push(id);
  if(onlineRandom()>=0.25)return false;
@@ -3858,7 +3927,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
   const dx = opponent.x-actor.x;
   const dy = opponent.y-actor.y;
   const centerDistance = Math.hypot(dx,dy);
-  const separation = centerDistance-hitboxRadius(actor,dx,dy)-hitboxRadius(opponent,dx,dy);
+  const separation = centerDistance-bodyRadius(actor)-bodyRadius(opponent);
   const rank=targetPreference(actor,opponent,separation);
   if(rank<targetRank || (rank===targetRank && separation<gap)) {
    target=opponent;gap=separation;distance=centerDistance;targetRank=rank;
@@ -3939,7 +4008,10 @@ function act(actor, opponents, dt, teammates=[actor]) {
   return;
  }
  if(!choice || actor.charge>0 || remaining>0.01) return;
- if(choice.rules.scope!=='ally' && rockIntersection(actor.x,actor.y,target.x,target.y)<1 && distance>1) {
+ const cover=choice.rules.scope!=='ally' && firstPillar(actor.x,actor.y,target.x,target.y);
+ const strikeCover=cover && !moveCatalog[choice.move][4] && !sacrificeProfiles.has(choice.move) &&
+  (cover.rock.hp<=8 || inSkill(target,null,0,pillarPath(cover.rock,actor)));
+ if(cover && !strikeCover && distance>1) {
   const dx=(target.x-actor.x)/distance,dy=(target.y-actor.y)/distance;
   moveActor(actor,dx,dy,Math.max(24,distance),dt,true);
   return;
@@ -4056,6 +4128,16 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
  const radius=cast?.radius ?? rules.radius;
  if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth});
  else if(radius && !cast?.flight) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
+ const pillars=new Set();
+ if(!status) {
+  for(const victim of opponents) {
+   const obstruction=firstPillar(actor.x,actor.y,victim.x,victim.y);
+   if(!obstruction)continue;
+   const rock=obstruction.rock;
+   if(!cast || (line?inSkill({...actor,x:rock.x,y:rock.y},center,radius,{...line,length:line.length+rock.r}):
+    Math.hypot(rock.x-center.x,rock.y-center.y)<=radius+rock.r))pillars.add(rock);
+  }
+ }
  const victims=cast?.flight ? opponents : line || radius ?
   opponents.filter(other=>other.hp>0 && inSkill(other,center,radius,line)) : opponents;
  for(const victim of victims) {
@@ -4144,6 +4226,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
   effect(victim,damage,multiplier,{impactOnly:Boolean(cast)});
   if(actor.hp<=0) break;
  }
+ for(const rock of pillars)damagePillar(rock,actor,power);
  if(sacrifice)actor.hp=0;
 }
 function tickSkillCasts(dt) {
@@ -4172,7 +4255,7 @@ function tickSkillCasts(dt) {
     if(distance>0) {
      const step=Math.min(distance,18*Math.min(dt,area.remaining));
      const x=opponent.x+dx*step/distance,y=opponent.y+dy*step/distance;
-     if(rockIntersection(opponent.x,opponent.y,x,y,12)===1){opponent.x=x;opponent.y=y;}
+     moveToClearPoint(opponent,x,y);
     }
    }
   }
@@ -4182,8 +4265,7 @@ function tickSkillCasts(dt) {
    const {line,actor}=area;
    const distance=line.length*progress;
    const step=Math.hypot(line.x+line.dx*distance-actor.x,line.y+line.dy*distance-actor.y);
-   actor.x=line.x+line.dx*distance;
-   actor.y=line.y+line.dy*distance;
+   moveToClearPoint(actor,line.x+line.dx*distance,line.y+line.dy*distance);
    actor.gait='run';
    actor.direction=pmdDirection(line.dx,line.dy);
    actor.motionTicks+=step*1.48;
@@ -4198,8 +4280,7 @@ function tickSkillCasts(dt) {
   resolveOffensiveMove(area.actor,area.move,area.rules,area.center,opponents,area);
   if(area.actor.hp>0 && (area.shape==='dash' || area.shape==='landing')) {
    const endpoint=area.line?.end ?? area.center;
-   area.actor.x=endpoint.x;
-   area.actor.y=endpoint.y;
+   moveToClearPoint(area.actor,endpoint.x,endpoint.y);
   }
   return false;
  });
@@ -4239,6 +4320,7 @@ function cooldownElapsed(actor,dt) {
 }
 function advanceCombat(dt,realDt,sides) {
  clock+=dt;
+ tickPillars(dt);
  weatherTime=Math.max(0,weatherTime-dt);
  if(!weatherTime) battleWeather=null;
  terrainTime=Math.max(0,terrainTime-dt);
@@ -4310,6 +4392,11 @@ function considerGymSwitch() {
  enemySwitch=startSwitch(activeEnemy,reserve);
  nextGymSwitchCheck=clock+10;
 }
+const battleTimeLimit=300;
+function compareTeamHP(first,second) {
+ const total=(team,key)=>team.reduce((sum,actor)=>sum+Math.max(0,actor[key]),0);
+ return Math.sign(total(first,'hp')*total(second,'max')-total(second,'hp')*total(first,'max'));
+}
 function advance(dt,realDt=dt) {
  refreshBerriesAfterKnockout();
  sendNextTrainerReserve();
@@ -4323,33 +4410,30 @@ function advance(dt,realDt=dt) {
  refreshBerriesAfterKnockout();
  const playerReserve=allies.find(actor=>actor.hp>0);
  const enemyReserve=enemies.find(actor=>actor.hp>0);
- if(playerReserve && enemyReserve && !awaitingPlayerReserve() && clock-lastDamageClock>60) {
-  if(rogueRun) {finishRogueRound(false);return;}
-  phase='draw';
-  renderControls();
-  return;
- }
- if(!playerReserve || !enemyReserve) {
-  phase=!playerReserve && !enemyReserve?'draw':playerReserve?'win':'loss';
+ const timedOut=clock>=battleTimeLimit-1e-8 && playerReserve && enemyReserve;
+ if(!playerReserve || !enemyReserve || timedOut) {
+  const result=timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
+  phase=result>0?'win':result<0?'loss':'draw';
   if(rogueRun) {finishRogueRound(phase==='win');return;}
   if(phase==='loss') {
    const detail=applyDefeatRewards();
    openMenu();
    const notice=byId('knockout-notice');
-   notice.textContent=['All your pokemons have been knocked out!',detail].filter(Boolean).join(' ');
+   notice.textContent=[timedOut?'Time expired. Your opponent had more team HP remaining.':'All your pokemons have been knocked out!',detail].filter(Boolean).join(' ');
    void notice.offsetWidth;
    notice.hidden=false;
    playEvolutionScenes();
    return;
   }
   if(phase==='win' && selectedGym) newBadge=awardBadge(selectedGym);
-  if(phase==='win' && selectedWild) {finishWildBattle();return;}
+  if(phase==='win' && selectedWild) {finishWildBattle(Boolean(timedOut));return;}
   if(phase==='win' && selectedTrainer) {
    wildProgress.coins+=selectedTrainer.coins;
    saveWildProgress();
   }
   const stones=phase==='win' && (selectedGym || selectedTrainer)?evolveStoneHolders():[];
   renderControls();
+  if(timedOut)byId('status').textContent=phase==='draw'?'Time expired. Team HP percentages are tied.':'Time expired. You won on remaining team HP. '+byId('status').textContent;
   if(stones.length) {
    cancelWildRepeat();
    byId('status').textContent+=' '+stones.join(' ');
@@ -4654,12 +4738,21 @@ function renderBattleDps(time,buckets,mirror=false) {
   panel.rows.scrollTop=offset;
  }
 }
+let onlineMatchDuration=0;
 function paintArenaWeather() {
+ const elapsed=phase==='online-battle'?onlineMatchDuration:phase==='setup'?0:clock ?? 0;
+ const seconds=Math.min(battleTimeLimit,Math.floor(elapsed+1e-8));
+ const duration='Match Duration: '+Math.floor(seconds/3600)+'h, '+Math.floor(seconds%3600/60)+'m, '+seconds%60+'s';
+ const timer=byId('arena-duration');
+ if(timer.textContent!==duration)timer.textContent=duration;
  const weather=battleWeather;
  const effective=abilityWeather();
  const conditions=byId('arena-conditions');
  const label=(arenaMap?arenaMap.name+' · '+arenaMap.type+' zones: +20% move damage and matching Pokémon speed':'')+
-  (weather?' · '+weather+' '+Math.ceil(weatherTime)+'s'+(effective?'':' (suppressed)'):'');
+  '';
+ const weatherLabel=weather?weather+': '+Math.ceil(weatherTime)+'s'+(effective?'':' (suppressed)'):'';
+ const display=byId('arena-weather');
+ if(display.textContent!==weatherLabel)display.textContent=weatherLabel;
  if(conditions.textContent!==label)conditions.textContent=label;
  if(!effective)return;
  const rain=effective==='Rain';
@@ -4684,7 +4777,14 @@ function paint() {
   ctx.fillRect(x,y,40,40);
  }
  for(const zone of arenaMap?.zones ?? []) {
-  ctx.fillStyle=arenaMap.zone;ctx.beginPath();ctx.arc(zone.x,zone.y,zone.r,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle=arenaMap.zone;ctx.beginPath();
+  const w=zone.w ?? zone.r,h=zone.h ?? zone.r;
+  if(zone.shape==='rectangle')ctx.rect(zone.x-w,zone.y-h,w*2,h*2);
+  else if(zone.shape==='diamond'){
+   ctx.moveTo(zone.x,zone.y-h);ctx.lineTo(zone.x+w,zone.y);ctx.lineTo(zone.x,zone.y+h);
+   ctx.lineTo(zone.x-w,zone.y);ctx.closePath();
+  } else ctx.ellipse(zone.x,zone.y,w,h,0,0,2*Math.PI);
+  ctx.fill();
  }
  ctx.strokeStyle = '#577967';
  ctx.lineWidth = 2;
@@ -4703,9 +4803,17 @@ function paint() {
  if(phase==='battle' || phase==='online-battle') for(const area of pendingCasts) drawSkillWarning(area);
  for(const effect of effects) drawMove(effect);
  for(const rock of arenaMap?.rocks ?? []) {
+  if(rock.fall) {
+   const f=rock.fall;
+   ctx.save();ctx.translate(f.x,f.y);ctx.rotate(Math.atan2(f.dy,f.dx));
+   ctx.fillStyle=f.resolved?'#51515a':'#f3916366';
+   ctx.fillRect(0,-f.radius,f.length,f.radius*2);
+   ctx.restore();continue;
+  }
   ctx.fillStyle='#20232a';ctx.beginPath();ctx.arc(rock.x+4,rock.y+6,rock.r,0,2*Math.PI);ctx.fill();
   ctx.fillStyle='#687385';ctx.strokeStyle='#303744';ctx.lineWidth=3;
   ctx.beginPath();ctx.arc(rock.x,rock.y,rock.r,0,2*Math.PI);ctx.fill();ctx.stroke();
+  if(rock.maxHp){ctx.fillStyle='#b9d2e9';ctx.fillRect(rock.x-rock.r,rock.y-rock.r-7,2*rock.r*rock.hp/rock.maxHp,3);}
  }
  paintArenaWeather();
  for(const actor of visible.sort((a,b)=>a.y-b.y)) drawUnit(actor);
@@ -5413,12 +5521,10 @@ function onlineFrame(dt) {
  const a=allies.some(actor=>actor.hp>0);
  const b=enemies.some(actor=>actor.hp>0);
  if(!a || !b)return a?'host':b?'guest':'draw';
- if(clock>900) {
-  const waiting=sides.map(side=>!side.length);
-  if(waiting[0]!==waiting[1])return waiting[0]?'guest':'host';
-  return 'draw';
+ if(clock>=battleTimeLimit-1e-8) {
+  const result=compareTeamHP(allies,enemies);
+  return result>0?'host':result<0?'guest':'draw';
  }
- if(clock-lastDamageClock>60)return 'draw';
  return null;
 }
 export function simulateOnline(match,state,steps,command,side) {
