@@ -184,7 +184,24 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 @keyframes evolution-new{0%,37%,64%{opacity:0}25%,50%,76%{opacity:1;filter:brightness(0) invert(1)}100%{opacity:1;filter:none}}
 @media(prefers-reduced-motion:reduce){.evolution-old{display:none}.evolution-new{animation:none}}
 .battle-ai-settings label{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:.35rem 0}.battle-ai-settings select{max-width:55%;min-width:0}
-#battle-dps{margin-top:.5rem;padding:.4rem .6rem;background:#17243a;border-radius:8px}#battle-dps-chart{display:block;width:100%;max-height:115px}#battle-dps-values{margin:.25rem 0;font-size:.85rem}
+#battle-dps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:5px}
+.damage-team{min-width:0;background:#17243a;border:1px solid #52678a;border-radius:8px;padding:5px}
+.damage-team h3{font-size:12px;margin:0 0 4px}
+.damage-tabs{display:flex;gap:3px}
+.damage-tabs button{flex:1;padding:4px 3px;font-size:11px}
+.damage-tabs button[aria-pressed=true]{outline:1px solid #ffd577}
+.damage-rows{max-height:clamp(34px,12dvh,105px);overflow:auto}
+.damage-bar-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 5px;padding:3px 0;font-size:11px;overflow-wrap:anywhere}
+.damage-track{grid-column:1/-1;height:5px;background:#0c1628;border-radius:4px;overflow:hidden}
+.damage-fill{display:block;height:100%;border-radius:4px}
+@media(max-width:560px){.damage-bar-row{grid-template-columns:1fr}}
+@media(min-width:760px) and (orientation:landscape){
+ #battle #arena,#battle-dps{max-width:max(220px,calc((100dvh - 255px)*2))}
+ #battle-dps{grid-column:3;grid-row:2;justify-self:center;width:100%;margin:0}
+}
+@media(max-width:759px), (orientation:portrait){
+ #battle #arena{max-height:45dvh;width:auto;max-width:100%;justify-self:center}
+}
 </style>
 <main><header id="arena-header"><h1>Pokemon Arena</h1><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -386,15 +403,11 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 </div>
 </section>
 <div id="battle" hidden><p id="status" role="status"></p><div class="battle-board"><div id="legendary-intro" role="status" aria-live="polite" hidden><strong>Legendary Encounter!</strong></div><div class="arena-stage"><div id="player-roster" class="arena-roster"></div><canvas id="arena" width="960" height="480" aria-label="Battle arena. Choose your lead Pokémon from the team roster."></canvas><div id="enemy-roster" class="arena-roster"></div></div>
+<section id="battle-dps" aria-label="Live battle damage"></section>
 <section class="active-hud" aria-label="Active Pokémon and move cooldowns">
 <div id="player-active" class="active-panel" data-side="player"></div>
 <div id="enemy-active" class="active-panel" data-side="enemy"></div>
-</section>
-<details id="battle-dps" open><summary>Live DPS · full match</summary>
-<div id="battle-dps-tabs" aria-label="Damage view"><button type="button" aria-pressed="true">Damage Dealt</button> <button type="button" aria-pressed="false">Damage Taken</button></div>
-<p id="battle-dps-values"></p>
-<canvas id="battle-dps-chart" width="600" height="115" aria-label="Average damage per second since the start of the match"></canvas>
-</details></div>
+</section></div>
 
 <section id="choices" class="choices" aria-label="Team and upgrades"></section>
 <div class="toolbar"><div><button id="start">Start battle</button> <button id="battle-sfx" aria-pressed="true">SFX: On</button> <button id="battle-music" aria-pressed="true">Music: On</button> <button id="speed" aria-pressed="false">1× speed</button> <button id="battle-auto-start" aria-pressed="false" hidden>Auto Start: Off</button> <button id="battle-auto-capture" aria-pressed="false" hidden>Auto capture: Off</button> <button id="battle-auto-repeat" aria-pressed="false" hidden>Auto repeat: Off</button> <button id="auto-reserve" aria-pressed="false" hidden>Auto send-out: Off</button></div><button id="next-gym" class="campaign-next" hidden>Next gym</button><button id="reset">Main menu</button></div></div></main>
@@ -1188,6 +1201,8 @@ function battleAIControls(name) {
  const styles=['Balanced','Aggressive','Defensive'];
  setting('Targeting',battleTargeting,battleTargeting.indexOf(ai.target),i=>{ai.target=battleTargeting[i];});
  setting('Style',styles,styles.indexOf(ai.style),i=>{ai.style=styles[i];});
+ const positions=Object.keys(battlePositions);
+ setting('Preferred position',positions,positions.indexOf(ai.position),i=>{ai.position=positions[i];});
  movesFor(name).forEach((move,i)=>setting(move,['Low','Normal','High'],ai.priorities[i],value=>{ai.priorities[i]=value;}));
  return section;
 }
@@ -1452,6 +1467,7 @@ function skillItem(move) {
 }
 const progressKey='pokemon-arena-wild-progress';
 const capsulePrice=5000;
+const battlePositions={Auto:null,Melee:14,'Mid-Range':75,Ranged:140,Frontline:28,Backline:180};
 const battleTargeting=['Nearest','Type weakness','Frontline','Backline','Farthest','Lowest HP','Highest HP','Ranged attacks'];
 const trainingItems=Object.fromEntries([
  ...['HP Up','Protein','Iron','Carbos','Zinc','Calcium'].map((name,stat)=>
@@ -1515,6 +1531,7 @@ function normalizeBattleAI(ai) {
  return {
   target:battleTargeting.includes(ai?.target)?ai.target:'Nearest',
   style:['Balanced','Aggressive','Defensive'].includes(ai?.style)?ai.style:'Balanced',
+  position:Object.hasOwn(battlePositions,ai?.position)?ai.position:'Auto',
   priorities:Array.from({length:4},(_,i)=>[0,1,2].includes(ai?.priorities?.[i])?ai.priorities[i]:1),
  };
 }
@@ -3715,11 +3732,18 @@ function recordOpponentDamage(source,victim,amount) {
  const second=Math.floor(clock);
  let bucket=damageBuckets.at(-1);
  if(bucket?.second!==second) {
-  bucket={second,damage:[0,0]};
+  bucket={second,dealt:{},taken:{}};
   damageBuckets.push(bucket);
  }
- bucket.damage[source.friendly?0:1]+=amount;
+ for(const [kind,actor] of [['dealt',source],['taken',victim]]) {
+  const slot=(actor.friendly?allies:enemies)?.indexOf(actor) ?? -1;
+  const id=actor.onlineId ?? (actor.friendly?'ally:':'enemy:')+slot;
+  const entries=bucket[kind] ??= {};
+  const entry=entries[id] ??= {name:actor.name,friendly:actor.friendly,damage:0};
+  entry.damage+=amount;
+ }
  lastDamageClock=clock;
+ lastDpsRender=-1;
  source.damagedOpponent=true;
  victim.lastDamageBy=source;
 }
@@ -4016,6 +4040,9 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  let choice=null;
  let rangedReadyIn=Infinity;
+ let attackReach=0;
+ const preferredGap=battlePositions[actor.ai?.position ?? 'Auto'];
+ const close=preferredGap!==null && preferredGap<=28;
  let usableAttack=false;
  for(let slot=0;slot<actor.moves.length;slot++) {
   const move=actor.moves[slot];
@@ -4025,7 +4052,10 @@ function act(actor, opponents, dt, teammates=[actor]) {
   const range=shape==='dash'?90:shape==='arc'?26:selfCentered?rules.radius:rules.range;
   const remaining=rules.scope==='ally' ? 0 : Math.max(0,gap-range);
   const score=tacticalMoveScore(actor,target,move,rules,gap);
-  if(score>0 && !moveCatalog[move][4]) usableAttack=true;
+  if(score>0 && !moveCatalog[move][4]) {
+   usableAttack=true;
+   attackReach=Math.max(attackReach,range);
+  }
   const timer=Math.max(actor.charge,actor.moveTimers[slot]);
   if(score>0 && !moveCatalog[move][4] && range>=90) rangedReadyIn=Math.min(rangedReadyIn,timer);
   if(actor.moveTimers[slot]>0 || score<=0) continue;
@@ -4034,7 +4064,9 @@ function act(actor, opponents, dt, teammates=[actor]) {
    style==='Defensive'?(rules.scope==='ally'?1.5:range>=90?1.25:0.85):1;
   const preference=actor.ai?.priorities[slot] ?? 1;
   const rangedBias=actor.ai?.target==='Ranged attacks' && range>=90 && rules.scope!=='ally'?1.65:1;
-  const value=score*bias*rangedBias*[0.4,1,2.5][preference]/(1+remaining/48);
+  const positionBias=preferredGap===null || rules.scope==='ally'?1:
+   close?(range<=30?1.35:1):1/(1+Math.max(0,preferredGap-range)/100);
+  const value=score*bias*rangedBias*positionBias*[0.4,1,2.5][preference]/(1+remaining/48);
   if(!choice || value>choice.value) choice={slot,move,rules,shape,range,selfCentered,remaining,value};
  }
  if(!choice && !usableAttack) {
@@ -4044,7 +4076,25 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  const meleeThreat=target.moves.some(move=>moveRules(move).range===16) &&
   !target.moves.some(move=>!moveCatalog[move][4] && moveRules(move).range>=90);
- const retreat=(actor.ai?.style!=='Aggressive' || actor.ai?.target==='Ranged attacks') && meleeThreat && gap<48 && rangedReadyIn>0 && rangedReadyIn<=1.2 &&
+ if(preferredGap!==null && attackReach>0 && distance>1 && choice?.rules.scope!=='ally') {
+  const goal=Math.min(preferredGap,Math.max(0,attackReach-5));
+  const ready=choice && choice.remaining===0 && actor.charge<=0;
+  const dx=(target.x-actor.x)/distance;
+  const dy=(target.y-actor.y)/distance;
+  if(gap>goal+10 && (close || !ready)) {
+   moveActor(actor,dx,dy,gap-goal,dt,gap-goal>100);
+   return;
+  }
+  if(!close && !ready && gap<goal-12) {
+   const x=clamp(actor.x-dx*12,28,canvas.width-28);
+   const y=clamp(actor.y-dy*12,28,canvas.height-28);
+   if(Math.hypot(x-target.x,y-target.y)>distance+1) {
+    moveActor(actor,-dx,-dy,goal-gap,dt,true);
+    return;
+   }
+  }
+ }
+ const retreat=preferredGap===null && (actor.ai?.style!=='Aggressive' || actor.ai?.target==='Ranged attacks') && meleeThreat && gap<48 && rangedReadyIn>0 && rangedReadyIn<=1.2 &&
   (!choice || actor.charge>0) && distance>1;
  const remaining=retreat ? 48-gap : choice?.remaining ?? 0;
  if(remaining>0.01 && distance>1) {
@@ -4640,60 +4690,72 @@ function drawUnit(actor) {
 
 
 }
-let showDamageTaken=false;
 let dpsSnapshot;
-for(const [index,button] of Array.from(byId('battle-dps-tabs').children ?? []).entries()) {
- button.onclick=()=>{
-  showDamageTaken=index===1;
-  for(const tab of byId('battle-dps-tabs').children)tab.setAttribute('aria-pressed',String(tab===button));
-  lastDpsRender=-1;
-  if(dpsSnapshot)renderBattleDps(...dpsSnapshot);
- };
-}
-function battleDamageHistory(time,buckets,reverse) {
- const totals=[0,0],points=[];
- let index=0;
- const samples=Math.max(1,Math.min(120,Math.ceil(time)));
- for(let sample=0;sample<=samples;sample++){
-  const elapsed=time*sample/samples;
-  while(index<buckets.length && buckets[index].second<=Math.floor(elapsed) && sample>0) {
-   const {damage}=buckets[index++];
-   totals[0]+=damage[reverse?1:0];
-   totals[1]+=damage[reverse?0:1];
-  }
-  points.push(totals.map(total=>total/Math.max(1,elapsed)));
+const damageBarColors=['#ffd577','#83d9ff','#b8ec92','#ffa6da','#f3ab76','#d3a6ff',
+ '#69e7cc','#ff8c85','#aab7ff','#e1ed85','#e2e8f0','#79a7ff'];
+const damagePanels=['Your team','Opponent'].map(title=>{
+ const panel=element('div',null,'damage-team');
+ const tabs=element('div',null,'damage-tabs');
+ const rows=element('div',null,'damage-rows');
+ const view={tabs,rows,mode:'dealt'};
+ for(const [mode,label] of [['dealt','Damage Dealt'],['taken','Damage Taken']]) {
+  const button=element('button',label);
+  button.type='button';
+  button.dataset.mode=mode;
+  button.onclick=()=>{
+   view.mode=mode;
+   rows.scrollTop=0;
+   lastDpsRender=-1;
+   if(dpsSnapshot) renderBattleDps(...dpsSnapshot);
+  };
+  tabs.append(button);
  }
- return {points,totals};
+ panel.append(element('h3',title),tabs,rows);
+ byId('battle-dps').append(panel);
+ return view;
+});
+function battleDamageTotals(buckets,kind) {
+ const totals=new Map();
+ for(const bucket of buckets) {
+  for(const [id,entry] of Object.entries(bucket[kind] ?? {})) {
+   const row=totals.get(id) ?? {...entry,total:0};
+   row.total+=entry.damage;
+   totals.set(id,row);
+  }
+ }
+ return [...totals.values()];
 }
 function renderBattleDps(time,buckets,mirror=false) {
  dpsSnapshot=[time,buckets,mirror];
- const second=Math.floor(time);
- if(lastDpsRender===second)return;
- lastDpsRender=second;
- const {points,totals}=battleDamageHistory(time,buckets,mirror!==showDamageTaken);
- const [your,opponent]=points.at(-1);
- byId('battle-dps-values').textContent='Your side: '+your.toFixed(1)+' HP/s ('+totals[0]+' HP) · Opponent: '+opponent.toFixed(1)+' HP/s ('+totals[1]+' HP)';
- const chart=byId('battle-dps-chart');
- const graph=chart.getContext('2d');
- const {width,height}=chart;
- const peak=Math.max(1,...points.flat());
- graph.clearRect(0,0,width,height);
- graph.font='12px system-ui';
- graph.fillStyle='#c9d8ee';
- graph.fillText(peak.toFixed(1)+' HP/s',4,13);
- graph.fillText('0',4,height-6);
- graph.strokeStyle='#52647d';
- graph.beginPath();graph.moveTo(65,height-10);graph.lineTo(width-8,height-10);graph.stroke();
- ['#b8ec92','#ff8c85'].forEach((color,side)=>{
-  graph.strokeStyle=color;graph.lineWidth=2;graph.beginPath();
-  points.forEach((point,index)=>{
-   const x=65+index*(width-73)/(points.length-1);
-   const y=height-10-point[side]/peak*(height-25);
-   if(index)graph.lineTo(x,y);else graph.moveTo(x-1,y);
-   if(!index)graph.lineTo(x,y);
-  });
-  graph.stroke();
- });
+ const quarter=Math.floor(time*4);
+ if(lastDpsRender===quarter)return;
+ lastDpsRender=quarter;
+ const totals={
+  dealt:battleDamageTotals(buckets,'dealt'),
+  taken:battleDamageTotals(buckets,'taken'),
+ };
+ for(const [side,panel] of damagePanels.entries()) {
+  for(const tab of panel.tabs.children) tab.setAttribute('aria-pressed',String(tab.dataset.mode===panel.mode));
+  const rows=totals[panel.mode].filter(row=>(row.friendly!==mirror)===(side===0) && row.total>0);
+  const total=rows.reduce((sum,row)=>sum+row.total,0);
+  const offset=panel.rows.scrollTop;
+  panel.rows.replaceChildren(...rows.map((row,index)=>{
+   const entry=element('div',null,'damage-bar-row');
+   const share=100*row.total/total;
+   const rate=Math.round(row.total/Math.max(1,time));
+   const stats=Math.round(row.total)+' damage · '+rate+(panel.mode==='dealt'?' DPS':' damage/s')+
+    ' · '+share.toFixed(1)+'%';
+   const track=element('span',null,'damage-track');
+   const bar=element('span',null,'damage-fill');
+   bar.style.width=share+'%';
+   bar.style.background=damageBarColors[index] ?? 'hsl('+((index*137.508)%360)+' 80% 65%)';
+   track.append(bar);
+   track.setAttribute('aria-hidden','true');
+   entry.append(element('span',row.name),element('span',stats),track);
+   return entry;
+  }));
+  panel.rows.scrollTop=offset;
+ }
 }
 function paint() {
  ctx.fillStyle = '#1c372d';
