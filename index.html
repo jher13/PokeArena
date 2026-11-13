@@ -1791,7 +1791,7 @@ function skillDescription(move) {
  if(move==='Dragon Rage') notes.push('Deals '+scaledBattleDamage(40)+' base fixed HP damage on a hit.');
  if(move==='Sonic Boom') notes.push('Deals '+scaledBattleDamage(20)+' base fixed HP damage on a hit.');
  if(move==='Baton Pass')notes.push('Switches to a random healthy reserve and passes the user’s stat stages.');
- if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +6.');
+ if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +3.');
  if(move==='Confuse Ray' && !skillConditions[6])notes.push('Inflicts confusion for 6 battle seconds.');
  if(forcedSwitchMoves.has(move))notes.push('Forces the target to switch to a random healthy reserve.');
  if(Object.hasOwn(additionalStatusMoves,move))notes.push(additionalStatusMoves[move].description);
@@ -2600,7 +2600,7 @@ function gymProfile(name) {
  const nature=tank?(physical?'Adamant':'Modest'):(physical?'Jolly':'Timid');
  return {ivs:Array(6).fill(31),evs,pid:natureNames.indexOf(nature)};
 }
-function gymMoves(name) {
+function gymMoves(name,gym,slot=gym?.roster.indexOf(name) ?? 0) {
  const {physical,tank}=gymRole(name);
  const types=dex[name].slice(1,3).filter(Boolean);
  const legal=legalMoves(name).filter(isVisibleArenaMove);
@@ -2621,7 +2621,24 @@ function gymMoves(name) {
  const support=(tank?['Recover','Roost','Slack Off','Synthesis','Morning Sun','Moonlight','Strength Sap','Will-O-Wisp','Thunder Wave','Protect']:
   physical?['Dragon Dance','Swords Dance','Bulk Up','Hone Claws','Agility','Protect']:
   ['Quiver Dance','Nasty Plot','Calm Mind','Agility','Protect']).find(move=>legal.includes(move));
- if(selected.length>=2)add(support);
+ const hazards=['Stealth Rock','Sticky Web','Toxic Spikes','Spikes'];
+ const teamSupport=['Tailwind','Aurora Veil','Reflect','Light Screen','Safeguard','Mist','Lucky Chant'];
+ const disruption=['Will-O-Wisp','Thunder Wave','Glare','Toxic','Yawn','Taunt','Parting Shot',
+  'Charm','Screech','Metal Sound','Fake Tears','Snarl','Icy Wind','Breaking Swipe'];
+ const role=slot===0?'lead':slot%3===1?'disruptor':slot%3===2?'support':'ace';
+ const tools={
+  lead:[...hazards,...teamSupport,...disruption],
+  disruptor:[...disruption,...hazards,...teamSupport],
+  support:[...teamSupport,...disruption,...hazards],
+  ace:[support,...disruption,...teamSupport],
+ };
+ const tactical=tools[role].find(move=>legal.includes(move) && !selected.includes(move));
+ if(selected.length)add(tactical ?? support);
+ if(selected.length<4 && role==='support' && legal.includes('Baton Pass') && support &&
+    moveRules(support).changes.some(([,amount])=>amount>0)) {
+  if(selected.length<3 && !selected.includes(support))add(support);
+  if(selected.includes(support))add('Baton Pass');
+ }
  const usedTypes=new Set(selected.map(move=>moveCatalog[move][0]));
  add(best(attacks.filter(move=>!usedTypes.has(moveCatalog[move][0]))));
  return legalLoadout(name,[...selected,...attacks.sort((a,b)=>attackValue(b)-attackValue(a))]);
@@ -3705,12 +3722,12 @@ function stepSwitch(transition,dt,realDt=dt) {
  }
  return true;
 }
-function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):5,runMember=null) {
+function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):5,runMember=null,gymSlot) {
  const [,primary,,,,baseSpeed]=dex[name];
  const defaults=species[name];
  const pace=defaults?.[4] ?? Math.min(105,42+baseSpeed*0.36);
  const cooldown=defaults?.[5] ?? Math.max(0.75,1.36-baseSpeed*0.003);
- const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name) :
+ const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name,selectedGym,gymSlot) :
   selectedWild || selectedTrainer || rogueRun ? wildMoves(name) : legalLoadout(name,[defaults?.[6],secondaryMoves[name]]);
  const profile=runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name) : rollProfile();
  if(!friendly && selectedTrainer) {
@@ -3915,7 +3932,7 @@ function prepare() {
  const difficulty=selectedGym ? gymDifficulty(selectedGym) : null;
  const roster=rogueRun ? rogueRun.enemyRoster.map(member=>member.name) : selectedWild ? [selectedWild.name] : selectedTrainer?.roster.map(member=>member.name) ?? selectedGym?.roster ?? lineup;
  enemies=roster.map((name,index)=>unit(name,sendOut.enemy.x,sendOut.enemy.y,false,
-  difficulty ? (index<selectedGym.aceCount ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5));
+  difficulty ? (index<selectedGym.aceCount ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,null,index));
  effects = [];
  pendingCasts=[];
  clock = 0;
@@ -4024,9 +4041,10 @@ function hitboxRadius(actor,dx,dy) {
  const distance = Math.hypot(dx,dy);
  return distance ? distance/Math.hypot(dx/box.x,dy/box.y) : Math.max(box.x,box.y);
 }
+const battleStageCap=3;
 function stageFactor(actor,stat) {
- const stage = actor.stages[stat] ?? 0;
- const base = stat>=7 ? 3 : 2;
+ const stage = clamp(actor.stages[stat] ?? 0,-battleStageCap,battleStageCap);
+ const base = 3;
  return stage>=0 ? (base+stage)/base : base/(base-stage);
 }
 function applyChanges(actor,changes,source=actor,reflected=false) {
@@ -4040,7 +4058,7 @@ function applyChanges(actor,changes,source=actor,reflected=false) {
    if(ability==='Mirror Armor' && !reflected) {applyChanges(source,[[stat,amount]],actor,true);continue;}
   }
   const before=actor.stages[stat] ?? 0;
-  actor.stages[stat]=clamp(before+amount,-6,6);
+  actor.stages[stat]=clamp(before+amount,-battleStageCap,battleStageCap);
   if(actor.stages[stat]<before && external) {
    if(ability==='Defiant') applyChanges(actor,[[2,2]]);
    if(ability==='Competitive') applyChanges(actor,[[4,2]]);
@@ -4401,7 +4419,7 @@ function allyHealingMove(percent) {
   apply:actor=>{const ally=lowestHealthAlly(actor);if(ally && ally.hp<ally.max)healActor(ally,ally.max*percent/100);}};
 }
 function stageMove(description,changes) {
- return {description,score:actor=>changes.some(([stat,amount])=>actor.stages[stat]<6 && amount>0)?45:0,
+ return {description,score:actor=>changes.some(([stat,amount])=>actor.stages[stat]<battleStageCap && amount>0)?45:0,
   apply:actor=>applyChanges(actor,changes)};
 }
 function swapArenaStages(actor,target,indices) {
@@ -4555,7 +4573,7 @@ const additionalStatusMoves={
    if(types.length)replaceBattleType(actor,types[Math.floor(Math.random()*types.length)]);
   }},
  Curse:{description:'Ghost users spend half max HP to curse the target for 1/16 max HP damage per second until it switches. Other users gain Attack and Defense and lose Speed.',
-  score:(actor,target)=>arenaDefenseTypes(actor).includes('Ghost')?actor.hp>actor.max/2 && !target.curseAt?56:0:actor.stages[2]<6 || actor.stages[3]<6?42:0,
+  score:(actor,target)=>arenaDefenseTypes(actor).includes('Ghost')?actor.hp>actor.max/2 && !target.curseAt?56:0:actor.stages[2]<battleStageCap || actor.stages[3]<battleStageCap?42:0,
   apply:(actor,target)=>{
    if(!arenaDefenseTypes(actor).includes('Ghost')){applyChanges(actor,[[2,1],[3,1],[6,-1]]);return;}
    if(actor.hp>actor.max/2 && !target.curseAt){actor.hp-=Math.floor(actor.max/2);target.curseAt=clock+1;}
@@ -4797,10 +4815,10 @@ const additionalStatusMoves={
   score:(actor,target)=>target.ailment && actor.hp<actor.max*.65?40:0,
   apply:(actor,target)=>{if(target.ailment){clearArenaAilment(target);healActor(actor,actor.max/8);}}},
  Acupressure:{description:'Raises a random uncapped stat of the user or an active teammate by two stages.',
-  score:actor=>[2,3,4,5,6,7,8].some(i=>actor.stages[i]<6)?40:0,
+  score:actor=>[2,3,4,5,6,7,8].some(i=>actor.stages[i]<battleStageCap)?40:0,
   apply:actor=>{
    const recipient=lowestHealthAlly(actor) ?? actor;
-   const stats=[2,3,4,5,6,7,8].filter(i=>recipient.stages[i]<6);
+   const stats=[2,3,4,5,6,7,8].filter(i=>recipient.stages[i]<battleStageCap);
    if(stats.length)applyChanges(recipient,[[stats[Math.floor(Math.random()*stats.length)],2]],actor);
   }},
  Entrainment:{description:'Gives the target the user’s ability.',
@@ -4822,7 +4840,7 @@ const additionalStatusMoves={
  Shelter:stageMove('Raises Defense by two stages.',[[3,2]]),
  'Focus Energy':stageMove('Raises critical-hit stage by two.',[[9,2]]),
  'Take Heart':{description:'Clears the user’s status and raises Sp. Atk and Sp. Def one stage.',
-  score:actor=>actor.ailment || actor.stages[4]<6 || actor.stages[5]<6?55:0,
+  score:actor=>actor.ailment || actor.stages[4]<battleStageCap || actor.stages[5]<battleStageCap?55:0,
   apply:actor=>{clearArenaAilment(actor);applyChanges(actor,[[4,1],[5,1]]);}},
  'Lunar Blessing':{description:'Cures and heals active allies for 6.25% of max HP.',
   score:actor=>fieldActors().some(member=>member?.friendly===actor.friendly && member.hp>0 && (member.ailment || member.hp<member.max*.8))?55:0,
@@ -4873,12 +4891,12 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
  const recipient=ally ? actor : target;
  const stages=rules.changes.reduce((total,[stat,change])=>{
   const current=recipient.stages[stat] ?? 0;
-  return total+Math.abs(clamp(current+change,-6,6)-current)/(1+Math.abs(current)*0.35);
+  return total+Math.abs(clamp(current+change,-battleStageCap,battleStageCap)-current)/(1+Math.abs(current)*0.35);
  },0);
  if(status) {
   if(Object.hasOwn(additionalStatusMoves,move))return additionalStatusMoves[move].score(actor,target);
   if(move==='Baton Pass')return actor.stages.some(stage=>stage>0) && forcedSwitchOptions(actor,null).length?55:0;
-  if(move==='Belly Drum')return actor.hp>Math.floor(actor.max/2) && actor.stages[2]<6?55:0;
+  if(move==='Belly Drum')return actor.hp>Math.floor(actor.max/2) && actor.stages[2]<battleStageCap?55:0;
   if(forcedSwitchMoves.has(move))return forcedSwitchOptions(target,defender).length && !(move==='Roar' && defender==='Soundproof')?45:0;
   const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
   const guard=guardMoves.has(move) && !actor.guard && target.charge<0.35 && gap<90;
@@ -5207,10 +5225,10 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  if(move==='Belly Drum') {
   const cost=Math.max(1,Math.floor(actor.max/2));
-  if(actor.hp>cost && actor.stages[2]<6) {
+  if(actor.hp>cost && actor.stages[2]<battleStageCap) {
    actor.hp-=cost;
-   actor.stages[2]=6;
-   effect(actor,'Attack +6',1,{status:true});
+   actor.stages[2]=battleStageCap;
+   effect(actor,'Attack +3',1,{status:true});
   }
   return;
  }
