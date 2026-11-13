@@ -152,10 +152,10 @@ export function onlineView(state,side) {
  const visible=[...state.allies,...state.enemies].filter(allowed).map(actor=>{
   const {name,side,onlineId,hp,max,level,ability,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment}=actor;
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages}=actor;
   return {name,side,onlineId,hp,max,level,ability,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment};
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages};
  });
  const ids=new Set(visible.map(actor=>actor.onlineId));
  const fields=state.fields.map(slots=>slots.map(slot=>{
