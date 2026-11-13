@@ -17,7 +17,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 
 .arena-stage{display:grid;grid-template-columns:106px minmax(0,1fr) 106px;gap:8px;align-items:start}
 .arena-roster{display:grid;gap:5px;min-width:0}.arena-roster h2{font-size:12px;margin:0;color:#e4edff;text-align:center}
-.battle-slot progress.battle-exhaustion{accent-color:#f8ce40}.battle-exhaustion::-webkit-progress-value{background:#f8ce40}.battle-exhaustion::-moz-progress-bar{background:#f8ce40}.battle-stage-icons{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 4px}.battle-stage-icons:empty{display:none}.battle-stage-icon{position:relative;min-width:24px;padding:2px 4px;border-radius:4px;background:#164b40;color:#b7ffe5;font-size:9px;font-weight:750;white-space:nowrap}.battle-stage-icon.is-debuff{background:#592a40;color:#ffd0e1}.battle-stage-icon b{position:absolute;right:-3px;bottom:-4px;border-radius:6px;background:#121623;color:white;padding:0 2px;font-size:8px}
+.battle-slot progress.battle-exhaustion{accent-color:#f8ce40}.battle-slot progress.battle-exhaustion::-webkit-progress-value{background:#ffb52e}.battle-slot progress.battle-exhaustion::-moz-progress-bar{background:#ffb52e}.battle-stage-icons{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 4px}.battle-stage-icons:empty{display:none}.battle-stage-icon{position:relative;min-width:24px;padding:2px 4px;border-radius:4px;background:#164b40;color:#b7ffe5;font-size:9px;font-weight:750;white-space:nowrap}.battle-stage-icon.is-debuff{background:#592a40;color:#ffd0e1}.battle-stage-icon b{position:absolute;right:-3px;bottom:-4px;border-radius:6px;background:#121623;color:white;padding:0 2px;font-size:8px}
 .battle-slot{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:2px 4px;min-width:0;width:100%;padding:3px;background:#283b56;border:1px solid #657f9e;border-radius:6px;color:#fff;text-align:left}
 .battle-slot:disabled{opacity:1;cursor:default}.battle-slot.is-active{border-color:#d6f397;background:#405742}.battle-slot.is-out{opacity:.45}.battle-slot canvas{border:0;border-radius:0;background:transparent;width:32px;height:28px;image-rendering:pixelated}.battle-slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.battle-slot progress{grid-column:1/-1;width:100%;height:6px;appearance:none;border:0;border-radius:4px;overflow:hidden;background:#111b2b}.battle-slot progress::-webkit-progress-bar{background:#111b2b}.battle-slot progress::-webkit-progress-value{background:#9ee884}.battle-slot progress::-moz-progress-bar{background:#9ee884}
 @media(max-width:640px){.arena-stage{grid-template-columns:42px minmax(0,1fr) 42px;gap:4px}.battle-slot{grid-template-columns:1fr;justify-items:center;gap:1px;padding:2px}.battle-slot span{display:none}.arena-roster h2{font-size:9px}}
@@ -7418,6 +7418,32 @@ function paint() {
  for(const slot of trainerFields?.flat() ?? []) if(slot.transition) drawSwitch(slot.transition);
  for(const effect of effects) drawImpactLabel(effect);
  drawMoveBubbles(visible);
+ const battleClock=phase==='online-battle'?onlineMatchDuration:clock;
+ if(phase==='battle' || phase==='online-battle')for(const actor of visible) {
+  if(actor.hp>0 && actor.exhaustedUntil>battleClock)drawExhaustedAlert(actor);
+ }
+}
+function drawExhaustedAlert(actor) {
+ const x=clamp(actor.x,62,canvas.width-62);
+ const y=clamp(actor.y-bodyRadius(actor)-45,25,canvas.height-25);
+ const points=[[-57,-5],[-47,-9],[-50,-20],[-35,-16],[-28,-24],[-17,-18],
+  [0,-24],[13,-18],[31,-23],[36,-15],[50,-20],[48,-9],[59,-4],[50,3],
+  [57,13],[41,12],[35,20],[21,15],[6,26],[7,15],[-13,17],[-31,15],
+  [-42,20],[-43,12],[-57,13],[-49,4]];
+ ctx.save();
+ ctx.translate(x,y);
+ ctx.beginPath();
+ points.forEach(([px,py],index)=>index?ctx.lineTo(px,py):ctx.moveTo(px,py));
+ ctx.closePath();
+ ctx.fillStyle='#bd192d';
+ ctx.strokeStyle='#ff6974';
+ ctx.lineWidth=2.5;
+ ctx.fill();ctx.stroke();
+ ctx.font='bold 15px system-ui';
+ ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.fillStyle='#fff';
+ ctx.fillText('Exhausted',0,0);
+ ctx.restore();
 }
 function traceSector(line) {
  ctx.beginPath();
