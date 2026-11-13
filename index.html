@@ -184,6 +184,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 @keyframes evolution-new{0%,37%,64%{opacity:0}25%,50%,76%{opacity:1;filter:brightness(0) invert(1)}100%{opacity:1;filter:none}}
 @media(prefers-reduced-motion:reduce){.evolution-old{display:none}.evolution-new{animation:none}}
 .battle-ai-settings label{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:.35rem 0}.battle-ai-settings select{max-width:55%;min-width:0}
+#battle-dps{margin-top:.5rem;padding:.4rem .6rem;background:#17243a;border-radius:8px}#battle-dps-chart{display:block;width:100%;max-height:115px}#battle-dps-values{margin:.25rem 0;font-size:.85rem}
 </style>
 <main><header id="arena-header"><h1>Pokemon Arena</h1><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -388,7 +389,12 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 <section class="active-hud" aria-label="Active Pokémon and move cooldowns">
 <div id="player-active" class="active-panel" data-side="player"></div>
 <div id="enemy-active" class="active-panel" data-side="enemy"></div>
-</section></div>
+</section>
+<details id="battle-dps" open><summary>Live DPS · full match</summary>
+<div id="battle-dps-tabs" aria-label="Damage view"><button type="button" aria-pressed="true">Damage Dealt</button> <button type="button" aria-pressed="false">Damage Taken</button></div>
+<p id="battle-dps-values"></p>
+<canvas id="battle-dps-chart" width="600" height="115" aria-label="Average damage per second since the start of the match"></canvas>
+</details></div>
 
 <section id="choices" class="choices" aria-label="Team and upgrades"></section>
 <div class="toolbar"><div><button id="start">Start battle</button> <button id="battle-sfx" aria-pressed="true">SFX: On</button> <button id="battle-music" aria-pressed="true">Music: On</button> <button id="speed" aria-pressed="false">1× speed</button> <button id="battle-auto-start" aria-pressed="false" hidden>Auto Start: Off</button> <button id="battle-auto-capture" aria-pressed="false" hidden>Auto capture: Off</button> <button id="battle-auto-repeat" aria-pressed="false" hidden>Auto repeat: Off</button> <button id="auto-reserve" aria-pressed="false" hidden>Auto send-out: Off</button></div><button id="next-gym" class="campaign-next" hidden>Next gym</button><button id="reset">Main menu</button></div></div></main>
@@ -3490,6 +3496,7 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
 }
 let nextGymSwitchCheck=0;
 function prepare() {
+ damageBuckets=[];lastDpsRender=-1;
  nextGymSwitchCheck=4;
  battleWeather=null;weatherTime=0;battleTerrain=null;terrainTime=0;
  lastDamageClock=0;
@@ -3701,8 +3708,17 @@ function tickAbility(actor,dt) {
  if(weather==='Sun' && ['Solar Power','Dry Skin'].includes(ability)) actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8))));
 }
 let lastDamageClock=0;
+let damageBuckets=[];
+let lastDpsRender=-1;
 function recordOpponentDamage(source,victim,amount) {
  if(amount<=0 || !source || source.friendly===victim.friendly) return;
+ const second=Math.floor(clock);
+ let bucket=damageBuckets.at(-1);
+ if(bucket?.second!==second) {
+  bucket={second,damage:[0,0]};
+  damageBuckets.push(bucket);
+ }
+ bucket.damage[source.friendly?0:1]+=amount;
  lastDamageClock=clock;
  source.damagedOpponent=true;
  victim.lastDamageBy=source;
@@ -4624,6 +4640,61 @@ function drawUnit(actor) {
 
 
 }
+let showDamageTaken=false;
+let dpsSnapshot;
+for(const [index,button] of Array.from(byId('battle-dps-tabs').children ?? []).entries()) {
+ button.onclick=()=>{
+  showDamageTaken=index===1;
+  for(const tab of byId('battle-dps-tabs').children)tab.setAttribute('aria-pressed',String(tab===button));
+  lastDpsRender=-1;
+  if(dpsSnapshot)renderBattleDps(...dpsSnapshot);
+ };
+}
+function battleDamageHistory(time,buckets,reverse) {
+ const totals=[0,0],points=[];
+ let index=0;
+ const samples=Math.max(1,Math.min(120,Math.ceil(time)));
+ for(let sample=0;sample<=samples;sample++){
+  const elapsed=time*sample/samples;
+  while(index<buckets.length && buckets[index].second<=Math.floor(elapsed) && sample>0) {
+   const {damage}=buckets[index++];
+   totals[0]+=damage[reverse?1:0];
+   totals[1]+=damage[reverse?0:1];
+  }
+  points.push(totals.map(total=>total/Math.max(1,elapsed)));
+ }
+ return {points,totals};
+}
+function renderBattleDps(time,buckets,mirror=false) {
+ dpsSnapshot=[time,buckets,mirror];
+ const second=Math.floor(time);
+ if(lastDpsRender===second)return;
+ lastDpsRender=second;
+ const {points,totals}=battleDamageHistory(time,buckets,mirror!==showDamageTaken);
+ const [your,opponent]=points.at(-1);
+ byId('battle-dps-values').textContent='Your side: '+your.toFixed(1)+' HP/s ('+totals[0]+' HP) · Opponent: '+opponent.toFixed(1)+' HP/s ('+totals[1]+' HP)';
+ const chart=byId('battle-dps-chart');
+ const graph=chart.getContext('2d');
+ const {width,height}=chart;
+ const peak=Math.max(1,...points.flat());
+ graph.clearRect(0,0,width,height);
+ graph.font='12px system-ui';
+ graph.fillStyle='#c9d8ee';
+ graph.fillText(peak.toFixed(1)+' HP/s',4,13);
+ graph.fillText('0',4,height-6);
+ graph.strokeStyle='#52647d';
+ graph.beginPath();graph.moveTo(65,height-10);graph.lineTo(width-8,height-10);graph.stroke();
+ ['#b8ec92','#ff8c85'].forEach((color,side)=>{
+  graph.strokeStyle=color;graph.lineWidth=2;graph.beginPath();
+  points.forEach((point,index)=>{
+   const x=65+index*(width-73)/(points.length-1);
+   const y=height-10-point[side]/peak*(height-25);
+   if(index)graph.lineTo(x,y);else graph.moveTo(x-1,y);
+   if(!index)graph.lineTo(x,y);
+  });
+  graph.stroke();
+ });
+}
 function paint() {
  ctx.fillStyle = '#1c372d';
  ctx.fillRect(0,0,960,480);
@@ -5083,7 +5154,8 @@ function frame(now) {
  if(phase==='online-battle') {window.paintOnlineBattle(dt);requestAnimationFrame(frame);return;}
  const wasBattling=phase==='battle';
  const before=clock;
- if(wasBattling) advance(dt*speed,dt);
+ if(wasBattling) {advance(dt*speed,dt);renderBattleDps(clock,damageBuckets);}
+ else if(phase==='setup')renderBattleDps(0,[]);
  else for(const actor of [...allies,...enemies]) {
   actor.labelTime=Math.max(0,actor.labelTime-dt);
   actor.attack=Math.max(0,actor.attack-dt*speed);
