@@ -77,7 +77,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 @keyframes catch-fragment{0%,80%{opacity:0;transform:translate(0,27px)}83%{opacity:1}100%{opacity:0;transform:translate(var(--shard-x),var(--shard-y)) rotate(160deg)}}
 @media(prefers-reduced-motion:reduce){.catch-playing .catch-orb,.catch-playing .catch-creature,.catch-playing .catch-pulse,.catch-playing .catch-shards i{animation:none}}
 
-.battle-identity{display:grid;gap:1px;min-width:0}.battle-slot .battle-level{display:block;color:#dfedff;font-size:9px;font-weight:750;white-space:nowrap}.battle-slot progress.battle-xp{height:4px}.battle-slot progress.battle-xp::-webkit-progress-value{background:#78c8ff}.battle-slot progress.battle-xp::-moz-progress-bar{background:#78c8ff}
+.battle-types{display:block;color:#d6e4fa;font-size:9px;line-height:1.15;overflow-wrap:anywhere}.battle-identity{display:grid;gap:1px;min-width:0}.battle-slot .battle-level{display:block;color:#dfedff;font-size:9px;font-weight:750;white-space:nowrap}.battle-slot progress.battle-xp{height:4px}.battle-slot progress.battle-xp::-webkit-progress-value{background:#78c8ff}.battle-slot progress.battle-xp::-moz-progress-bar{background:#78c8ff}
 @media(max-width:640px){.battle-slot .battle-name{display:none}.battle-slot .battle-level{display:block;text-align:center}}
 
 .dex-browser{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.85fr);gap:14px}.dex-sheet{border:1px solid #7968a2;border-radius:12px;padding:12px;background:#222443;min-width:0}.dex-sheet .box-tools{margin-top:0}.dex-sheet .box-tools select{max-width:36%}.dex-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.dex-tile{min-height:53px;aspect-ratio:1}.dex-tile canvas{z-index:1}.dex-tile small{z-index:3}.dex-tile.is-uncaught canvas,.dex-art.is-uncaught canvas{filter:brightness(0) drop-shadow(0 0 1px #d5b8ff);opacity:.9}.dex-tile.is-uncaught{background:#2b2948}.dex-tile.is-uncaught[aria-pressed=true]{background:#4c3f70;color:#fff}.dex-lock-badge{position:absolute;top:8px;right:5px;pointer-events:none;z-index:2}.dex-art .dex-lock-badge{top:16px;right:13px}.dex-lock{display:block;position:relative;z-index:1;width:11px;height:8px;border:1px solid #281d43;background:#e5c277;border-radius:2px;box-shadow:0 1px 3px #151127}.dex-lock:before{content:'';position:absolute;bottom:100%;left:2px;width:5px;height:5px;border:1px solid #e5c277;border-bottom:0;border-radius:5px 5px 0 0}.dex-art{position:relative;display:grid;place-items:center;min-height:115px;background:radial-gradient(ellipse,#594483,#282342 72%);border-radius:9px}.dex-art canvas{transform:scale(2.4);image-rendering:pixelated;background:none;border:0}.dex-art .dex-lock{width:18px;height:13px}.dex-art .dex-lock:before{left:4px;width:8px;height:7px}.dex-description{line-height:1.5;margin:8px 0;color:#efe9f9}.dex-base-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:9px 0}.dex-base-stats div{padding:6px;border-radius:5px;background:#1e1d37}.dex-base-stats dt{font-size:11px;color:#d4c6e7}.dex-base-stats dd{margin:0;font-weight:750}.dex-status{font-size:12px;color:#dbcaef}.dex-summary{margin:0 0 8px;color:#ded1f0}
@@ -183,6 +183,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 @keyframes evolution-old{0%,37%,64%{opacity:1;filter:brightness(0) invert(1)}25%,50%,76%,100%{opacity:0}}
 @keyframes evolution-new{0%,37%,64%{opacity:0}25%,50%,76%{opacity:1;filter:brightness(0) invert(1)}100%{opacity:1;filter:none}}
 @media(prefers-reduced-motion:reduce){.evolution-old{display:none}.evolution-new{animation:none}}
+.battle-ai-settings label{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:.35rem 0}.battle-ai-settings select{max-width:55%;min-width:0}
 </style>
 <main><header id="arena-header"><h1>Pokemon Arena</h1><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -816,10 +817,13 @@ function pokemonNameplate(name,suffix='',tag='span') {
   plate.append(ball);
  }
  plate.append(name+suffix);
- const types=element('small',dex[name].slice(1,3).filter(Boolean).join(' / '));
- types.style.cssText='display:block;color:#c4d6ee;font-size:.72em';
- plate.append(types);
  return plate;
+}
+function battleRosterIdentity(name,level) {
+ const identity=element('div',null,'battle-identity');
+ const types=element('span',dex[name].slice(1,3).filter(Boolean).join(' / '),'battle-types');
+ identity.append(element('span',name,'battle-name'),element('span','Lv. '+level,'battle-level'),types);
+ return identity;
 }
 function pokemonPortrait(name,className,fullSize=false) {
  const thumb=element('canvas',null,className);
@@ -1160,7 +1164,7 @@ function vitaminControls(name) {
 }
 function battleAIControls(name) {
  const ai=normalizeBattleAI(wildProgress.ai[name]);
- const section=element('fieldset');
+ const section=element('fieldset',null,'battle-ai-settings');
  section.append(element('legend','Battle AI'));
  const setting=(label,values,current,apply)=>{
   const group=element('label',label+' ');
@@ -3350,8 +3354,7 @@ function renderBattleRosters() {
    const hp=element('progress');
    hp.max=actor.max;
    hp.setAttribute('aria-label',actor.name+' HP');
-   const identity=element('div',null,'battle-identity');
-   identity.append(element('span',actor.name,'battle-name'),element('span','Lv. '+actor.level,'battle-level'));
+   const identity=battleRosterIdentity(actor.name,actor.level);
    card.append(pokemonPortrait(actor.name),identity,hp);
    const xp=friendly && !rogueRun ? element('progress',null,'battle-xp') : null;
    if(xp) card.append(xp);
@@ -4550,17 +4553,14 @@ function drawUnit(actor) {
  ctx.fillRect(x-25,healthY,50*actor.hp/actor.max,5);
  ctx.fillStyle = '#f0f6e7';
  ctx.font = '600 13px system-ui';
- const types=dex[name].slice(1,3).filter(Boolean);
  const caught=registeredPokemon.has(name);
- const plateWidth=Math.max(ctx.measureText(name).width+(caught?29:14),types.join(' / ').length*8+14);
+ const plateWidth=ctx.measureText(name).width+(caught?29:14);
  ctx.fillStyle='#142138';
- ctx.fillRect(x-plateWidth/2,ground+6,plateWidth,29);
+ ctx.fillRect(x-plateWidth/2,ground+6,plateWidth,18);
  ctx.fillStyle='#f0f6e7';
  ctx.fillText(name,x+(caught?6:0),ground+18);
  if(caught){ctx.save();ctx.translate(x-plateWidth/2+9,ground+14);ctx.scale(.55,.55);drawSwitchBall(0,0,0);ctx.restore();}
- ctx.font='600 10px system-ui';
- ctx.fillStyle=moveColors[types[0]] ?? '#f0f6e7';
- ctx.fillText(types.join(' / '),x,ground+30);
+
 
 }
 function paint() {
