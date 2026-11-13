@@ -1330,7 +1330,7 @@ const conditionalPowerNotes={
 function arenaMoveGeometry(move,rules) {
  const shape=skillShape(move);
  const blast=sacrificeProfiles.get(move);
- const selfCentered=Boolean(blast) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
+ const selfCentered=move==='Earthquake' || Boolean(blast) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
  const radius=shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
  const range=shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?radius:rules.range;
  const warning=blast?.charge ?? (shape==='dash'?(moveCatalog[move][3]>0?0.35:0.55):
@@ -1355,6 +1355,7 @@ function skillDescription(move) {
  };
  if(shape)notes[0]=(status?type+' status move.': 'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage.')+' '+geometryNotes[shape];
  if(rules.scope!=='ally' && (shape || radius) && !sacrificeProfiles.has(move))notes.push('The warning lasts '+warning+' battle seconds.');
+ if(move==='Earthquake')notes.push('Three rings strike outward, 0.5 battle seconds apart. The inner ring deals full damage, the middle deals 50% damage, and the outer deals 25% damage.');
  if(conditionalPowerNotes[move])notes.push(conditionalPowerNotes[move]);
  const [criticalStage,flinchChance]=moveExtras[move] ?? [];
  if(!status && criticalStage)notes.push('Increased critical-hit chance.');
@@ -1386,7 +1387,7 @@ function skillDescription(move) {
  if(move==='Dragon Rage') notes.push('Deals '+scaledBattleDamage(40)+' base fixed HP damage on a hit.');
  if(move==='Sonic Boom') notes.push('Deals '+scaledBattleDamage(20)+' base fixed HP damage on a hit.');
  if(move==='Baton Pass')notes.push('Switches to a random healthy reserve and passes the user’s stat stages.');
- if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +6.');
+ if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +3.');
  if(move==='Confuse Ray' && !skillConditions[6])notes.push('Inflicts confusion for 6 battle seconds.');
  if(forcedSwitchMoves.has(move))notes.push('Forces the target to switch to a random healthy reserve.');
  if(Object.hasOwn(additionalStatusMoves,move))notes.push(additionalStatusMoves[move].description);
@@ -2178,24 +2179,70 @@ try {
 function gymDifficulty(gym) {
  const progress=gymTeams.indexOf(gym)/(gymTeams.length-1);
  const level=12+Math.floor(84*progress);
- return {level,aceLevel:level+4,iv:20+Math.floor(11*progress),training:4*Math.floor(8+34*progress)};
+ return {level,aceLevel:level+4};
 }
-function gymProfile(name,gym) {
- const {iv,training}=gymDifficulty(gym);
- const base=dexStats[dex[name][0]-1];
- const offense=base[1]>=base[5]?1:5;
- const evs=Array(6).fill(0);
- evs[0]=evs[3]=evs[offense]=training;
- return {ivs:Array(6).fill(iv),evs,pid:0};
+function gymRole(name) {
+ const [hp,attack,defense,speed,specialDefense,specialAttack]=dexStats[dex[name][0]-1];
+ const physical=attack>=specialAttack;
+ const tank=speed<75 && hp+(defense+specialDefense)/2>=155;
+ return {physical,tank};
 }
-function gymMoves(name,gym) {
- const [,primary,secondary]=dex[name];
- const type=[primary,secondary].find(value=>gym.specialties.includes(value)) ?? gym.type;
- const choices=legalMoves(name).filter(move=>moveCatalog[move][0]===type && moveCatalog[move][1]>=45 &&
-  moveCatalog[move][1]<=105 && moveCatalog[move][2]>=85);
- const quick=choices.find(move=>moveCatalog[move][1]<=65);
- const strong=choices.find(move=>moveCatalog[move][1]>=75);
- return legalLoadout(name,[quick,strong,'Bite','Tackle']);
+function gymProfile(name) {
+ const {physical,tank}=gymRole(name);
+ const evs=[0,0,0,0,0,0];
+ evs[physical?1:5]=252;
+ evs[tank?0:3]=252;
+ evs[tank?3:0]=6;
+ const nature=tank?(physical?'Adamant':'Modest'):(physical?'Jolly':'Timid');
+ return {ivs:Array(6).fill(31),evs,pid:natureNames.indexOf(nature)};
+}
+function gymMoves(name,gym,slot=gym?.roster.indexOf(name) ?? 0) {
+ const {physical,tank}=gymRole(name);
+ const types=dex[name].slice(1,3).filter(Boolean);
+ const legal=legalMoves(name).filter(isVisibleArenaMove);
+ const attacks=legal.filter(move=>moveCatalog[move][1]>0 && !sacrificeProfiles.has(move));
+ const attackValue=move=>{
+  const [type,power,accuracy,priority,,,recoil]=moveCatalog[move];
+  const rules=moveRules(move);
+  return power*(accuracy ?? 100)/100*(types.includes(type)?1.45:1)*
+   ((rules.category===2)===physical?1:0.72)/(1+rules.cooldown*0.10)+priority*8-recoil*25;
+ };
+ const selected=[];
+ const best=pool=>pool.filter(move=>!selected.includes(move)).sort((a,b)=>attackValue(b)-attackValue(a))[0];
+ const add=move=>{if(move)selected.push(move);};
+ add(best(attacks));
+ const firstType=moveCatalog[selected[0]]?.[0];
+ add(best(attacks.filter(move=>moveCatalog[move][0]!==firstType && types.includes(moveCatalog[move][0]))) ??
+  best(attacks.filter(move=>moveCatalog[move][0]!==firstType)));
+ const support=(tank?['Recover','Roost','Slack Off','Synthesis','Morning Sun','Moonlight','Strength Sap','Will-O-Wisp','Thunder Wave','Protect']:
+  physical?['Dragon Dance','Swords Dance','Bulk Up','Hone Claws','Agility','Protect']:
+  ['Quiver Dance','Nasty Plot','Calm Mind','Agility','Protect']).find(move=>legal.includes(move));
+ const hazards=['Stealth Rock','Sticky Web','Toxic Spikes','Spikes'];
+ const teamSupport=['Tailwind','Aurora Veil','Reflect','Light Screen','Safeguard','Mist','Lucky Chant'];
+ const disruption=['Will-O-Wisp','Thunder Wave','Glare','Toxic','Yawn','Taunt','Parting Shot',
+  'Charm','Screech','Metal Sound','Fake Tears','Snarl','Icy Wind','Breaking Swipe'];
+ const role=slot===0?'lead':slot%3===1?'disruptor':slot%3===2?'support':'ace';
+ const tools={
+  lead:[...hazards,...teamSupport,...disruption],
+  disruptor:[...disruption,...hazards,...teamSupport],
+  support:[...teamSupport,...disruption,...hazards],
+  ace:[support,...disruption,...teamSupport],
+ };
+ const tactical=tools[role].find(move=>legal.includes(move) && !selected.includes(move));
+ if(selected.length)add(tactical ?? support);
+ if(selected.length<4 && role==='support' && legal.includes('Baton Pass') && support &&
+    moveRules(support).changes.some(([,amount])=>amount>0)) {
+  if(selected.length<3 && !selected.includes(support))add(support);
+  if(selected.includes(support))add('Baton Pass');
+ }
+ const usedTypes=new Set(selected.map(move=>moveCatalog[move][0]));
+ add(best(attacks.filter(move=>!usedTypes.has(moveCatalog[move][0]))));
+ return legalLoadout(name,[...selected,...attacks.sort((a,b)=>attackValue(b)-attackValue(a))]);
+}
+function gymHeldItem(name) {
+ const {physical,tank}=gymRole(name);
+ if(tank)return canEvolveIds.has(dex[name][0])?'Eviolite':'Leftovers';
+ return physical?'Muscle Band':'Wise Glasses';
 }
 function awardBadge(gym) {
  if(gymTeams[clearedGyms.length]!==gym) return false;
@@ -3272,14 +3319,14 @@ function stepSwitch(transition,dt,realDt=dt) {
  }
  return true;
 }
-function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):5,runMember=null) {
+function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):5,runMember=null,gymSlot) {
  const [,primary,,,,baseSpeed]=dex[name];
  const defaults=species[name];
  const pace=defaults?.[4] ?? Math.min(105,42+baseSpeed*0.36);
  const cooldown=defaults?.[5] ?? Math.max(0.75,1.36-baseSpeed*0.003);
- const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name,selectedGym) :
+ const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name,selectedGym,gymSlot) :
   selectedWild || selectedTrainer || rogueRun ? wildMoves(name) : legalLoadout(name,[defaults?.[6],secondaryMoves[name]]);
- const profile=runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name,selectedGym) : rollProfile();
+ const profile=runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name) : rollProfile();
  if(!friendly && selectedTrainer) {
   const size=selectedTrainer.roster.length;
   profile.ivs.fill(35-4*size);
@@ -3298,7 +3345,9 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  }
  const hp=stats[0];
  const speedFactor=clamp(0.65+stats[3]/200,0.65,1.7);
- return {name,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):null,heldItem:friendly && !rogueRun?wildProgress.held[name]:null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
+ return {name,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
+  !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness'}):null,
+  heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?gymHeldItem(name):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
   moveCooldowns:moves.map(skill=>moveRules(skill).cooldown),moveTimers:moves.map(()=>0),
   stages:[0,0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
@@ -3399,7 +3448,7 @@ function tickPillars(dt) {
   const source=(fall.sourceSide?allies:enemies)[fall.sourceSlot];
   for(const victim of fieldActors()) {
    if(!victim || victim.hp<=0 || !inSkill(victim,null,0,fall))continue;
-   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12)));
+   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12))*gymDamageMultiplier(source,victim));
    victim.hp-=dealt;
    recordOpponentDamage(source,victim,dealt);
   }
@@ -3480,7 +3529,7 @@ function prepare() {
  const difficulty=selectedGym ? gymDifficulty(selectedGym) : null;
  const roster=rogueRun ? rogueRun.enemyRoster.map(member=>member.name) : selectedWild ? [selectedWild.name] : selectedTrainer?.roster.map(member=>member.name) ?? selectedGym?.roster ?? lineup;
  enemies=roster.map((name,index)=>unit(name,sendOut.enemy.x,sendOut.enemy.y,false,
-  difficulty ? (index<selectedGym.aceCount ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5));
+  difficulty ? (index<selectedGym.aceCount ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,null,index));
  effects = [];
  pendingCasts=[];
  clock = 0;
@@ -3589,9 +3638,10 @@ function hitboxRadius(actor,dx,dy) {
  const distance = Math.hypot(dx,dy);
  return distance ? distance/Math.hypot(dx/box.x,dy/box.y) : Math.max(box.x,box.y);
 }
+const battleStageCap=3;
 function stageFactor(actor,stat) {
- const stage = actor.stages[stat] ?? 0;
- const base = stat>=7 ? 3 : 2;
+ const stage = clamp(actor.stages[stat] ?? 0,-battleStageCap,battleStageCap);
+ const base = 3;
  return stage>=0 ? (base+stage)/base : base/(base-stage);
 }
 function applyChanges(actor,changes,source=actor,reflected=false) {
@@ -3605,7 +3655,7 @@ function applyChanges(actor,changes,source=actor,reflected=false) {
    if(ability==='Mirror Armor' && !reflected) {applyChanges(source,[[stat,amount]],actor,true);continue;}
   }
   const before=actor.stages[stat] ?? 0;
-  actor.stages[stat]=clamp(before+amount,-6,6);
+  actor.stages[stat]=clamp(before+amount,-battleStageCap,battleStageCap);
   if(actor.stages[stat]<before && external) {
    if(ability==='Defiant') applyChanges(actor,[[2,2]]);
    if(ability==='Competitive') applyChanges(actor,[[4,2]]);
@@ -3722,7 +3772,7 @@ function tickStatus(actor,dt) {
   if(!actor[key] || clock<actor[key])continue;
   actor[key]+=1;
   if(activeAbility(actor)==='Magic Guard')continue;
-  const damage=Math.min(actor.hp,Math.max(1,Math.floor(actor.max*fraction)));
+  const damage=Math.min(actor.hp,Math.max(1,Math.floor(actor.max*fraction))*gymDamageMultiplier(key==='nightmareAt'?actor.ailmentSource:fieldActors().find(member=>member?.friendly!==actor.friendly && member?.hp>0),actor));
   actor.hp-=damage;
   if(key==='seedAt') {
    const recipient=fieldActors().find(member=>member?.hp>0 && member.friendly!==actor.friendly);
@@ -3748,7 +3798,7 @@ function tickStatus(actor,dt) {
    const amount=actor.ailment===5?actor.max*0.01:(actor.burnPower ?? 0)*(ability==='Heatproof'?0.5:1);
    if(actor.ailment===5 && ability==='Poison Heal')healActor(actor,actor.max/8);
    else if(ability!=='Magic Guard') {
-    const dealt=Math.min(actor.hp,Math.max(1,Math.round(amount)));
+    const dealt=Math.min(actor.hp,Math.max(1,Math.round(amount))*gymDamageMultiplier(actor.ailmentSource,actor));
     actor.hp-=dealt;
     recordOpponentDamage(actor.ailmentSource,actor,dealt);
    }
@@ -3799,14 +3849,17 @@ function movePower(move,power,actor,victim) {
  }
  return power || 55;
 }
+function gymDamageMultiplier(source,target) {
+ return selectedGym && source?.friendly===false && target?.friendly===true ? 2 : 1;
+}
 function scaledBattleDamage(damage) {
  return damage>0 ? Math.max(1,Math.round(damage/8)) : 0;
 }
 function battleDamage(actor,victim,power,multiplier,physical,element,move,critical=false) {
  if(multiplier===0) return 0;
- if(move==='Seismic Toss' || move==='Night Shade') return scaledBattleDamage(actor.level);
- if(move==='Dragon Rage') return scaledBattleDamage(40);
- if(move==='Sonic Boom') return scaledBattleDamage(20);
+ if(move==='Seismic Toss' || move==='Night Shade') return scaledBattleDamage(actor.level)*gymDamageMultiplier(actor,victim);
+ if(move==='Dragon Rage') return scaledBattleDamage(40)*gymDamageMultiplier(actor,victim);
+ if(move==='Sonic Boom') return scaledBattleDamage(20)*gymDamageMultiplier(actor,victim);
  const superEffective=multiplier>1;
  const ability=activeAbility(actor);
  const defender=targetAbility(actor,victim);
@@ -3861,7 +3914,7 @@ function battleDamage(actor,victim,power,multiplier,physical,element,move,critic
  if(element==='Fire' && fieldMoveActive('Water Sport') || element==='Electric' && fieldMoveActive('Mud Sport'))multiplier/=3;
  if(critical) multiplier*=ability==='Sniper'?2.25:1.5;
  const raw=Math.floor((Math.floor(2*actor.level/5)+2)*movePower(move,power,actor,victim)*attack/defense/50)+2;
- return scaledBattleDamage(Math.max(1,Math.round(raw*multiplier*(victim.guard>0 && !critical ? 0.5 : 1))));
+ return scaledBattleDamage(Math.max(1,Math.round(raw*multiplier*(victim.guard>0 && !critical ? 0.5 : 1))))*gymDamageMultiplier(actor,victim);
 }
 function respondToHit(actor,victim,move,element,physical,dealt) {
  const ability=activeAbility(actor);
@@ -3875,7 +3928,7 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
     case 'burn':tryAilment(actor,4,victim);break;
     case 'spikes':
      if(ability!=='Magic Guard') {
-      const damage=Math.min(actor.hp,scaledBattleDamage(Math.floor(actor.max/8)));
+      const damage=Math.min(actor.hp,scaledBattleDamage(Math.floor(actor.max/8))*gymDamageMultiplier(victim,actor));
       actor.hp-=damage;recordOpponentDamage(victim,actor,damage);
      }
      break;
@@ -3884,9 +3937,9 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
    }
   }
   if(['Rough Skin','Iron Barbs'].includes(defender) && ability!=='Magic Guard')
-   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8))));
+   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8)))*gymDamageMultiplier(victim,actor));
   if(defender==='Aftermath' && victim.hp<=0 && ability!=='Damp' && ability!=='Magic Guard')
-   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/4))));
+   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/4)))*gymDamageMultiplier(victim,actor));
   if(onlineRandom()<0.30) {
    if(contactAilments[defender]) tryAilment(actor,contactAilments[defender],victim);
    if(defender==='Effect Spore' && ![actor.type,extraTypes[actor.name]].includes('Grass'))
@@ -3966,7 +4019,7 @@ function allyHealingMove(percent) {
   apply:actor=>{const ally=lowestHealthAlly(actor);if(ally && ally.hp<ally.max)healActor(ally,ally.max*percent/100);}};
 }
 function stageMove(description,changes) {
- return {description,score:actor=>changes.some(([stat,amount])=>actor.stages[stat]<6 && amount>0)?45:0,
+ return {description,score:actor=>changes.some(([stat,amount])=>actor.stages[stat]<battleStageCap && amount>0)?45:0,
   apply:actor=>applyChanges(actor,changes)};
 }
 function swapArenaStages(actor,target,indices) {
@@ -4041,7 +4094,7 @@ function applyEntryHazards(actor,opponent) {
  const spikes=grounded?[0,1/8,1/6,1/4][hazards.Spikes ?? 0]:0;
  const rock=hazards['Stealth Rock']?effectiveness('Rock',actor)/8:0;
  if(spikes+rock>0) {
-  const damage=Math.min(actor.hp,scaledBattleDamage(Math.round(actor.max*(spikes+rock))));
+  const damage=Math.min(actor.hp,scaledBattleDamage(Math.round(actor.max*(spikes+rock)))*gymDamageMultiplier(opponent,actor));
   actor.hp-=damage;
   recordOpponentDamage(opponent,actor,damage);
  }
@@ -4120,7 +4173,7 @@ const additionalStatusMoves={
    if(types.length)replaceBattleType(actor,types[Math.floor(onlineRandom()*types.length)]);
   }},
  Curse:{description:'Ghost users spend half max HP to curse the target for 1/16 max HP damage per second until it switches. Other users gain Attack and Defense and lose Speed.',
-  score:(actor,target)=>arenaDefenseTypes(actor).includes('Ghost')?actor.hp>actor.max/2 && !target.curseAt?56:0:actor.stages[2]<6 || actor.stages[3]<6?42:0,
+  score:(actor,target)=>arenaDefenseTypes(actor).includes('Ghost')?actor.hp>actor.max/2 && !target.curseAt?56:0:actor.stages[2]<battleStageCap || actor.stages[3]<battleStageCap?42:0,
   apply:(actor,target)=>{
    if(!arenaDefenseTypes(actor).includes('Ghost')){applyChanges(actor,[[2,1],[3,1],[6,-1]]);return;}
    if(actor.hp>actor.max/2 && !target.curseAt){actor.hp-=Math.floor(actor.max/2);target.curseAt=clock+1;}
@@ -4362,10 +4415,10 @@ const additionalStatusMoves={
   score:(actor,target)=>target.ailment && actor.hp<actor.max*.65?40:0,
   apply:(actor,target)=>{if(target.ailment){clearArenaAilment(target);healActor(actor,actor.max/8);}}},
  Acupressure:{description:'Raises a random uncapped stat of the user or an active teammate by two stages.',
-  score:actor=>[2,3,4,5,6,7,8].some(i=>actor.stages[i]<6)?40:0,
+  score:actor=>[2,3,4,5,6,7,8].some(i=>actor.stages[i]<battleStageCap)?40:0,
   apply:actor=>{
    const recipient=lowestHealthAlly(actor) ?? actor;
-   const stats=[2,3,4,5,6,7,8].filter(i=>recipient.stages[i]<6);
+   const stats=[2,3,4,5,6,7,8].filter(i=>recipient.stages[i]<battleStageCap);
    if(stats.length)applyChanges(recipient,[[stats[Math.floor(onlineRandom()*stats.length)],2]],actor);
   }},
  Entrainment:{description:'Gives the target the user’s ability.',
@@ -4387,7 +4440,7 @@ const additionalStatusMoves={
  Shelter:stageMove('Raises Defense by two stages.',[[3,2]]),
  'Focus Energy':stageMove('Raises critical-hit stage by two.',[[9,2]]),
  'Take Heart':{description:'Clears the user’s status and raises Sp. Atk and Sp. Def one stage.',
-  score:actor=>actor.ailment || actor.stages[4]<6 || actor.stages[5]<6?55:0,
+  score:actor=>actor.ailment || actor.stages[4]<battleStageCap || actor.stages[5]<battleStageCap?55:0,
   apply:actor=>{clearArenaAilment(actor);applyChanges(actor,[[4,1],[5,1]]);}},
  'Lunar Blessing':{description:'Cures and heals active allies for 6.25% of max HP.',
   score:actor=>fieldActors().some(member=>member?.friendly===actor.friendly && member.hp>0 && (member.ailment || member.hp<member.max*.8))?55:0,
@@ -4438,12 +4491,12 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
  const recipient=ally ? actor : target;
  const stages=rules.changes.reduce((total,[stat,change])=>{
   const current=recipient.stages[stat] ?? 0;
-  return total+Math.abs(clamp(current+change,-6,6)-current)/(1+Math.abs(current)*0.35);
+  return total+Math.abs(clamp(current+change,-battleStageCap,battleStageCap)-current)/(1+Math.abs(current)*0.35);
  },0);
  if(status) {
   if(Object.hasOwn(additionalStatusMoves,move))return additionalStatusMoves[move].score(actor,target);
   if(move==='Baton Pass')return actor.stages.some(stage=>stage>0) && forcedSwitchOptions(actor,null).length?55:0;
-  if(move==='Belly Drum')return actor.hp>Math.floor(actor.max/2) && actor.stages[2]<6?55:0;
+  if(move==='Belly Drum')return actor.hp>Math.floor(actor.max/2) && actor.stages[2]<battleStageCap?55:0;
   if(forcedSwitchMoves.has(move))return forcedSwitchOptions(target,defender).length && !(move==='Roar' && defender==='Soundproof')?45:0;
   const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
   const guard=guardMoves.has(move) && !actor.guard && target.charge<0.35 && gap<90;
@@ -4772,10 +4825,10 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  if(move==='Belly Drum') {
   const cost=Math.max(1,Math.floor(actor.max/2));
-  if(actor.hp>cost && actor.stages[2]<6) {
+  if(actor.hp>cost && actor.stages[2]<battleStageCap) {
    actor.hp-=cost;
-   actor.stages[2]=6;
-   effect(actor,'Attack +6',1,{status:true});
+   actor.stages[2]=battleStageCap;
+   effect(actor,'Attack +3',1,{status:true});
   }
   return;
  }
@@ -4989,7 +5042,8 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
   const critical=!(victim.luckyChantUntil>clock) && !['Battle Armor','Shell Armor'].includes(defender) &&
    (focused || attacker==='Merciless' && victim.ailment===5 || onlineRandom()<([1/24,1/8,1/2,1][Math.min(3,criticalStage)] ?? 0));
   const boosted=attacker==='Flash Fire' && actor.flashFire && element==='Fire' ? multiplier*1.5 : multiplier;
-  const damage=Math.round(battleDamage(actor,victim,power,boosted,rules.category!==3,element,move,critical)*(sacrificeProfiles.get(move)?.damage ?? 1)*(wasAsleep?1.25:1)*(helped?1.5:1));
+  const baseDamage=battleDamage(actor,victim,power,boosted,rules.category!==3,element,move,critical)*(cast?.quakeRing===2?0.25:cast?.quakeRing===1?0.5:1);
+  const damage=Math.round(baseDamage*(sacrificeProfiles.get(move)?.damage ?? 1)*(wasAsleep?1.25:1)*(helped?1.5:1));
   const dealt=Math.min(victim.hp===victim.max && defender==='Sturdy' && victim.hp>1?victim.hp-1:victim.hp,damage);
   victim.hp-=dealt;
   if(victim.hp<=0 && dealt>0) {
@@ -5069,6 +5123,17 @@ function tickSkillCasts(dt) {
    area.flight=true;
    area.travel=0;
    return true;
+  }
+  if(area.move==='Earthquake') {
+   const ring=area.quakeRing ?? 0;
+   const inner=area.radius*ring/3,outer=area.radius*(ring+1)/3;
+   const targets=opponents.filter(target=>{
+    const distance=Math.hypot(target.x-area.center.x,target.y-area.center.y);
+    return (ring===0 || distance>inner) && distance<=outer;
+   });
+   resolveOffensiveMove(area.actor,area.move,area.rules,area.center,targets,{...area,radius:outer,quakeRing:ring});
+   if(ring<2){area.quakeRing=ring+1;area.warning=area.remaining=0.5;return true;}
+   return false;
   }
   resolveOffensiveMove(area.actor,area.move,area.rules,area.center,opponents,area);
   if(area.actor.hp>0 && (area.shape==='dash' || area.shape==='landing')) {
@@ -5647,7 +5712,7 @@ function clipPillarShadows(origin) {
   ctx.clip('evenodd');
  }
 }
-function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,travel,move}) {
+function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,travel,move,quakeRing}) {
  const progress=clamp(1-remaining/warning,0,1);
  const color=actor.friendly?'#72d9ff':'#ff947c';
  ctx.save();
@@ -5703,6 +5768,16 @@ function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,tra
   ctx.globalAlpha=0.95;
   ctx.lineWidth=3;
   ctx.stroke();
+  ctx.restore();
+  return;
+ }
+ if(move==='Earthquake') {
+  for(let ring=2;ring>=0;ring--) {
+   ctx.beginPath();ctx.arc(center.x,center.y,radius*(ring+1)/3,0,Math.PI*2);
+   ctx.strokeStyle=color;ctx.lineWidth=ring===(quakeRing ?? 0)?4:1.5;
+   ctx.globalAlpha=ring===(quakeRing ?? 0)?0.95:0.45;
+   ctx.stroke();
+  }
   ctx.restore();
   return;
  }
