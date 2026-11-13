@@ -1258,6 +1258,8 @@ const gambitComparisons=['Equal','Not Equal','Less Than','Greater Than','At Most
 const gambitStats={ATK:[1,2],DEF:[2,3],SATK:[5,4],SDEF:[4,5],SPD:[3,6],ACC:[null,7],EVA:[null,8]};
 const gambitStageFields=Object.fromEntries(Object.entries(gambitStats).map(([stat,[,index]])=>[stat+' stage',index]));
 const gambitConditions={
+ 'Exhaustion %':{operators:gambitComparisons,values:Array.from({length:11},(_,i)=>i*10+'%')},
+ Exhausted:{operators:gambitComparisons.slice(0,2),values:['True','False']},
  Always:{operators:['Equal'],values:['True']},
  ...Object.fromEntries(Object.keys(gambitStageFields).map(stat=>[stat,{
   operators:gambitComparisons,values:['-3','-2','-1','0','1','2','3'],
@@ -2947,6 +2949,8 @@ function masterGymKit(name,gym,slot) {
  const pivot=attacks.find(move=>['U Turn','Volt Switch','Flip Turn'].includes(move));
  if(pivot)add('Self','HP %','At Most','40%',pivot);
  add('Enemy Lowest HP','HP %','At Most','30%','Attack');
+ add('Any','Exhausted','Equal','True','Attack');
+ add('Self','Exhaustion %','At Least','80%','Do not Attack');
  for(const move of attacks)add('Any','Move effectiveness','At Least','2',move);
  for(const move of moves.filter(move=>gymTactics[tactic].includes(move) && moveCatalog[move][4]))
   add('Any','Always','Equal','True',move);
@@ -3898,10 +3902,10 @@ function canSendReserve(actor) {
   const slots=trainerFields[0];
   const slot=trainerReserveSlot();
   return phase==='battle' && actor.hp>0 && Boolean(slot) && !trainerOnField(actor,slots) && !slots.some(entry=>entry.transition) &&
-   (!slot.actor || slot.actor.hp<=0 || (!fieldMoveActive('Fairy Lock') && !slot.actor.ingrainAt && !(slot.actor.trappedUntil>clock || slot.actor.octolockUntil>clock) && recallCooldown===0));
+   (!slot.actor || slot.actor.hp<=0 || (!fieldMoveActive('Fairy Lock') && !slot.actor.ingrainAt && !blocksExhaustionRecall(slot.actor) && !(slot.actor.trappedUntil>clock || slot.actor.octolockUntil>clock) && recallCooldown===0));
  }
  if(phase!=='battle' || playerSwitch || actor.hp<=0 || actor===activePlayer) return false;
- return awaitingPlayerReserve() || (!fieldMoveActive('Fairy Lock') && !activePlayer?.ingrainAt && !(activePlayer?.trappedUntil>clock || activePlayer?.octolockUntil>clock) && (Boolean(selectedWild) || recallCooldown===0));
+ return awaitingPlayerReserve() || (!fieldMoveActive('Fairy Lock') && !activePlayer?.ingrainAt && !blocksExhaustionRecall(activePlayer) && !(activePlayer?.trappedUntil>clock || activePlayer?.octolockUntil>clock) && (Boolean(selectedWild) || recallCooldown===0));
 }
 function updateRecallStatus() {
  if(phase!=='battle') return;
@@ -4042,6 +4046,8 @@ function renderBattleRosters() {
    const identity=battleRosterIdentity(actor.name,actor.level);
    card.append(pokemonPortrait(actor.name),identity,hp);
    const xp=friendly && !rogueRun ? element('progress',null,'battle-xp') : null;
+   const exhaustion=makeExhaustionBar(actor);
+   card.append(exhaustion);
    if(xp) card.append(xp);
    const stages=element('span',null,'battle-stage-icons');
    card.append(stages);
@@ -4066,14 +4072,15 @@ function renderBattleRosters() {
     }
    };
    container.append(card);
-   rosterCards.push({actor,index,card,hp,xp,stages,friendly});
+   rosterCards.push({actor,index,card,hp,xp,stages,exhaustion,friendly});
   });
  }
  updateBattleRosters();
 }
 function updateBattleRosters() {
- for(const {actor,index,card,hp,xp,stages,friendly} of rosterCards) {
+ for(const {actor,index,card,hp,xp,stages,exhaustion,friendly} of rosterCards) {
   updateStageIcons(stages,actor);
+  updateExhaustionBar(exhaustion,actor);
   const slots=trainerFields?.[friendly?0:1];
   const active=phase==='setup' ? selectedTrainer ? trainerLeads(friendly?allies:enemies,friendly).includes(actor) :
    friendly ? index===selected : index===0 : slots ? trainerOnField(actor,slots) : actor===(friendly ? activePlayer : activeEnemy);
@@ -5029,7 +5036,7 @@ function callArenaAttack(actor,target,move) {
   const center={x:target.x,y:target.y};
   playSkillSound(move,'warning',shape);
   const line=shape==='beam'?skillLane(actor,target,range,shape,0,move):null;
-  pendingCasts.push({actor,move,rules,shape,line,center,radius,warning,remaining:warning,started:clock});
+  pendingCasts.push({actor,move,rules,shape,line,center,radius,warning,remaining:warning,started:clock,tracksExhaustion:true});
   return;
  }
  resolveOffensiveMove(actor,move,rules,target,[target]);
@@ -5699,6 +5706,8 @@ function gambitMatches(rule,subject,move,distance) {
  if(rule.condition==='Move effectiveness' && !move)return false;
  const stage=gambitStageFields[rule.condition];
  const actual=stage!==undefined?(subject.stages[stage] ?? 0):stat?Math.round((stat[0]===null?100:subject.stats[stat[0]])*stageFactor(subject,stat[1])):
+  rule.condition==='Exhaustion %'?Math.floor(subject.exhaustion ?? 0):
+  rule.condition==='Exhausted'?(isExhausted(subject)?'True':'False'):
   rule.condition==='Status'?gambitStatuses[subject.ailment ?? 0]:
   rule.condition==='HP %'?Math.round(100*subject.hp/subject.max):
   rule.condition==='Distance'?Math.round(distance):
@@ -5773,7 +5782,7 @@ function act(actor, opponents, dt) {
  tickHeldItem(actor,dt);
  tickAbility(actor,dt);
  actor.flinch=Math.max(0,(actor.flinch ?? 0)-dt);
- if(actor.hp<=0 || actor.flinch>0 || actor.ailment===3)return;
+ if(actor.hp<=0 || actor.flinch>0 || actor.ailment===3 || blocksExhaustionRecall(actor))return;
  if(pendingCasts.some(cast=>cast.actor===actor && cast.move==='Hyper Beam') && actor.ailment!==2)return;
  if(actor.ailment===2) {
   const slot=actor.moves.indexOf('Sleep Talk');
@@ -5962,6 +5971,7 @@ function act(actor, opponents, dt) {
  actor.attackSpan=(pmdMotion(actor,actor.attackStyle)?.duration ?? 21.6)/60;
  actor.attack=actor.attackSpan;
  if(slot>=0)actor.moveCooldownStarts[slot]=clock+Math.max(0.58,actor.attackSpan);
+ actor.exhaustionAnimationUntil=Math.max(actor.exhaustionAnimationUntil,clock+actor.attackSpan);
  const aim=distance || 1;
  actor.attackX=rules.scope==='ally' ? 0 : (target.x-actor.x)/aim;
  actor.attackY=rules.scope==='ally' ? 0 : (target.y-actor.y)/aim;
@@ -6022,7 +6032,7 @@ function act(actor, opponents, dt) {
   const line=shape && shape!=='landing' && shape!=='vortex' ? skillLane(actor,target,range,shape,halfAngle,move) : null;
   const ground={x:clamp(center.x,28,canvas.width-28),y:clamp(center.y,28,canvas.height-28)};
   playSkillSound(move,'warning',shape);
-  pendingCasts.push({actor,move,rules,shape,line,center:ground,radius,warning,remaining:warning,started:clock,cooldownSlot:slot,friendlyFire:actor.ailment===6});
+  pendingCasts.push({actor,move,rules,shape,line,center:ground,radius,warning,remaining:warning,started:clock,tracksExhaustion:true,cooldownSlot:slot,friendlyFire:actor.ailment===6});
   return;
  }
  resolveOffensiveMove(actor,move,rules,target,[target]);
@@ -6270,7 +6280,46 @@ function tickVortex(area,field,dt) {
  area.remaining-=step;
  return area.remaining>1e-8;
 }
+function isExhausted(actor) {return (actor?.exhaustedUntil ?? 0)>clock;}
+function blocksExhaustionRecall(actor) {
+ return isExhausted(actor) || (actor?.exhaustion ?? 0)>=100;
+}
+function makeExhaustionBar(actor) {
+ const bar=element('progress',null,'battle-exhaustion');
+ bar.max=100;
+ updateExhaustionBar(bar,actor);
+ return bar;
+}
+function updateExhaustionBar(bar,actor) {
+ const value=Math.floor(actor.exhaustion ?? 0);
+ if(bar.value!==value)bar.value=value;
+ const label=actor.name+' · '+(value===100?'Exhausted':'Exhaustion '+value+'%');
+ if(bar.title!==label){bar.title=label;bar.setAttribute('aria-label',label);}
+}
+function addMoveExhaustion(actor,slot,animation) {
+ const move=actor.moves[slot] ?? 'Struggle';
+ const power=moveCatalog[move][1];
+ const cooldown=actor.moveCooldowns[slot] ?? 2;
+ const quick=power<=60 && (cooldown<=3 || moveCatalog[move][3]>0);
+ const cost=quick?6:power>=120?32:power>=90?23:power>0?15:12;
+ actor.exhaustion=Math.min(100,(actor.exhaustion ?? 0)+cost);
+ actor.exhaustionAnimationUntil=Math.max(actor.exhaustionAnimationUntil ?? 0,clock+animation);
+}
+function tickExhaustion(actor,dt) {
+ if(actor.exhaustedUntil) {
+  if(isExhausted(actor))return;
+  actor.exhaustion=0;
+  actor.exhaustedUntil=0;
+  return;
+ }
+ if(!actor.exhaustion || pendingCasts.some(cast=>cast.actor===actor && cast.tracksExhaustion))return;
+ const end=actor.exhaustionAnimationUntil ?? 0;
+ if(clock<end)return;
+ if(actor.exhaustion>=100){actor.exhaustedUntil=clock+3;return;}
+ actor.exhaustion=Math.max(0,actor.exhaustion-15*Math.min(dt,Math.max(0,clock-end-1)));
+}
 function beginMoveCooldown(actor,slot,animation=0.58) {
+ addMoveExhaustion(actor,slot,animation);
  if(slot<0)return;
  actor.moveTimers[slot]=actor.moveCooldowns[slot];
  (actor.moveCooldownStarts ??=[])[slot]=clock+animation;
@@ -6352,6 +6401,7 @@ function tickSkillCasts(dt) {
  });
  for(const area of previousCasts) {
   const slot=area.cooldownSlot;
+  if(area.tracksExhaustion && !pendingCasts.includes(area))area.actor.exhaustionAnimationUntil=Math.max(area.actor.exhaustionAnimationUntil ?? 0,clock+0.58);
   if(slot>=0 && !pendingCasts.includes(area) && area.actor.moveCooldownStarts?.[slot]!=null) {
    area.actor.moveCooldownStarts[slot]=Math.max(area.actor.moveCooldownStarts[slot],clock+0.58);
   }
@@ -6403,6 +6453,7 @@ function advanceCombat(dt,realDt,sides) {
   actor.labelTime=Math.max(0,actor.labelTime-realDt);
   actor.attack=Math.max(0,actor.attack-dt);
   if(actor.attack===0) actor.hit=Math.max(0,actor.hit-dt);
+  tickExhaustion(actor,dt);
   const cooldownDt=cooldownElapsed(actor,dt);
   for(let i=0;i<actor.moveTimers.length;i++) {
    if(pendingCasts.some(cast=>cast.actor===actor && cast.cooldownSlot===i))continue;
@@ -6483,7 +6534,7 @@ function sendGymReserve(outgoing,reserve,reason) {
  noteGymSwitch(reserve,reason);
 }
 function considerGymSwitch() {
- if(!selectedGym || fieldMoveActive('Fairy Lock') || activeEnemy?.ingrainAt || activeEnemy?.trappedUntil>clock || activeEnemy?.octolockUntil>clock || enemySwitch || playerSwitch || !(activePlayer?.hp>0) || !(activeEnemy?.hp>0) ||
+ if(!selectedGym || blocksExhaustionRecall(activeEnemy) || fieldMoveActive('Fairy Lock') || activeEnemy?.ingrainAt || activeEnemy?.trappedUntil>clock || activeEnemy?.octolockUntil>clock || enemySwitch || playerSwitch || !(activePlayer?.hp>0) || !(activeEnemy?.hp>0) ||
   clock<nextGymSwitchCheck || activeEnemy.attack>0 ||
   pendingCasts.some(cast=>cast.actor===activeEnemy && !cast.roaming))return;
  nextGymSwitchCheck=clock+1;
@@ -7709,6 +7760,7 @@ function onlineSend(side,incomingId,fieldIndex) {
  const incoming=[...allies,...enemies].find(actor=>actor.onlineId===incomingId && actor.side===side && actor.hp>0);
  if(!slot || slot.transition || !incoming || trainerFields.flat().some(field=>trainerOnField(incoming,[field])))
   throw Error('Choose an available reserve and field slot.');
+ if(slot.actor?.hp>0 && blocksExhaustionRecall(slot.actor))throw Error('This Pokémon is exhausted.');
  if(slot.actor?.hp>0 && fieldMoveActive('Fairy Lock'))throw Error('Fairy Lock prevents recalls.');
  if(slot.actor?.hp>0 && (slot.actor.trappedUntil>clock || slot.actor.octolockUntil>clock))throw Error('This Pokémon is trapped.');
  if(slot.actor?.hp>0 && slot.actor.ingrainAt)throw Error('This Pokémon is rooted by Ingrain.');
@@ -7766,10 +7818,10 @@ export function onlineView(state,side) {
  const visible=[...state.allies,...state.enemies].filter(allowed).map(actor=>{
   const {name,side,onlineId,hp,max,level,ability,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages}=actor;
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil}=actor;
   return {name,side,onlineId,hp,max,level,ability,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages};
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil};
  });
  const ids=new Set(visible.map(actor=>actor.onlineId));
  const fields=state.fields.map(slots=>slots.map(slot=>{
