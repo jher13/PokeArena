@@ -550,8 +550,11 @@ const terrainMoves={'Electric Terrain':'Electric','Grassy Terrain':'Grass','Mist
 const arenaFieldMoves={'Gravity':8,'Mud Sport':10,'Water Sport':10,'Wonder Room':10,'Magic Room':10,'Ion Deluge':8,'Fairy Lock':3,'Trick Room':10};
 let fieldMoveExpiry={};
 const fieldMoveActive=move=>fieldMoveExpiry[move]>clock;
+const partyBuffMoves=new Set(['Tailwind','Reflect','Light Screen','Wide Guard','Quick Guard']);
+const allyOnlyBuffMoves=new Set(['Coaching','Aromatic Mist','Decorate']);
 function moveRules(move) {
- const [target,category,changes,statChance,ailment,ailmentChance,healing] = moveData[move] ?? [10,2,[],0,0,0,0];
+ const [baseTarget,category,changes,statChance,ailment,ailmentChance,healing] = moveData[move] ?? [10,2,[],0,0,0,0];
+ const target=partyBuffMoves.has(move)?13:move==='Decorate'?3:baseTarget;
  const [type,power,,priority,status,drain,,configuredArea] = moveCatalog[move];
  const scope = (Object.hasOwn(arenaFieldMoves,move) || ['Spikes','Toxic Spikes','Stealth Rock','Sticky Web','Court Change','Perish Song','Assist','Instruct','Metronome','Nature Power','Sleep Talk','Spotlight','Ally Switch','After You','Follow Me','Rage Powder','Substitute','Shed Tail','Revival Blessing','Healing Wish','Lunar Dance','Teatime','Splash','Celebrate','Hold Hands','Mimic','Sketch','Transform','Me First'].includes(move) || Object.hasOwn(weatherMoves,move) || Object.hasOwn(terrainMoves,move) || [3,4,5,7,13,15].includes(target)) ? 'ally' :
   configuredArea || [6,9,11,12,14].includes(target) ? 'area' : 'single';
@@ -562,7 +565,7 @@ function moveRules(move) {
  const statImpact = changes.reduce((sum,[,stages])=>sum+Math.abs(stages),0);
  const cooldown = status ? 3+healing*0.065+statImpact*0.8+(ailment ? 1.6 : 0)+(scope==='area' ? 0.6 : 0) :
   0.9+(power||55)*0.036+(scope==='area' ? 0.65 : 0)+drain*1.2-Math.max(0,priority)*0.25;
- return {cooldown:Math.round(cooldown*10)/10,target,category,changes,statChance,ailment,ailmentChance,healing,scope,range,radius};
+ return {cooldown:move==='Earthquake'?7.5:Math.round(cooldown*10)/10,target,category,changes,statChance,ailment,ailmentChance,healing,scope,range,radius};
 }
 // Pokémon Database reference values keep omitted fields distinct from arena defaults.
 const moveReferences = {"10,000,000 Volt Thunderbolt":["10000000-volt-thunderbolt","Electric","Special",195,null,1,false],"Absorb":["absorb","Grass","Special",20,100,25,true],"Accelerock":["accelerock","Rock","Physical",40,100,20,true],"Acid":["acid","Poison","Special",40,100,30,true],"Acid Armor":["acid-armor","Poison","Status",null,null,20,true],"Acid Downpour":["acid-downpour","Poison",null,null,null,1,false],"Acid Spray":["acid-spray","Poison","Special",40,100,20,true],"Acrobatics":["acrobatics","Flying","Physical",55,100,15,true],"Acupressure":["acupressure","Normal","Status",null,null,30,true],"Aerial Ace":["aerial-ace","Flying","Physical",60,null,20,true],"Aeroblast":["aeroblast","Flying","Special",100,95,5,true],"After You":["after-you","Normal","Status",null,null,15,true],"Agility":["agility","Psychic","Status",null,null,30,true],"Air Cutter":["air-cutter","Flying","Special",60,95,25,true],"Air Slash":["air-slash","Flying","Special",75,95,15,true],"All-Out Pummeling":["all-out-pummeling","Fighting",null,null,null,1,false],"Alluring Voice":["alluring-voice","Fairy","Special",80,100,10,true],"Ally Switch":["ally-switch","Psychic","Status",null,null,15,true],"Amnesia":["amnesia","Psychic","Status",null,null,20,true],"Anchor Shot":["anchor-shot","Steel","Physical",80,100,20,true],"Ancient Power":["ancient-power","Rock","Special",60,100,5,true],"Apple Acid":["apple-acid","Grass","Special",80,100,10,true],"Aqua Cutter":["aqua-cutter","Water","Physical",70,100,20,true],"Aqua Jet":["aqua-jet","Water","Physical",40,100,20,true],"Aqua Ring":["aqua-ring","Water","Status",null,null,20,true],"Aqua Step":["aqua-step","Water","Physical",80,100,10,true],"Aqua Tail":["aqua-tail","Water","Physical",90,90,10,true],"Arm Thrust":["arm-thrust","Fighting","Physical",15,100,20,true],"Armor Cannon":["armor-cannon","Fire","Special",120,100,5,true],"Aromatherapy":["aromatherapy","Grass","Status",null,null,5,true],"Aromatic Mist":["aromatic-mist","Fairy","Status",null,null,20,true],"Assist":["assist","Normal","Status",null,null,20,true],"Assurance":["assurance","Dark","Physical",60,100,10,true],"Astonish":["astonish","Ghost","Physical",30,100,15,true],"Astral Barrage":["astral-barrage","Ghost","Special",120,100,5,true],"Attack Order":["attack-order","Bug","Physical",90,100,15,true],"Attract":["attract","Normal","Status",null,100,15,true],"Aura Sphere":["aura-sphere","Fighting","Special",80,null,20,true],"Aura Wheel":["aura-wheel","Electric","Physical",110,100,10,true],"Aurora Beam":["aurora-beam","Ice","Special",65,100,20,true],"Aurora Veil":["aurora-veil","Ice","Status",null,null,20,true],"Autotomize":["autotomize","Steel","Status",null,null,15,true],"Avalanche":["avalanche","Ice","Physical",60,100,10,true],"Axe Kick":["axe-kick","Fighting","Physical",120,90,10,true],"Baby Doll Eyes":["baby-doll-eyes","Fairy","Status",null,100,30,true],"Baddy Bad":["baddy-bad","Dark","Special",90,100,15,true],"Baneful Bunker":["baneful-bunker","Poison","Status",null,null,10,true],"Barb Barrage":["barb-barrage","Poison","Physical",60,100,10,true],"Barrage":["barrage","Normal","Physical",15,85,20,true],"Barrier":["barrier","Psychic","Status",null,null,20,true],"Baton Pass":["baton-pass","Normal","Status",null,null,40,true],"Beak Blast":["beak-blast","Flying","Physical",100,100,15,true],"Beat Up":["beat-up","Dark","Physical",null,100,10,true],"Behemoth Bash":["behemoth-bash","Steel","Physical",100,100,5,true],"Behemoth Blade":["behemoth-blade","Steel","Physical",100,100,5,true],"Belch":["belch","Poison","Special",120,90,10,true],"Belly Drum":["belly-drum","Normal","Status",null,null,10,true],"Bestow":["bestow","Normal","Status",null,null,15,true],"Bide":["bide","Normal","Physical",null,null,10,true],"Bind":["bind","Normal","Physical",15,85,20,true],"Bite":["bite","Dark","Physical",60,100,25,true],"Bitter Blade":["bitter-blade","Fire","Physical",90,100,10,true],"Bitter Malice":["bitter-malice","Ghost","Special",75,100,10,true],"Black Hole Eclipse":["black-hole-eclipse","Dark",null,null,null,1,false],"Blast Burn":["blast-burn","Fire","Special",150,90,5,true],"Blaze Kick":["blaze-kick","Fire","Physical",85,90,10,true],"Blazing Torque":["blazing-torque","Fire","Physical",80,100,10,true],"Bleakwind Storm":["bleakwind-storm","Flying","Special",100,80,10,true],"Blizzard":["blizzard","Ice","Special",110,70,5,true],"Block":["block","Normal","Status",null,null,5,true],"Blood Moon":["blood-moon","Normal","Special",140,100,5,true],"Bloom Doom":["bloom-doom","Grass",null,null,null,1,false],"Blue Flare":["blue-flare","Fire","Special",130,85,5,true],"Body Press":["body-press","Fighting","Physical",80,100,10,true],"Body Slam":["body-slam","Normal","Physical",85,100,15,true],"Bolt Beak":["bolt-beak","Electric","Physical",85,100,10,true],"Bolt Strike":["bolt-strike","Electric","Physical",130,85,5,true],"Bone Club":["bone-club","Ground","Physical",65,85,20,true],"Bone Rush":["bone-rush","Ground","Physical",25,90,10,true],"Bonemerang":["bonemerang","Ground","Physical",50,90,10,true],"Boomburst":["boomburst","Normal","Special",140,100,10,true],"Bounce":["bounce","Flying","Physical",85,85,5,true],"Bouncy Bubble":["bouncy-bubble","Water","Special",90,100,15,true],"Branch Poke":["branch-poke","Grass","Physical",40,100,40,true],"Brave Bird":["brave-bird","Flying","Physical",120,100,15,true],"Breaking Swipe":["breaking-swipe","Dragon","Physical",60,100,15,true],"Breakneck Blitz":["breakneck-blitz","Normal",null,null,null,1,false],"Brick Break":["brick-break","Fighting","Physical",75,100,15,true],"Brine":["brine","Water","Special",65,100,10,true],"Brutal Swing":["brutal-swing","Dark","Physical",60,100,20,true],"Bubble":["bubble","Water","Special",40,100,30,true],"Bubble Beam":["bubble-beam","Water","Special",65,100,20,true],"Bug Bite":["bug-bite","Bug","Physical",60,100,20,true],"Bug Buzz":["bug-buzz","Bug","Special",90,100,10,true],"Bulk Up":["bulk-up","Fighting","Status",null,null,20,true],"Bulldoze":["bulldoze","Ground","Physical",60,100,20,true],"Bullet Punch":["bullet-punch","Steel","Physical",40,100,30,true],"Bullet Seed":["bullet-seed","Grass","Physical",25,100,30,true],"Burn Up":["burn-up","Fire","Special",130,100,5,true],"Burning Bulwark":["burning-bulwark","Fire","Status",null,null,10,true],"Burning Jealousy":["burning-jealousy","Fire","Special",70,100,5,true],"Buzzy Buzz":["buzzy-buzz","Electric","Special",90,100,15,true],"Calm Mind":["calm-mind","Psychic","Status",null,null,20,true],"Camouflage":["camouflage","Normal","Status",null,null,20,true],"Captivate":["captivate","Normal","Status",null,100,20,true],"Catastropika":["catastropika","Electric","Physical",210,null,1,false],"Ceaseless Edge":["ceaseless-edge","Dark","Physical",65,90,15,true],"Celebrate":["celebrate","Normal","Status",null,null,40,true],"Charge":["charge","Electric","Status",null,null,20,true],"Charge Beam":["charge-beam","Electric","Special",50,90,10,true],"Charm":["charm","Fairy","Status",null,100,20,true],"Chatter":["chatter","Flying","Special",65,100,20,true],"Chilling Water":["chilling-water","Water","Special",50,100,20,true],"Chilly Reception":["chilly-reception","Ice","Status",null,null,10,true],"Chip Away":["chip-away","Normal","Physical",70,100,20,true],"Chloroblast":["chloroblast","Grass","Special",150,95,5,true],"Circle Throw":["circle-throw","Fighting","Physical",60,90,10,true],"Clamp":["clamp","Water","Physical",35,85,15,true],"Clanging Scales":["clanging-scales","Dragon","Special",110,100,5,true],"Clangorous Soul":["clangorous-soul","Dragon","Status",null,100,5,true],"Clangorous Soulblaze":["clangorous-soulblaze","Dragon","Special",185,null,1,false],"Clear Smog":["clear-smog","Poison","Special",50,null,15,true],"Close Combat":["close-combat","Fighting","Physical",120,100,5,true],"Coaching":["coaching","Fighting","Status",null,null,10,true],"Coil":["coil","Poison","Status",null,null,20,true],"Collision Course":["collision-course","Fighting","Physical",100,100,5,true],"Combat Torque":["combat-torque","Fighting","Physical",100,100,10,true],"Comet Punch":["comet-punch","Normal","Physical",18,85,15,true],"Comeuppance":["comeuppance","Dark","Physical",null,100,10,true],"Confide":["confide","Normal","Status",null,null,20,true],"Confuse Ray":["confuse-ray","Ghost","Status",null,100,10,true],"Confusion":["confusion","Psychic","Special",50,100,25,true],"Constrict":["constrict","Normal","Physical",10,100,35,true],"Continental Crush":["continental-crush","Rock",null,null,null,1,false],"Conversion":["conversion","Normal","Status",null,null,30,true],"Conversion 2":["conversion-2","Normal","Status",null,null,30,true],"Copycat":["copycat","Normal","Status",null,null,20,true],"Core Enforcer":["core-enforcer","Dragon","Special",100,100,10,true],"Corkscrew Crash":["corkscrew-crash","Steel",null,null,null,1,false],"Corrosive Gas":["corrosive-gas","Poison","Status",null,100,40,true],"Cosmic Power":["cosmic-power","Psychic","Status",null,null,20,true],"Cotton Guard":["cotton-guard","Grass","Status",null,null,10,true],"Cotton Spore":["cotton-spore","Grass","Status",null,100,40,true],"Counter":["counter","Fighting","Physical",null,100,20,true],"Court Change":["court-change","Normal","Status",null,100,10,true],"Covet":["covet","Normal","Physical",60,100,25,true],"Crabhammer":["crabhammer","Water","Physical",100,90,10,true],"Crafty Shield":["crafty-shield","Fairy","Status",null,null,10,true],"Cross Chop":["cross-chop","Fighting","Physical",100,80,5,true],"Cross Poison":["cross-poison","Poison","Physical",70,100,20,true],"Crunch":["crunch","Dark","Physical",80,100,15,true],"Crush Claw":["crush-claw","Normal","Physical",75,95,10,true],"Crush Grip":["crush-grip","Normal","Physical",null,100,5,true],"Curse":["curse","Ghost","Status",null,null,10,true],"Cut":["cut","Normal","Physical",50,95,30,true],"Dark Pulse":["dark-pulse","Dark","Special",80,100,15,true],"Dark Void":["dark-void","Dark","Status",null,50,10,true],"Darkest Lariat":["darkest-lariat","Dark","Physical",85,100,10,true],"Dazzling Gleam":["dazzling-gleam","Fairy","Special",80,100,10,true],"Decorate":["decorate","Fairy","Status",null,null,15,true],"Defend Order":["defend-order","Bug","Status",null,null,10,true],"Defense Curl":["defense-curl","Normal","Status",null,null,40,true],"Defog":["defog","Flying","Status",null,null,15,true],"Destiny Bond":["destiny-bond","Ghost","Status",null,null,5,true],"Detect":["detect","Fighting","Status",null,null,5,true],"Devastating Drake":["devastating-drake","Dragon",null,null,null,1,false],"Diamond Storm":["diamond-storm","Rock","Physical",100,95,5,true],"Dig":["dig","Ground","Physical",80,100,10,true],"Dire Claw":["dire-claw","Poison","Physical",80,100,15,true],"Disable":["disable","Normal","Status",null,100,20,true],"Disarming Voice":["disarming-voice","Fairy","Special",40,null,15,true],"Discharge":["discharge","Electric","Special",80,100,15,true],"Dive":["dive","Water","Physical",80,100,10,true],"Dizzy Punch":["dizzy-punch","Normal","Physical",70,100,10,true],"Doodle":["doodle","Normal","Status",null,100,10,true],"Doom Desire":["doom-desire","Steel","Special",140,100,5,true],"Double Hit":["double-hit","Normal","Physical",35,90,10,true],"Double Iron Bash":["double-iron-bash","Steel","Physical",60,100,5,true],"Double Kick":["double-kick","Fighting","Physical",30,100,30,true],"Double Shock":["double-shock","Electric","Physical",120,100,5,true],"Double Slap":["double-slap","Normal","Physical",15,85,10,true],"Double Team":["double-team","Normal","Status",null,null,15,true],"Double Edge":["double-edge","Normal","Physical",120,100,15,true],"Draco Meteor":["draco-meteor","Dragon","Special",130,90,5,true],"Dragon Ascent":["dragon-ascent","Flying","Physical",120,100,5,true],"Dragon Breath":["dragon-breath","Dragon","Special",60,100,20,true],"Dragon Cheer":["dragon-cheer","Dragon","Status",null,null,15,true],"Dragon Claw":["dragon-claw","Dragon","Physical",80,100,15,true],"Dragon Dance":["dragon-dance","Dragon","Status",null,null,20,true],"Dragon Darts":["dragon-darts","Dragon","Physical",50,100,10,true],"Dragon Energy":["dragon-energy","Dragon","Special",150,100,5,true],"Dragon Hammer":["dragon-hammer","Dragon","Physical",90,100,15,true],"Dragon Pulse":["dragon-pulse","Dragon","Special",85,100,10,true],"Dragon Rage":["dragon-rage","Dragon","Special",null,100,10,true],"Dragon Rush":["dragon-rush","Dragon","Physical",100,75,10,true],"Dragon Tail":["dragon-tail","Dragon","Physical",60,90,10,true],"Drain Punch":["drain-punch","Fighting","Physical",75,100,10,true],"Draining Kiss":["draining-kiss","Fairy","Special",50,100,10,true],"Dream Eater":["dream-eater","Psychic","Special",100,100,15,true],"Drill Peck":["drill-peck","Flying","Physical",80,100,20,true],"Drill Run":["drill-run","Ground","Physical",80,95,10,true],"Drum Beating":["drum-beating","Grass","Physical",80,100,10,true],"Dual Chop":["dual-chop","Dragon","Physical",40,90,15,true],"Dual Wingbeat":["dual-wingbeat","Flying","Physical",40,90,10,true],"Dynamax Cannon":["dynamax-cannon","Dragon","Special",100,100,5,true],"Dynamic Punch":["dynamic-punch","Fighting","Physical",100,50,5,true],"Earth Power":["earth-power","Ground","Special",90,100,10,true],"Earthquake":["earthquake","Ground","Physical",100,100,10,true],"Echoed Voice":["echoed-voice","Normal","Special",40,100,15,true],"Eerie Impulse":["eerie-impulse","Electric","Status",null,100,15,true],"Eerie Spell":["eerie-spell","Psychic","Special",80,100,5,true],"Egg Bomb":["egg-bomb","Normal","Physical",100,75,10,true],"Electric Terrain":["electric-terrain","Electric","Status",null,null,10,true],"Electrify":["electrify","Electric","Status",null,null,20,true],"Electro Ball":["electro-ball","Electric","Special",null,100,10,true],"Electro Drift":["electro-drift","Electric","Special",100,100,5,true],"Electro Shot":["electro-shot","Electric","Special",130,100,10,true],"Electroweb":["electroweb","Electric","Special",55,95,15,true],"Embargo":["embargo","Dark","Status",null,100,15,true],"Ember":["ember","Fire","Special",40,100,25,true],"Encore":["encore","Normal","Status",null,100,5,true],"Endeavor":["endeavor","Normal","Physical",null,100,5,true],"Endure":["endure","Normal","Status",null,null,10,true],"Energy Ball":["energy-ball","Grass","Special",90,100,10,true],"Entrainment":["entrainment","Normal","Status",null,100,15,true],"Eruption":["eruption","Fire","Special",150,100,5,true],"Esper Wing":["esper-wing","Psychic","Special",80,100,10,true],"Eternabeam":["eternabeam","Dragon","Special",160,90,5,true],"Expanding Force":["expanding-force","Psychic","Special",80,100,10,true],"Explosion":["explosion","Normal","Physical",250,100,5,true],"Extrasensory":["extrasensory","Psychic","Special",80,100,20,true],"Extreme Evoboost":["extreme-evoboost","Normal","Status",null,null,1,false],"Extreme Speed":["extreme-speed","Normal","Physical",80,100,5,true],"Facade":["facade","Normal","Physical",70,100,20,true],"Fairy Lock":["fairy-lock","Fairy","Status",null,null,10,true],"Fairy Wind":["fairy-wind","Fairy","Special",40,100,30,true],"Fake Out":["fake-out","Normal","Physical",40,100,10,true],"Fake Tears":["fake-tears","Dark","Status",null,100,20,true],"False Surrender":["false-surrender","Dark","Physical",80,null,10,true],"False Swipe":["false-swipe","Normal","Physical",40,100,40,true],"Feather Dance":["feather-dance","Flying","Status",null,100,15,true],"Feint":["feint","Normal","Physical",30,100,10,true],"Feint Attack":["feint-attack","Dark","Physical",60,null,20,true],"Fell Stinger":["fell-stinger","Bug","Physical",50,100,25,true],"Fickle Beam":["fickle-beam","Dragon","Special",80,100,5,true],"Fiery Dance":["fiery-dance","Fire","Special",80,100,10,true],"Fiery Wrath":["fiery-wrath","Dark","Special",90,100,10,true],"Fillet Away":["fillet-away","Normal","Status",null,null,10,true],"Final Gambit":["final-gambit","Fighting","Special",null,100,5,true],"Fire Blast":["fire-blast","Fire","Special",110,85,5,true],"Fire Fang":["fire-fang","Fire","Physical",65,95,15,true],"Fire Lash":["fire-lash","Fire","Physical",80,100,15,true],"Fire Pledge":["fire-pledge","Fire","Special",80,100,10,true],"Fire Punch":["fire-punch","Fire","Physical",75,100,15,true],"Fire Spin":["fire-spin","Fire","Special",35,85,15,true],"First Impression":["first-impression","Bug","Physical",90,100,10,true],"Fishious Rend":["fishious-rend","Water","Physical",85,100,10,true],"Fissure":["fissure","Ground","Physical",null,30,5,true],"Flail":["flail","Normal","Physical",null,100,15,true],"Flame Burst":["flame-burst","Fire","Special",70,100,15,true],"Flame Charge":["flame-charge","Fire","Physical",50,100,20,true],"Flame Wheel":["flame-wheel","Fire","Physical",60,100,25,true],"Flamethrower":["flamethrower","Fire","Special",90,100,15,true],"Flare Blitz":["flare-blitz","Fire","Physical",120,100,15,true],"Flash":["flash","Normal","Status",null,100,20,true],"Flash Cannon":["flash-cannon","Steel","Special",80,100,10,true],"Flatter":["flatter","Dark","Status",null,100,15,true],"Fleur Cannon":["fleur-cannon","Fairy","Special",130,90,5,true],"Fling":["fling","Dark","Physical",null,100,10,true],"Flip Turn":["flip-turn","Water","Physical",60,100,20,true],"Floaty Fall":["floaty-fall","Flying","Physical",90,95,15,true],"Floral Healing":["floral-healing","Fairy","Status",null,null,10,true],"Flower Shield":["flower-shield","Fairy","Status",null,null,10,true],"Flower Trick":["flower-trick","Grass","Physical",70,null,10,true],"Fly":["fly","Flying","Physical",90,95,15,true],"Flying Press":["flying-press","Fighting","Physical",100,95,10,true],"Focus Blast":["focus-blast","Fighting","Special",120,70,5,true],"Focus Energy":["focus-energy","Normal","Status",null,null,30,true],"Focus Punch":["focus-punch","Fighting","Physical",150,100,20,true],"Follow Me":["follow-me","Normal","Status",null,null,20,true],"Force Palm":["force-palm","Fighting","Physical",60,100,10,true],"Foresight":["foresight","Normal","Status",null,null,40,true],"Forest's Curse":["forests-curse","Grass","Status",null,100,20,true],"Foul Play":["foul-play","Dark","Physical",95,100,15,true],"Freeze Shock":["freeze-shock","Ice","Physical",140,90,5,true],"Freeze Dry":["freeze-dry","Ice","Special",70,100,20,true],"Freezing Glare":["freezing-glare","Psychic","Special",90,100,10,true],"Freezy Frost":["freezy-frost","Ice","Special",90,100,15,true],"Frenzy Plant":["frenzy-plant","Grass","Special",150,90,5,true],"Frost Breath":["frost-breath","Ice","Special",60,90,10,true],"Frustration":["frustration","Normal","Physical",null,100,20,true],"Fury Attack":["fury-attack","Normal","Physical",15,85,20,true],"Fury Cutter":["fury-cutter","Bug","Physical",40,95,20,true],"Fury Swipes":["fury-swipes","Normal","Physical",18,80,15,true],"Fusion Bolt":["fusion-bolt","Electric","Physical",100,100,5,true],"Fusion Flare":["fusion-flare","Fire","Special",100,100,5,true],"Future Sight":["future-sight","Psychic","Special",120,100,10,true],"G-Max Befuddle":["g-max-befuddle","Bug",null,null,null,5,false],"G-Max Cannonade":["g-max-cannonade","Water",null,null,null,10,false],"G-Max Centiferno":["g-max-centiferno","Fire",null,null,null,5,false],"G-Max Chi Strike":["g-max-chi-strike","Fighting",null,null,null,5,false],"G-Max Cuddle":["g-max-cuddle","Normal",null,null,null,5,false],"G-Max Depletion":["g-max-depletion","Dragon",null,null,null,5,false],"G-Max Drum Solo":["g-max-drum-solo","Grass",null,160,null,5,false],"G-Max Finale":["g-max-finale","Fairy",null,null,null,5,false],"G-Max Fireball":["g-max-fireball","Fire",null,160,null,5,false],"G-Max Foam Burst":["g-max-foam-burst","Water",null,null,null,5,false],"G-Max Gold Rush":["g-max-gold-rush","Normal",null,null,null,5,false],"G-Max Gravitas":["g-max-gravitas","Psychic",null,null,null,5,false],"G-Max Hydrosnipe":["g-max-hydrosnipe","Water",null,160,null,5,false],"G-Max Malodor":["g-max-malodor","Poison",null,null,null,5,false],"G-Max Meltdown":["g-max-meltdown","Steel",null,null,null,5,false],"G-Max One Blow":["g-max-one-blow","Dark",null,null,null,5,false],"G-Max Rapid Flow":["g-max-rapid-flow","Water",null,null,null,5,false],"G-Max Replenish":["g-max-replenish","Normal",null,null,null,5,false],"G-Max Resonance":["g-max-resonance","Ice",null,null,null,5,false],"G-Max Sandblast":["g-max-sandblast","Ground",null,null,null,5,false],"G-Max Smite":["g-max-smite","Fairy",null,null,null,5,false],"G-Max Snooze":["g-max-snooze","Dark",null,null,null,5,false],"G-Max Steelsurge":["g-max-steelsurge","Steel",null,null,null,5,false],"G-Max Stonesurge":["g-max-stonesurge","Water",null,null,null,5,false],"G-Max Stun Shock":["g-max-stun-shock","Electric",null,null,null,10,false],"G-Max Sweetness":["g-max-sweetness","Grass",null,null,null,10,false],"G-Max Tartness":["g-max-tartness","Grass",null,null,null,10,false],"G-Max Terror":["g-max-terror","Ghost",null,null,null,10,false],"G-Max Vine Lash":["g-max-vine-lash","Grass",null,null,null,10,false],"G-Max Volcalith":["g-max-volcalith","Rock",null,null,null,10,false],"G-Max Volt Crash":["g-max-volt-crash","Electric",null,null,null,10,false],"G-Max Wildfire":["g-max-wildfire","Fire",null,null,null,10,false],"G-Max Wind Rage":["g-max-wind-rage","Flying",null,null,null,10,false],"Gastro Acid":["gastro-acid","Poison","Status",null,100,10,true],"Gear Grind":["gear-grind","Steel","Physical",50,85,15,true],"Gear Up":["gear-up","Steel","Status",null,null,20,true],"Genesis Supernova":["genesis-supernova","Psychic","Special",185,null,1,false],"Geomancy":["geomancy","Fairy","Status",null,null,10,true],"Giga Drain":["giga-drain","Grass","Special",75,100,10,true],"Giga Impact":["giga-impact","Normal","Physical",150,90,5,true],"Gigaton Hammer":["gigaton-hammer","Steel","Physical",160,100,5,true],"Gigavolt Havoc":["gigavolt-havoc","Electric",null,null,null,1,false],"Glacial Lance":["glacial-lance","Ice","Physical",120,100,5,true],"Glaciate":["glaciate","Ice","Special",65,95,10,true],"Glaive Rush":["glaive-rush","Dragon","Physical",120,100,5,true],"Glare":["glare","Normal","Status",null,100,30,true],"Glitzy Glow":["glitzy-glow","Psychic","Special",90,100,15,true],"Grass Knot":["grass-knot","Grass","Special",null,100,20,true],"Grass Pledge":["grass-pledge","Grass","Special",80,100,10,true],"Grass Whistle":["grass-whistle","Grass","Status",null,55,15,true],"Grassy Glide":["grassy-glide","Grass","Physical",55,100,20,true],"Grassy Terrain":["grassy-terrain","Grass","Status",null,null,10,true],"Grav Apple":["grav-apple","Grass","Physical",80,100,10,true],"Gravity":["gravity","Psychic","Status",null,null,5,true],"Growl":["growl","Normal","Status",null,100,40,true],"Growth":["growth","Normal","Status",null,null,20,true],"Grudge":["grudge","Ghost","Status",null,null,5,true],"Guard Split":["guard-split","Psychic","Status",null,null,10,true],"Guard Swap":["guard-swap","Psychic","Status",null,null,10,true],"Guardian of Alola":["guardian-of-alola","Fairy","Special",null,null,1,false],"Guillotine":["guillotine","Normal","Physical",null,30,5,true],"Gunk Shot":["gunk-shot","Poison","Physical",120,80,5,true],"Gust":["gust","Flying","Special",40,100,35,true],"Gyro Ball":["gyro-ball","Steel","Physical",null,100,5,true],"Hail":["hail","Ice","Status",null,null,10,true],"Hammer Arm":["hammer-arm","Fighting","Physical",100,90,10,true],"Happy Hour":["happy-hour","Normal","Status",null,null,30,true],"Hard Press":["hard-press","Steel","Physical",null,100,10,true],"Harden":["harden","Normal","Status",null,null,30,true],"Haze":["haze","Ice","Status",null,null,30,true],"Head Charge":["head-charge","Normal","Physical",120,100,15,true],"Head Smash":["head-smash","Rock","Physical",150,80,5,true],"Headbutt":["headbutt","Normal","Physical",70,100,15,true],"Headlong Rush":["headlong-rush","Ground","Physical",120,100,5,true],"Heal Bell":["heal-bell","Normal","Status",null,null,5,true],"Heal Block":["heal-block","Psychic","Status",null,100,15,true],"Heal Order":["heal-order","Bug","Status",null,null,10,true],"Heal Pulse":["heal-pulse","Psychic","Status",null,null,10,true],"Healing Wish":["healing-wish","Psychic","Status",null,null,10,true],"Heart Stamp":["heart-stamp","Psychic","Physical",60,100,25,true],"Heart Swap":["heart-swap","Psychic","Status",null,null,10,true],"Heat Crash":["heat-crash","Fire","Physical",null,100,10,true],"Heat Wave":["heat-wave","Fire","Special",95,90,10,true],"Heavy Slam":["heavy-slam","Steel","Physical",null,100,10,true],"Helping Hand":["helping-hand","Normal","Status",null,null,20,true],"Hex":["hex","Ghost","Special",65,100,10,true],"Hidden Power":["hidden-power","Normal","Special",60,100,15,true],"High Horsepower":["high-horsepower","Ground","Physical",95,95,10,true],"High Jump Kick":["high-jump-kick","Fighting","Physical",130,90,10,true],"Hold Back":["hold-back","Normal","Physical",40,100,40,true],"Hold Hands":["hold-hands","Normal","Status",null,null,40,true],"Hone Claws":["hone-claws","Dark","Status",null,null,15,true],"Horn Attack":["horn-attack","Normal","Physical",65,100,25,true],"Horn Drill":["horn-drill","Normal","Physical",null,30,5,true],"Horn Leech":["horn-leech","Grass","Physical",75,100,10,true],"Howl":["howl","Normal","Status",null,null,40,true],"Hurricane":["hurricane","Flying","Special",110,70,10,true],"Hydro Cannon":["hydro-cannon","Water","Special",150,90,5,true],"Hydro Pump":["hydro-pump","Water","Special",110,80,5,true],"Hydro Steam":["hydro-steam","Water","Special",80,100,15,true],"Hydro Vortex":["hydro-vortex","Water",null,null,null,1,false],"Hyper Beam":["hyper-beam","Normal","Special",150,90,5,true],"Hyper Drill":["hyper-drill","Normal","Physical",100,100,5,true],"Hyper Fang":["hyper-fang","Normal","Physical",80,90,15,true],"Hyper Voice":["hyper-voice","Normal","Special",90,100,10,true],"Hyperspace Fury":["hyperspace-fury","Dark","Physical",100,null,5,true],"Hyperspace Hole":["hyperspace-hole","Psychic","Special",80,null,5,true],"Hypnosis":["hypnosis","Psychic","Status",null,60,20,true],"Ice Ball":["ice-ball","Ice","Physical",30,90,20,true],"Ice Beam":["ice-beam","Ice","Special",90,100,10,true],"Ice Burn":["ice-burn","Ice","Special",140,90,5,true],"Ice Fang":["ice-fang","Ice","Physical",65,95,15,true],"Ice Hammer":["ice-hammer","Ice","Physical",100,90,10,true],"Ice Punch":["ice-punch","Ice","Physical",75,100,15,true],"Ice Shard":["ice-shard","Ice","Physical",40,100,30,true],"Ice Spinner":["ice-spinner","Ice","Physical",80,100,15,true],"Icicle Crash":["icicle-crash","Ice","Physical",85,90,10,true],"Icicle Spear":["icicle-spear","Ice","Physical",25,100,30,true],"Icy Wind":["icy-wind","Ice","Special",55,95,15,true],"Imprison":["imprison","Psychic","Status",null,null,10,true],"Incinerate":["incinerate","Fire","Special",60,100,15,true],"Infernal Parade":["infernal-parade","Ghost","Special",60,100,15,true],"Inferno":["inferno","Fire","Special",100,50,5,true],"Inferno Overdrive":["inferno-overdrive","Fire",null,null,null,1,false],"Infestation":["infestation","Bug","Special",20,100,20,true],"Ingrain":["ingrain","Grass","Status",null,null,20,true],"Instruct":["instruct","Psychic","Status",null,null,15,true],"Ion Deluge":["ion-deluge","Electric","Status",null,null,25,true],"Iron Defense":["iron-defense","Steel","Status",null,null,15,true],"Iron Head":["iron-head","Steel","Physical",80,100,15,true],"Iron Tail":["iron-tail","Steel","Physical",100,75,15,true],"Ivy Cudgel":["ivy-cudgel","Grass","Physical",100,null,null,true],"Jaw Lock":["jaw-lock","Dark","Physical",80,100,10,true],"Jet Punch":["jet-punch","Water","Physical",60,100,15,true],"Judgment":["judgment","Normal","Special",100,100,10,true],"Jump Kick":["jump-kick","Fighting","Physical",100,95,10,true],"Jungle Healing":["jungle-healing","Grass","Status",null,null,10,true],"Karate Chop":["karate-chop","Fighting","Physical",50,100,25,true],"Kinesis":["kinesis","Psychic","Status",null,80,15,true],"Kings Shield":["kings-shield","Steel","Status",null,null,10,true],"Knock Off":["knock-off","Dark","Physical",65,100,20,true],"Kowtow Cleave":["kowtow-cleave","Dark","Physical",85,null,10,true],"Land's Wrath":["lands-wrath","Ground","Physical",90,100,10,true],"Laser Focus":["laser-focus","Normal","Status",null,null,30,true],"Lash Out":["lash-out","Dark","Physical",75,100,5,true],"Last Resort":["last-resort","Normal","Physical",140,100,5,true],"Last Respects":["last-respects","Ghost","Physical",50,100,10,true],"Lava Plume":["lava-plume","Fire","Special",80,100,15,true],"Leaf Blade":["leaf-blade","Grass","Physical",90,100,15,true],"Leaf Storm":["leaf-storm","Grass","Special",130,90,5,true],"Leaf Tornado":["leaf-tornado","Grass","Special",65,90,10,true],"Leafage":["leafage","Grass","Physical",40,100,40,true],"Leech Life":["leech-life","Bug","Physical",80,100,10,true],"Leech Seed":["leech-seed","Grass","Status",null,90,10,true],"Leer":["leer","Normal","Status",null,100,30,true],"Let's Snuggle Forever":["lets-snuggle-forever","Fairy","Physical",190,null,1,false],"Lick":["lick","Ghost","Physical",30,100,30,true],"Life Dew":["life-dew","Water","Status",null,null,10,true],"Light of Ruin":["light-of-ruin","Fairy","Special",140,90,5,true],"Light Screen":["light-screen","Psychic","Status",null,null,30,true],"Light That Burns the Sky":["light-that-burns-the-sky","Psychic","Special",200,null,1,false],"Liquidation":["liquidation","Water","Physical",85,100,10,true],"Lock-On":["lock-on","Normal","Status",null,null,5,true],"Lovely Kiss":["lovely-kiss","Normal","Status",null,75,10,true],"Low Kick":["low-kick","Fighting","Physical",null,100,20,true],"Low Sweep":["low-sweep","Fighting","Physical",65,100,20,true],"Lucky Chant":["lucky-chant","Normal","Status",null,null,30,true],"Lumina Crash":["lumina-crash","Psychic","Special",80,100,10,true],"Lunar Blessing":["lunar-blessing","Psychic","Status",null,null,5,true],"Lunar Dance":["lunar-dance","Psychic","Status",null,null,10,true],"Lunge":["lunge","Bug","Physical",80,100,15,true],"Luster Purge":["luster-purge","Psychic","Special",95,100,5,true],"Mach Punch":["mach-punch","Fighting","Physical",40,100,30,true],"Magic Coat":["magic-coat","Psychic","Status",null,null,15,true],"Magic Powder":["magic-powder","Psychic","Status",null,100,20,true],"Magic Room":["magic-room","Psychic","Status",null,null,10,true],"Magical Leaf":["magical-leaf","Grass","Special",60,null,20,true],"Magical Torque":["magical-torque","Fairy","Physical",100,100,10,true],"Magma Storm":["magma-storm","Fire","Special",100,75,5,true],"Magnet Bomb":["magnet-bomb","Steel","Physical",60,null,20,true],"Magnet Rise":["magnet-rise","Electric","Status",null,null,10,true],"Magnetic Flux":["magnetic-flux","Electric","Status",null,null,20,true],"Magnitude":["magnitude","Ground","Physical",null,100,30,true],"Make It Rain":["make-it-rain","Steel","Special",120,100,5,true],"Malicious Moonsault":["malicious-moonsault","Dark","Physical",180,null,1,false],"Malignant Chain":["malignant-chain","Poison","Special",100,100,5,true],"Mat Block":["mat-block","Fighting","Status",null,null,10,true],"Matcha Gotcha":["matcha-gotcha","Grass","Special",80,90,15,true],"Max Airstream":["max-airstream","Flying",null,null,null,null,false],"Max Darkness":["max-darkness","Dark",null,null,null,null,false],"Max Flare":["max-flare","Fire",null,null,null,null,false],"Max Flutterby":["max-flutterby","Bug",null,null,null,null,false],"Max Geyser":["max-geyser","Water",null,null,null,null,false],"Max Guard":["max-guard","Normal",null,null,null,null,false],"Max Hailstorm":["max-hailstorm","Ice",null,null,null,null,false],"Max Knuckle":["max-knuckle","Fighting",null,null,null,null,false],"Max Lightning":["max-lightning","Electric",null,null,null,null,false],"Max Mindstorm":["max-mindstorm","Psychic",null,null,null,null,false],"Max Ooze":["max-ooze","Poison",null,null,null,null,false],"Max Overgrowth":["max-overgrowth","Grass",null,null,null,null,false],"Max Phantasm":["max-phantasm","Ghost",null,null,null,null,false],"Max Quake":["max-quake","Ground",null,null,null,null,false],"Max Rockfall":["max-rockfall","Rock",null,null,null,null,false],"Max Starfall":["max-starfall","Fairy",null,null,null,null,false],"Max Steelspike":["max-steelspike","Steel",null,null,null,null,false],"Max Strike":["max-strike","Normal",null,null,null,null,false],"Max Wyrmwind":["max-wyrmwind","Dragon",null,null,null,null,false],"Me First":["me-first","Normal","Status",null,null,20,true],"Mean Look":["mean-look","Normal","Status",null,null,5,true],"Meditate":["meditate","Psychic","Status",null,null,40,true],"Mega Drain":["mega-drain","Grass","Special",40,100,15,true],"Mega Kick":["mega-kick","Normal","Physical",120,75,5,true],"Mega Punch":["mega-punch","Normal","Physical",80,85,20,true],"Megahorn":["megahorn","Bug","Physical",120,85,10,true],"Memento":["memento","Dark","Status",null,100,10,true],"Menacing Moonraze Maelstrom":["menacing-moonraze-maelstrom","Ghost","Special",200,null,1,false],"Metal Burst":["metal-burst","Steel","Physical",null,100,10,true],"Metal Claw":["metal-claw","Steel","Physical",50,95,35,true],"Metal Sound":["metal-sound","Steel","Status",null,85,40,true],"Meteor Assault":["meteor-assault","Fighting","Physical",150,100,5,true],"Meteor Beam":["meteor-beam","Rock","Special",120,90,10,true],"Meteor Mash":["meteor-mash","Steel","Physical",90,90,10,true],"Metronome":["metronome","Normal","Status",null,null,10,true],"Mighty Cleave":["mighty-cleave","Rock","Physical",95,100,5,true],"Milk Drink":["milk-drink","Normal","Status",null,null,5,true],"Mimic":["mimic","Normal","Status",null,null,10,true],"Mind Blown":["mind-blown","Fire","Special",150,100,5,true],"Mind Reader":["mind-reader","Normal","Status",null,null,5,true],"Minimize":["minimize","Normal","Status",null,null,10,true],"Miracle Eye":["miracle-eye","Psychic","Status",null,null,40,true],"Mirror Coat":["mirror-coat","Psychic","Special",null,100,20,true],"Mirror Move":["mirror-move","Flying","Status",null,null,20,true],"Mirror Shot":["mirror-shot","Steel","Special",65,85,10,true],"Mist":["mist","Ice","Status",null,null,30,true],"Mist Ball":["mist-ball","Psychic","Special",95,100,5,true],"Misty Explosion":["misty-explosion","Fairy","Special",100,100,5,true],"Misty Terrain":["misty-terrain","Fairy","Status",null,null,10,true],"Moonblast":["moonblast","Fairy","Special",95,100,15,true],"Moongeist Beam":["moongeist-beam","Ghost","Special",100,100,5,true],"Moonlight":["moonlight","Fairy","Status",null,null,5,true],"Morning Sun":["morning-sun","Normal","Status",null,null,5,true],"Mortal Spin":["mortal-spin","Poison","Physical",30,100,15,true],"Mountain Gale":["mountain-gale","Ice","Physical",100,85,10,true],"Mud Bomb":["mud-bomb","Ground","Special",65,85,10,true],"Mud Shot":["mud-shot","Ground","Special",55,95,15,true],"Mud Sport":["mud-sport","Ground","Status",null,null,15,true],"Mud Slap":["mud-slap","Ground","Special",20,100,10,true],"Muddy Water":["muddy-water","Water","Special",90,85,10,true],"Multi-Attack":["multi-attack","Normal","Physical",120,100,10,true],"Mystical Fire":["mystical-fire","Fire","Special",75,100,10,true],"Mystical Power":["mystical-power","Psychic","Special",70,90,10,true],"Nasty Plot":["nasty-plot","Dark","Status",null,null,20,true],"Natural Gift":["natural-gift","Normal","Physical",null,100,15,true],"Nature Power":["nature-power","Normal","Status",null,null,20,true],"Nature's Madness":["natures-madness","Fairy","Special",null,90,10,true],"Needle Arm":["needle-arm","Grass","Physical",60,100,15,true],"Never-Ending Nightmare":["never-ending-nightmare","Ghost",null,null,null,1,false],"Night Daze":["night-daze","Dark","Special",85,95,10,true],"Night Shade":["night-shade","Ghost","Special",null,100,15,true],"Night Slash":["night-slash","Dark","Physical",70,100,15,true],"Nightmare":["nightmare","Ghost","Status",null,100,15,true],"No Retreat":["no-retreat","Fighting","Status",null,null,5,true],"Noble Roar":["noble-roar","Normal","Status",null,100,30,true],"Noxious Torque":["noxious-torque","Poison","Physical",100,100,10,true],"Nuzzle":["nuzzle","Electric","Physical",20,100,20,true],"Oblivion Wing":["oblivion-wing","Flying","Special",80,100,10,true],"Obstruct":["obstruct","Dark","Status",null,100,10,true],"Oceanic Operetta":["oceanic-operetta","Water","Special",195,null,1,false],"Octazooka":["octazooka","Water","Special",65,85,10,true],"Octolock":["octolock","Fighting","Status",null,100,15,true],"Odor Sleuth":["odor-sleuth","Normal","Status",null,null,40,true],"Ominous Wind":["ominous-wind","Ghost","Special",60,100,5,true],"Order Up":["order-up","Dragon","Physical",80,100,10,true],"Origin Pulse":["origin-pulse","Water","Special",110,85,10,true],"Outrage":["outrage","Dragon","Physical",120,100,10,true],"Overdrive":["overdrive","Electric","Special",80,100,10,true],"Overheat":["overheat","Fire","Special",130,90,5,true],"Pain Split":["pain-split","Normal","Status",null,null,20,true],"Parabolic Charge":["parabolic-charge","Electric","Special",65,100,20,true],"Parting Shot":["parting-shot","Dark","Status",null,100,20,true],"Pay Day":["pay-day","Normal","Physical",40,100,20,true],"Payback":["payback","Dark","Physical",50,100,10,true],"Peck":["peck","Flying","Physical",35,100,35,true],"Perish Song":["perish-song","Normal","Status",null,null,5,true],"Petal Blizzard":["petal-blizzard","Grass","Physical",90,100,15,true],"Petal Dance":["petal-dance","Grass","Special",120,100,10,true],"Phantom Force":["phantom-force","Ghost","Physical",90,100,10,true],"Photon Geyser":["photon-geyser","Psychic","Special",100,100,5,true],"Pika Papow":["pika-papow","Electric","Special",null,null,20,true],"Pin Missile":["pin-missile","Bug","Physical",25,95,20,true],"Plasma Fists":["plasma-fists","Electric","Physical",100,100,15,true],"Play Nice":["play-nice","Normal","Status",null,null,20,true],"Play Rough":["play-rough","Fairy","Physical",90,90,10,true],"Pluck":["pluck","Flying","Physical",60,100,20,true],"Poison Fang":["poison-fang","Poison","Physical",50,100,15,true],"Poison Gas":["poison-gas","Poison","Status",null,90,40,true],"Poison Jab":["poison-jab","Poison","Physical",80,100,20,true],"Poison Powder":["poison-powder","Poison","Status",null,75,35,true],"Poison Sting":["poison-sting","Poison","Physical",15,100,35,true],"Poison Tail":["poison-tail","Poison","Physical",50,100,25,true],"Pollen Puff":["pollen-puff","Bug","Special",90,100,15,true],"Poltergeist":["poltergeist","Ghost","Physical",110,90,5,true],"Population Bomb":["population-bomb","Normal","Physical",20,90,10,true],"Pounce":["pounce","Bug","Physical",50,100,20,true],"Pound":["pound","Normal","Physical",40,100,35,true],"Powder":["powder","Bug","Status",null,100,20,true],"Powder Snow":["powder-snow","Ice","Special",40,100,25,true],"Power Gem":["power-gem","Rock","Special",80,100,20,true],"Power Shift":["power-shift","Normal","Status",null,null,10,true],"Power Split":["power-split","Psychic","Status",null,null,10,true],"Power Swap":["power-swap","Psychic","Status",null,null,10,true],"Power Trick":["power-trick","Psychic","Status",null,null,10,true],"Power Trip":["power-trip","Dark","Physical",20,100,10,true],"Power Whip":["power-whip","Grass","Physical",120,85,10,true],"Power Up Punch":["power-up-punch","Fighting","Physical",40,100,20,true],"Precipice Blades":["precipice-blades","Ground","Physical",120,85,10,true],"Present":["present","Normal","Physical",null,90,15,true],"Prismatic Laser":["prismatic-laser","Psychic","Special",160,100,10,true],"Protect":["protect","Normal","Status",null,null,10,true],"Psybeam":["psybeam","Psychic","Special",65,100,20,true],"Psyblade":["psyblade","Psychic","Physical",80,100,15,true],"Psych Up":["psych-up","Normal","Status",null,null,10,true],"Psychic":["psychic","Psychic","Special",90,100,10,true],"Psychic Fangs":["psychic-fangs","Psychic","Physical",85,100,10,true],"Psychic Noise":["psychic-noise","Psychic","Special",75,100,10,true],"Psychic Terrain":["psychic-terrain","Psychic","Status",null,null,10,true],"Psycho Boost":["psycho-boost","Psychic","Special",140,90,5,true],"Psycho Cut":["psycho-cut","Psychic","Physical",70,100,20,true],"Psycho Shift":["psycho-shift","Psychic","Status",null,100,10,true],"Psyshield Bash":["psyshield-bash","Psychic","Physical",70,90,10,true],"Psyshock":["psyshock","Psychic","Special",80,100,10,true],"Psystrike":["psystrike","Psychic","Special",100,100,10,true],"Psywave":["psywave","Psychic","Special",null,100,15,true],"Pulverizing Pancake":["pulverizing-pancake","Normal","Physical",210,null,1,false],"Punishment":["punishment","Dark","Physical",null,100,5,true],"Purify":["purify","Poison","Status",null,null,20,true],"Pursuit":["pursuit","Dark","Physical",40,100,20,true],"Pyro Ball":["pyro-ball","Fire","Physical",120,90,5,true],"Quash":["quash","Dark","Status",null,100,15,true],"Quick Attack":["quick-attack","Normal","Physical",40,100,30,true],"Quick Guard":["quick-guard","Fighting","Status",null,null,15,true],"Quiver Dance":["quiver-dance","Bug","Status",null,null,20,true],"Rage":["rage","Normal","Physical",20,100,20,true],"Rage Fist":["rage-fist","Ghost","Physical",50,100,10,true],"Rage Powder":["rage-powder","Bug","Status",null,null,20,true],"Raging Bull":["raging-bull","Normal","Physical",90,100,10,true],"Raging Fury":["raging-fury","Fire","Physical",120,100,10,true],"Rain Dance":["rain-dance","Water","Status",null,null,5,true],"Rapid Spin":["rapid-spin","Normal","Physical",50,100,40,true],"Razor Leaf":["razor-leaf","Grass","Physical",55,95,25,true],"Razor Shell":["razor-shell","Water","Physical",75,95,10,true],"Razor Wind":["razor-wind","Normal","Special",80,100,10,true],"Recover":["recover","Normal","Status",null,null,5,true],"Recycle":["recycle","Normal","Status",null,null,10,true],"Reflect":["reflect","Psychic","Status",null,null,20,true],"Reflect Type":["reflect-type","Normal","Status",null,null,15,true],"Refresh":["refresh","Normal","Status",null,null,20,true],"Relic Song":["relic-song","Normal","Special",75,100,10,true],"Rest":["rest","Psychic","Status",null,null,5,true],"Retaliate":["retaliate","Normal","Physical",70,100,5,true],"Return":["return","Normal","Physical",null,100,20,true],"Revelation Dance":["revelation-dance","Normal","Special",90,100,15,true],"Revenge":["revenge","Fighting","Physical",60,100,10,true],"Reversal":["reversal","Fighting","Physical",null,100,15,true],"Revival Blessing":["revival-blessing","Normal","Status",null,null,1,true],"Rising Voltage":["rising-voltage","Electric","Special",70,100,20,true],"Roar":["roar","Normal","Status",null,null,20,true],"Roar Of Time":["roar-of-time","Dragon","Special",150,90,5,true],"Rock Blast":["rock-blast","Rock","Physical",25,90,10,true],"Rock Climb":["rock-climb","Normal","Physical",90,85,20,true],"Rock Polish":["rock-polish","Rock","Status",null,null,20,true],"Rock Slide":["rock-slide","Rock","Physical",75,90,10,true],"Rock Smash":["rock-smash","Fighting","Physical",40,100,15,true],"Rock Throw":["rock-throw","Rock","Physical",50,90,15,true],"Rock Tomb":["rock-tomb","Rock","Physical",60,95,15,true],"Rock Wrecker":["rock-wrecker","Rock","Physical",150,90,5,true],"Role Play":["role-play","Psychic","Status",null,null,10,true],"Rolling Kick":["rolling-kick","Fighting","Physical",60,85,15,true],"Rollout":["rollout","Rock","Physical",30,90,20,true],"Roost":["roost","Flying","Status",null,null,5,true],"Rototiller":["rototiller","Ground","Status",null,null,10,true],"Round":["round","Normal","Special",60,100,15,true],"Ruination":["ruination","Dark","Special",null,90,10,true],"Sacred Fire":["sacred-fire","Fire","Physical",100,95,5,true],"Sacred Sword":["sacred-sword","Fighting","Physical",90,100,15,true],"Safeguard":["safeguard","Normal","Status",null,null,25,true],"Salt Cure":["salt-cure","Rock","Physical",40,100,15,true],"Sand Attack":["sand-attack","Ground","Status",null,100,15,true],"Sand Tomb":["sand-tomb","Ground","Physical",35,85,15,true],"Sandsear Storm":["sandsear-storm","Ground","Special",100,80,10,true],"Sandstorm":["sandstorm","Rock","Status",null,null,10,true],"Sappy Seed":["sappy-seed","Grass","Physical",90,100,15,true],"Savage Spin-Out":["savage-spin-out","Bug",null,null,null,1,false],"Scald":["scald","Water","Special",80,100,15,true],"Scale Shot":["scale-shot","Dragon","Physical",25,90,20,true],"Scary Face":["scary-face","Normal","Status",null,100,10,true],"Scorching Sands":["scorching-sands","Ground","Special",70,100,10,true],"Scratch":["scratch","Normal","Physical",40,100,35,true],"Screech":["screech","Normal","Status",null,85,40,true],"Searing Shot":["searing-shot","Fire","Special",100,100,5,true],"Searing Sunraze Smash":["searing-sunraze-smash","Steel","Physical",200,null,1,false],"Secret Power":["secret-power","Normal","Physical",70,100,20,true],"Secret Sword":["secret-sword","Fighting","Special",85,100,10,true],"Seed Bomb":["seed-bomb","Grass","Physical",80,100,15,true],"Seed Flare":["seed-flare","Grass","Special",120,85,5,true],"Seismic Toss":["seismic-toss","Fighting","Physical",null,100,20,true],"Self-Destruct":["self-destruct","Normal","Physical",200,100,5,true],"Shadow Ball":["shadow-ball","Ghost","Special",80,100,15,true],"Shadow Bone":["shadow-bone","Ghost","Physical",85,100,10,true],"Shadow Claw":["shadow-claw","Ghost","Physical",70,100,15,true],"Shadow Force":["shadow-force","Ghost","Physical",120,100,5,true],"Shadow Punch":["shadow-punch","Ghost","Physical",60,null,20,true],"Shadow Sneak":["shadow-sneak","Ghost","Physical",40,100,30,true],"Sharpen":["sharpen","Normal","Status",null,null,30,true],"Shattered Psyche":["shattered-psyche","Psychic",null,null,null,1,false],"Shed Tail":["shed-tail","Normal","Status",null,null,10,true],"Sheer Cold":["sheer-cold","Ice","Special",null,30,5,true],"Shell Side Arm":["shell-side-arm","Poison","Special",90,100,10,true],"Shell Smash":["shell-smash","Normal","Status",null,null,15,true],"Shell Trap":["shell-trap","Fire","Special",150,100,5,true],"Shelter":["shelter","Steel","Status",null,null,10,true],"Shift Gear":["shift-gear","Steel","Status",null,null,10,true],"Shock Wave":["shock-wave","Electric","Special",60,null,20,true],"Shore Up":["shore-up","Ground","Status",null,null,5,true],"Signal Beam":["signal-beam","Bug","Special",75,100,15,true],"Silk Trap":["silk-trap","Bug","Status",null,null,10,true],"Silver Wind":["silver-wind","Bug","Special",60,100,5,true],"Simple Beam":["simple-beam","Normal","Status",null,100,15,true],"Sing":["sing","Normal","Status",null,55,15,true],"Sinister Arrow Raid":["sinister-arrow-raid","Ghost","Physical",180,null,1,false],"Sizzly Slide":["sizzly-slide","Fire","Physical",90,100,15,true],"Sketch":["sketch","Normal","Status",null,null,1,true],"Skill Swap":["skill-swap","Psychic","Status",null,null,10,true],"Skitter Smack":["skitter-smack","Bug","Physical",70,90,10,true],"Skull Bash":["skull-bash","Normal","Physical",130,100,10,true],"Sky Attack":["sky-attack","Flying","Physical",140,90,5,true],"Sky Drop":["sky-drop","Flying","Physical",60,100,10,true],"Sky Uppercut":["sky-uppercut","Fighting","Physical",85,90,15,true],"Slack Off":["slack-off","Normal","Status",null,null,5,true],"Slam":["slam","Normal","Physical",80,75,20,true],"Slash":["slash","Normal","Physical",70,100,20,true],"Sleep Powder":["sleep-powder","Grass","Status",null,75,15,true],"Sleep Talk":["sleep-talk","Normal","Status",null,null,10,true],"Sludge":["sludge","Poison","Special",65,100,20,true],"Sludge Bomb":["sludge-bomb","Poison","Special",90,100,10,true],"Sludge Wave":["sludge-wave","Poison","Special",95,100,10,true],"Smack Down":["smack-down","Rock","Physical",50,100,15,true],"Smart Strike":["smart-strike","Steel","Physical",70,null,10,true],"Smelling Salts":["smelling-salts","Normal","Physical",70,100,10,true],"Smog":["smog","Poison","Special",30,70,20,true],"Smokescreen":["smokescreen","Normal","Status",null,100,20,true],"Snap Trap":["snap-trap","Grass","Physical",35,100,15,true],"Snarl":["snarl","Dark","Special",55,95,15,true],"Snatch":["snatch","Dark","Status",null,null,10,true],"Snipe Shot":["snipe-shot","Water","Special",80,100,15,true],"Snore":["snore","Normal","Special",50,100,15,true],"Snowscape":["snowscape","Ice","Status",null,null,10,true],"Soak":["soak","Water","Status",null,100,20,true],"Soft Boiled":["soft-boiled","Normal","Status",null,null,5,true],"Solar Beam":["solar-beam","Grass","Special",120,100,10,true],"Solar Blade":["solar-blade","Grass","Physical",125,100,10,true],"Sonic Boom":["sonic-boom","Normal","Special",null,90,20,true],"Soul-Stealing 7-Star Strike":["soul-stealing-7-star-strike","Ghost","Physical",195,null,1,false],"Spacial Rend":["spacial-rend","Dragon","Special",100,95,5,true],"Spark":["spark","Electric","Physical",65,100,20,true],"Sparkling Aria":["sparkling-aria","Water","Special",90,100,10,true],"Sparkly Swirl":["sparkly-swirl","Fairy","Special",90,100,15,true],"Spectral Thief":["spectral-thief","Ghost","Physical",90,100,10,true],"Speed Swap":["speed-swap","Psychic","Status",null,null,10,true],"Spicy Extract":["spicy-extract","Grass","Status",null,null,15,true],"Spider Web":["spider-web","Bug","Status",null,null,10,true],"Spike Cannon":["spike-cannon","Normal","Physical",20,100,15,true],"Spikes":["spikes","Ground","Status",null,null,20,true],"Spiky Shield":["spiky-shield","Grass","Status",null,null,10,true],"Spin Out":["spin-out","Steel","Physical",100,100,5,true],"Spirit Break":["spirit-break","Fairy","Physical",75,100,15,true],"Spirit Shackle":["spirit-shackle","Ghost","Physical",80,100,10,true],"Spit Up":["spit-up","Normal","Special",null,100,10,true],"Spite":["spite","Ghost","Status",null,100,10,true],"Splash":["splash","Normal","Status",null,null,40,true],"Splintered Stormshards":["splintered-stormshards","Rock","Physical",190,null,1,false],"Splishy Splash":["splishy-splash","Water","Special",90,100,15,true],"Spore":["spore","Grass","Status",null,100,15,true],"Spotlight":["spotlight","Normal","Status",null,null,15,true],"Springtide Storm":["springtide-storm","Fairy","Special",100,80,5,true],"Stealth Rock":["stealth-rock","Rock","Status",null,null,20,true],"Steam Eruption":["steam-eruption","Water","Special",110,95,5,true],"Steamroller":["steamroller","Bug","Physical",65,100,20,true],"Steel Beam":["steel-beam","Steel","Special",140,95,5,true],"Steel Roller":["steel-roller","Steel","Physical",130,100,5,true],"Steel Wing":["steel-wing","Steel","Physical",70,90,25,true],"Sticky Web":["sticky-web","Bug","Status",null,null,20,true],"Stockpile":["stockpile","Normal","Status",null,null,20,true],"Stoked Sparksurfer":["stoked-sparksurfer","Electric","Special",175,null,1,false],"Stomp":["stomp","Normal","Physical",65,100,20,true],"Stomping Tantrum":["stomping-tantrum","Ground","Physical",75,100,10,true],"Stone Axe":["stone-axe","Rock","Physical",65,90,15,true],"Stone Edge":["stone-edge","Rock","Physical",100,80,5,true],"Stored Power":["stored-power","Psychic","Special",20,100,10,true],"Storm Throw":["storm-throw","Fighting","Physical",60,100,10,true],"Strange Steam":["strange-steam","Fairy","Special",90,95,10,true],"Strength":["strength","Normal","Physical",80,100,15,true],"Strength Sap":["strength-sap","Grass","Status",null,100,10,true],"String Shot":["string-shot","Bug","Status",null,95,40,true],"Struggle":["struggle","Normal","Physical",50,null,null,false],"Struggle Bug":["struggle-bug","Bug","Special",50,100,20,true],"Stuff Cheeks":["stuff-cheeks","Normal","Status",null,null,10,true],"Stun Spore":["stun-spore","Grass","Status",null,75,30,true],"Submission":["submission","Fighting","Physical",80,80,20,true],"Substitute":["substitute","Normal","Status",null,null,10,true],"Subzero Slammer":["subzero-slammer","Ice",null,null,null,1,false],"Sucker Punch":["sucker-punch","Dark","Physical",70,100,5,true],"Sunny Day":["sunny-day","Fire","Status",null,null,5,true],"Sunsteel Strike":["sunsteel-strike","Steel","Physical",100,100,5,true],"Super Fang":["super-fang","Normal","Physical",null,90,10,true],"Supercell Slam":["supercell-slam","Electric","Physical",100,95,15,true],"Superpower":["superpower","Fighting","Physical",120,100,5,true],"Supersonic":["supersonic","Normal","Status",null,55,20,true],"Supersonic Skystrike":["supersonic-skystrike","Flying",null,null,null,1,false],"Surf":["surf","Water","Special",90,100,15,true],"Surging Strikes":["surging-strikes","Water","Physical",25,100,5,true],"Swagger":["swagger","Normal","Status",null,85,15,true],"Swallow":["swallow","Normal","Status",null,null,10,true],"Sweet Kiss":["sweet-kiss","Fairy","Status",null,75,10,true],"Sweet Scent":["sweet-scent","Normal","Status",null,100,20,true],"Swift":["swift","Normal","Special",60,null,20,true],"Switcheroo":["switcheroo","Dark","Status",null,100,10,true],"Swords Dance":["swords-dance","Normal","Status",null,null,20,true],"Synchronoise":["synchronoise","Psychic","Special",120,100,10,true],"Synthesis":["synthesis","Grass","Status",null,null,5,true],"Syrup Bomb":["syrup-bomb","Grass","Special",60,85,10,true],"Tachyon Cutter":["tachyon-cutter","Steel","Special",50,null,10,true],"Tackle":["tackle","Normal","Physical",40,100,35,true],"Tail Glow":["tail-glow","Bug","Status",null,null,20,true],"Tail Slap":["tail-slap","Normal","Physical",25,85,10,true],"Tail Whip":["tail-whip","Normal","Status",null,100,30,true],"Tailwind":["tailwind","Flying","Status",null,null,15,true],"Take Down":["take-down","Normal","Physical",90,85,20,true],"Take Heart":["take-heart","Psychic","Status",null,null,10,true],"Tar Shot":["tar-shot","Rock","Status",null,100,15,true],"Taunt":["taunt","Dark","Status",null,100,20,true],"Tearful Look":["tearful-look","Normal","Status",null,null,20,true],"Teatime":["teatime","Normal","Status",null,null,10,true],"Techno Blast":["techno-blast","Normal","Special",120,100,5,true],"Tectonic Rage":["tectonic-rage","Ground",null,null,null,1,false],"Teeter Dance":["teeter-dance","Normal","Status",null,100,20,true],"Telekinesis":["telekinesis","Psychic","Status",null,null,15,true],"Teleport":["teleport","Psychic","Status",null,null,20,true],"Temper Flare":["temper-flare","Fire","Physical",75,100,10,true],"Tera Blast":["tera-blast","Normal","Special",80,100,10,true],"Tera Starstorm":["tera-starstorm","Normal","Special",120,100,5,true],"Terrain Pulse":["terrain-pulse","Normal","Special",50,100,10,true],"Thief":["thief","Dark","Physical",60,100,25,true],"Thousand Arrows":["thousand-arrows","Ground","Physical",90,100,10,true],"Thousand Waves":["thousand-waves","Ground","Physical",90,100,10,true],"Thrash":["thrash","Normal","Physical",120,100,10,true],"Throat Chop":["throat-chop","Dark","Physical",80,100,15,true],"Thunder":["thunder","Electric","Special",110,70,10,true],"Thunder Cage":["thunder-cage","Electric","Special",80,90,15,true],"Thunder Fang":["thunder-fang","Electric","Physical",65,95,15,true],"Thunder Punch":["thunder-punch","Electric","Physical",75,100,15,true],"Thunder Shock":["thunder-shock","Electric","Special",40,100,30,true],"Thunder Wave":["thunder-wave","Electric","Status",null,90,20,true],"Thunderbolt":["thunderbolt","Electric","Special",90,100,15,true],"Thunderclap":["thunderclap","Electric","Special",70,100,5,true],"Thunderous Kick":["thunderous-kick","Fighting","Physical",90,100,10,true],"Tickle":["tickle","Normal","Status",null,100,20,true],"Tidy Up":["tidy-up","Normal","Status",null,null,10,true],"Topsy-Turvy":["topsy-turvy","Dark","Status",null,null,20,true],"Torch Song":["torch-song","Fire","Special",80,100,10,true],"Torment":["torment","Dark","Status",null,100,15,true],"Toxic":["toxic","Poison","Status",null,90,10,true],"Toxic Spikes":["toxic-spikes","Poison","Status",null,null,20,true],"Toxic Thread":["toxic-thread","Poison","Status",null,100,20,true],"Trailblaze":["trailblaze","Grass","Physical",50,100,20,true],"Transform":["transform","Normal","Status",null,null,10,true],"Tri Attack":["tri-attack","Normal","Special",80,100,10,true],"Trick":["trick","Psychic","Status",null,100,10,true],"Trick Room":["trick-room","Psychic","Status",null,null,5,true],"Trick-or-Treat":["trick-or-treat","Ghost","Status",null,100,20,true],"Triple Arrows":["triple-arrows","Fighting","Physical",90,100,10,true],"Triple Axel":["triple-axel","Ice","Physical",20,90,10,true],"Triple Dive":["triple-dive","Water","Physical",30,95,10,true],"Triple Kick":["triple-kick","Fighting","Physical",10,90,10,true],"Trop Kick":["trop-kick","Grass","Physical",70,100,15,true],"Trump Card":["trump-card","Normal","Special",null,null,5,true],"Twin Beam":["twin-beam","Psychic","Special",40,100,10,true],"Twineedle":["twineedle","Bug","Physical",25,100,20,true],"Twinkle Tackle":["twinkle-tackle","Fairy",null,null,null,1,false],"Twister":["twister","Dragon","Special",40,100,20,true],"U Turn":["u-turn","Bug","Physical",70,100,20,true],"Upper Hand":["upper-hand","Fighting","Physical",65,100,15,true],"Uproar":["uproar","Normal","Special",90,100,10,true],"V Create":["v-create","Fire","Physical",180,95,5,true],"Vacuum Wave":["vacuum-wave","Fighting","Special",40,100,30,true],"Veevee Volley":["veevee-volley","Normal","Physical",null,null,20,true],"Venom Drench":["venom-drench","Poison","Status",null,100,20,true],"Venoshock":["venoshock","Poison","Special",65,100,10,true],"Victory Dance":["victory-dance","Fighting","Status",null,null,10,true],"Vine Whip":["vine-whip","Grass","Physical",45,100,25,true],"Vise Grip":["vise-grip","Normal","Physical",55,100,30,true],"Vital Throw":["vital-throw","Fighting","Physical",70,null,10,true],"Volt Switch":["volt-switch","Electric","Special",70,100,20,true],"Volt Tackle":["volt-tackle","Electric","Physical",120,100,15,true],"Wake Up Slap":["wake-up-slap","Fighting","Physical",70,100,10,true],"Water Gun":["water-gun","Water","Special",40,100,25,true],"Water Pledge":["water-pledge","Water","Special",80,100,10,true],"Water Pulse":["water-pulse","Water","Special",60,100,20,true],"Water Shuriken":["water-shuriken","Water","Special",15,100,20,true],"Water Sport":["water-sport","Water","Status",null,null,15,true],"Water Spout":["water-spout","Water","Special",150,100,5,true],"Waterfall":["waterfall","Water","Physical",80,100,15,true],"Wave Crash":["wave-crash","Water","Physical",120,100,10,true],"Weather Ball":["weather-ball","Normal","Special",50,100,10,true],"Whirlpool":["whirlpool","Water","Special",35,85,15,true],"Whirlwind":["whirlwind","Normal","Status",null,null,20,true],"Wicked Blow":["wicked-blow","Dark","Physical",75,100,5,true],"Wicked Torque":["wicked-torque","Dark","Physical",80,100,10,true],"Wide Guard":["wide-guard","Rock","Status",null,null,10,true],"Wild Charge":["wild-charge","Electric","Physical",90,100,15,true],"Wildbolt Storm":["wildbolt-storm","Electric","Special",100,80,10,true],"Will O Wisp":["will-o-wisp","Fire","Status",null,85,15,true],"Wing Attack":["wing-attack","Flying","Physical",60,100,35,true],"Wish":["wish","Normal","Status",null,null,10,true],"Withdraw":["withdraw","Water","Status",null,null,40,true],"Wonder Room":["wonder-room","Psychic","Status",null,null,10,true],"Wood Hammer":["wood-hammer","Grass","Physical",120,100,15,true],"Work Up":["work-up","Normal","Status",null,null,30,true],"Worry Seed":["worry-seed","Grass","Status",null,100,10,true],"Wrap":["wrap","Normal","Physical",15,90,20,true],"Wring Out":["wring-out","Normal","Special",null,100,5,true],"X Scissor":["x-scissor","Bug","Physical",80,100,15,true],"Yawn":["yawn","Normal","Status",null,null,10,true],"Zap Cannon":["zap-cannon","Electric","Special",120,50,5,true],"Zen Headbutt":["zen-headbutt","Psychic","Physical",80,90,15,true],"Zing Zap":["zing-zap","Electric","Physical",80,100,10,true],"Zippy Zap":["zippy-zap","Electric","Physical",50,100,15,true]};
@@ -1732,34 +1735,35 @@ const conditionalPowerNotes={
  'Water Spout':'Base power scales with the user’s remaining HP.',
  'Dragon Energy':'Base power scales with the user’s remaining HP.',
 };
+const heavyArenaBeams=new Set(['Hyper Beam','Dynamax Cannon','Eternabeam']);
 function arenaMoveGeometry(move,rules) {
  const shape=skillShape(move);
  const blast=sacrificeProfiles.get(move);
  const selfCentered=move==='Earthquake' || Boolean(blast) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
- const radius=move==='Earthquake'?rules.radius*2:shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
- const range=shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?radius:rules.range;
- const warning=blast?.charge ?? (shape==='dash'?(moveCatalog[move][3]>0?0.35:0.55):
-  shape==='arc'?0.45:shape==='projectile'?0.55:castWindup);
+ const radius=shape==='vortex'?38:move==='Earthquake'?rules.radius*2:shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
+ const range=shape==='beam'?(heavyArenaBeams.has(move)?Math.hypot(canvas.width,canvas.height):rules.range*2):shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?radius:rules.range;
+ const warning=castWindup;
  return {shape,selfCentered,radius,range,warning};
 }
 function skillDescription(move) {
  const [type,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
  const rules=moveRules(move);
  const {shape,selfCentered:selfArea,radius,warning}=arenaMoveGeometry(move,rules);
- const target=rules.scope==='ally' ? ([13,15].includes(rules.target)?'all active allies':
+ const target=rules.scope==='ally' ? ([13,15].includes(rules.target)?(move==='Coaching'?'all other active allies':'all active allies'):
   [3,5].includes(rules.target)?'a low-HP active ally':'the user') :
   rules.scope==='area' ? (selfArea?'enemies around the user':'enemies around the target') : 'one enemy';
  const notes=[status?'Targets '+target+'.':
   'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage to '+target+'.'];
  const geometryNotes={
-  wave:'Sweeps a wide forward rectangle.',beam:'Fires a narrow forward beam.',
+  wave:'Sweeps a wide forward rectangle.',beam:heavyArenaBeams.has(move)?'Fires a wide beam that can reach across the arena.':'Fires a forward beam with double its base range.',
   cone:'Hits enemies in a forward cone.',arc:'Sweeps a short forward arc.',
   dash:'Dashes along a marked path that can hit multiple opponents.',
   projectile:'Launches a projectile that hits the first enemy it reaches.',
   landing:'Leaps to a marked landing area.',
+  vortex:'Creates a vortex that roams the arena for 3 battle seconds and can hit every Pokémon once, including the user and its allies.',
  };
  if(shape)notes[0]=(status?type+' status move.': 'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage.')+' '+geometryNotes[shape];
- if(rules.scope!=='ally' && (shape || radius) && !sacrificeProfiles.has(move))notes.push('The warning lasts '+warning+' battle seconds.');
+ if(rules.scope!=='ally' && (shape || radius))notes.push('The warning lasts '+warning+' battle seconds.');
  if(move==='Earthquake')notes.push('Three rings strike outward, 0.5 battle seconds apart. The inner ring deals full damage, the middle deals 50% damage, and the outer deals 25% damage.');
  if(conditionalPowerNotes[move])notes.push(conditionalPowerNotes[move]);
  const [criticalStage,flinchChance]=moveExtras[move] ?? [];
@@ -1781,19 +1785,20 @@ function skillDescription(move) {
   notes.push((status?'Inflicts ':rules.ailmentChance+'% chance to inflict ')+skillConditions[rules.ailment]+' on a hit.');
  }
  const blast=sacrificeProfiles.get(move);
- if(blast)notes.push('Below 40% HP, has a 50% chance to begin charging when selected. Below 10% HP, activation is guaranteed when usable. Slows and pulls opponents inside the blast area while charging for '+blast.charge+
+ if(blast)notes.push('Below 40% HP, has a 50% chance to begin charging when selected. Below 10% HP, activation is guaranteed when usable. Slows and pulls opponents inside the blast area while charging for '+warning+
   ' seconds, with '+blast.radius+'× blast radius and '+blast.damage+'× damage. The user faints after the blast.');
  if(!status && drain) notes.push('Restores '+Math.round(drain*100)+'% of damage dealt as HP.');
  if(!status && recoil) notes.push('User takes recoil equal to '+Math.round(recoil*100)+'% of damage dealt.');
  if(weatherMoves[move]) notes.push('Sets '+weatherMoves[move].toLowerCase()+' weather for 25 battle seconds.');
  if(terrainMoves[move]) notes.push('Sets '+terrainMoves[move].toLowerCase()+' terrain for 25 battle seconds.');
- if(move==='Tailwind') notes.push('Raises Speed by two stages in the arena.');
+ if(move==='Tailwind') notes.push('Raises the Speed of all active teammates by two stages.');
  if(['Seismic Toss','Night Shade'].includes(move)) notes.push('Fixed damage scales with the user’s level after the Arena damage reduction, with a minimum of 1 HP.');
  if(move==='Dragon Rage') notes.push('Deals '+scaledBattleDamage(40)+' base fixed HP damage on a hit.');
  if(move==='Sonic Boom') notes.push('Deals '+scaledBattleDamage(20)+' base fixed HP damage on a hit.');
  if(move==='Baton Pass')notes.push('Switches to a random healthy reserve and passes the user’s stat stages.');
  if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +3.');
  if(move==='Confuse Ray' && !skillConditions[6])notes.push('Inflicts confusion for 6 battle seconds.');
+ if(pivotMoves.has(move))notes.push('After the move connects, recalls the user and sends out a random healthy reserve.');
  if(forcedSwitchMoves.has(move))notes.push('Forces the target to switch to a random healthy reserve.');
  if(Object.hasOwn(additionalStatusMoves,move))notes.push(additionalStatusMoves[move].description);
  if(status && notes.length===1 && !Object.hasOwn(additionalStatusMoves,move)) notes.push(unsupportedMoveNote);
@@ -3285,7 +3290,7 @@ byId('team-back').onclick=openMenu;
 let phase, allies, enemies, effects, selected, speed, clock, recallCooldown;
 let activePlayer, activeEnemy, playerSwitch, enemySwitch;
 let rosterCards = [];
-const castWindup=1;
+const castWindup=0.5;
 const lineSkills=new Set(['Hyper Beam','Ice Beam','Aurora Beam','Bubble Beam','Psybeam',
  'Signal Beam','Solar Beam','Charge Beam','Flash Cannon','Dragon Pulse','Dark Pulse',
  'Water Pulse','Origin Pulse','Photon Geyser','Dynamax Cannon','Eternabeam']);
@@ -3303,7 +3308,9 @@ const landingSkills=new Set(['Fly','Bounce']);
 const projectileSkills=new Set(['Shadow Ball','Aura Sphere','Energy Ball','Focus Blast','Weather Ball','Electro Ball','Sludge Bomb']);
 const arcSkills=new Set(['Slash','Night Slash','Scratch','Cut','X-Scissor','Leaf Blade']);
 const wideWaveSkills=new Set(['Surf','Muddy Water','Sludge Wave','Heat Wave','Blizzard','Glacial Lance','Sandsear Storm']);
+const vortexMoves=new Set(['Hurricane','Twister','Bleakwind Storm']);
 function skillShape(move) {
+ if(vortexMoves.has(move))return 'vortex';
  if(wideWaveSkills.has(move))return 'wave';
  if(dashSkills.has(move)) return 'dash';
  if(coneSkills.has(move)) return 'cone';
@@ -3380,7 +3387,7 @@ function actBattleFields(sides,dt) {
    const foes=sides[1-side];
    const target=foes.find(foe=>foe.hp>0);
    if(target)entryAbility(actor,target);
-   act(actor,foes,dt,sides[side]);
+   act(actor,foes,dt);
   }
   return;
  }
@@ -3391,7 +3398,7 @@ function actBattleFields(sides,dt) {
    const target=foes.find(foe=>foe.hp>0);
    if(actor.hp<=0) continue;
    if(target) entryAbility(actor,target);
-   act(actor,foes,dt,sides[side]);
+   act(actor,foes,dt);
   }
  }
 }
@@ -4386,6 +4393,7 @@ const sacrificeProfiles=new Map([
  ['Self-Destruct',{charge:3,radius:1,damage:5}],
 ]);
 
+const pivotMoves=new Set(['U Turn','Volt Switch','Flip Turn','Parting Shot']);
 const forcedSwitchMoves=new Set(['Whirlwind','Roar','Dragon Tail','Circle Throw']);
 function forcedSwitchOptions(victim,defender) {
  if(victim.hp<=0 || defender==='Suction Cups' || victim.ingrainAt)return [];
@@ -4418,6 +4426,15 @@ function forceSwitch(victim,defender,passStages=false,passSubstitute=0) {
 function clearArenaAilment(actor) {
  actor.ailment=null;
  actor.ailmentSource=null;
+}
+function supportRecipients(actor,move,rules) {
+ const living=activeTeammates(actor).filter(member=>!allyOnlyBuffMoves.has(move) || member!==actor);
+ if(move==='Magnetic Flux' || move==='Gear Up')
+  return living.filter(member=>['Plus','Minus'].includes(activeAbility(member)));
+ if([13,15].includes(rules.target))return living;
+ if([3,5].includes(rules.target))return living.filter(member=>rules.target===5 || member!==actor)
+  .sort((a,b)=>a.hp/a.max-b.hp/b.max).slice(0,1);
+ return [actor];
 }
 function lowestHealthAlly(actor) {
  return fieldActors().filter(member=>member?.hp>0 && member!==actor && member.friendly===actor.friendly)
@@ -4524,7 +4541,15 @@ function callArenaAttack(actor,target,move) {
  if(!target?.hp || !callableAttack(move))return;
  actor.moveLabel=move;
  actor.labelTime=0.95;
- resolveOffensiveMove(actor,move,moveRules(move),target,[target]);
+ const rules=moveRules(move);
+ if(vortexMoves.has(move)) {
+  const {shape,warning,radius}=arenaMoveGeometry(move,rules);
+  const center={x:target.x,y:target.y};
+  playSkillSound(move,'warning',shape);
+  pendingCasts.push({actor,move,rules,shape,line:null,center,radius,warning,remaining:warning,started:clock});
+  return;
+ }
+ resolveOffensiveMove(actor,move,rules,target,[target]);
 }
 function repeatAttackMove(description,pick) {
  return {description,score:(actor,target)=>callableAttack(pick(actor,target))?42:0,
@@ -4902,25 +4927,25 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
  const defender=targetAbility(actor,target);
  const health=actor.hp/actor.max;
  const ally=rules.scope==='ally';
- const recipient=ally ? actor : target;
- const stages=rules.changes.reduce((total,[stat,change])=>{
+ const recipients=ally?supportRecipients(actor,move,rules):[target];
+ const stages=Math.max(0,...recipients.map(recipient=>rules.changes.reduce((total,[stat,change])=>{
   const current=recipient.stages[stat] ?? 0;
   return total+Math.abs(clamp(current+change,-battleStageCap,battleStageCap)-current)/(1+Math.abs(current)*0.35);
- },0);
+ },0)));
  if(status) {
   if(Object.hasOwn(additionalStatusMoves,move))return additionalStatusMoves[move].score(actor,target);
   if(move==='Baton Pass')return actor.stages.some(stage=>stage>0) && forcedSwitchOptions(actor,null).length?55:0;
   if(move==='Belly Drum')return actor.hp>Math.floor(actor.max/2) && actor.stages[2]<battleStageCap?55:0;
   if(forcedSwitchMoves.has(move))return forcedSwitchOptions(target,defender).length && !(move==='Roar' && defender==='Soundproof')?45:0;
   const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
-  const guard=guardMoves.has(move) && !actor.guard && target.charge<0.35 && gap<90;
+  const guard=guardMoves.has(move) && recipients.some(member=>!member.guard) && target.charge<0.35 && gap<90;
   const ailment=rules.ailment && !target.ailment && !ally;
   const weather=weatherMoves[move];
   if(weather && fieldActors().some(member=>member?.hp>0 && ['Cloud Nine','Air Lock'].includes(activeAbility(member))))return 0;
   const field=(weather && (weather!==battleWeather || weatherTime<=3)) ||
    (terrainMoves[move] && terrainMoves[move]!==battleTerrain);
   return (healing*(health<0.45?180:70)+stages*17+(guard?30:0)+
-   (ailment?30:0)+(field?(weather?55:18):0)+(move==='Tailwind' && actor.stages[6]<2?25:0))*(accuracy ?? 100)/100;
+   (ailment?30:0)+(field?(weather?55:18):0)+(move==='Tailwind' && recipients.some(member=>member.stages[6]<battleStageCap)?25:0))*(accuracy ?? 100)/100;
  }
  const flags=moveFlags[move] ?? [];
  let multiplier=effectiveness(type,target);
@@ -5021,8 +5046,8 @@ function tryDashDodge(actor,hazard,angle) {
  return true;
 }
 function dodgeSkill(actor,dt) {
- const hazard=pendingCasts.find(area=>area.actor.hp>0 && area.actor.friendly!==actor.friendly &&
-  area.remaining<=area.warning*0.8 && inSkill(actor,area.center,area.radius,area.line) &&
+ const hazard=pendingCasts.find(area=>(area.roaming || area.actor.hp>0 && area.actor.friendly!==actor.friendly) &&
+  (area.roaming || area.remaining<=area.warning*0.8) && inSkill(actor,area.center,area.radius,area.line,area.roaming) &&
   (!area.flight || (actor.x-area.line.x)*area.line.dx+(actor.y-area.line.y)*area.line.dy>=area.travel-area.line.radius));
  if(!hazard) return false;
  const center=hazard.line ? nearestLinePoint(actor,hazard.line) : hazard.center;
@@ -5082,26 +5107,26 @@ function escapeCrowding(actor,opponents,dt) {
   !cast.flight && (cast.shape==='dash' || cast.shape==='landing' || sacrificeProfiles.has(cast.move))))return false;
  const edge=Math.min(actor.x-28,canvas.width-28-actor.x,actor.y-28,canvas.height-28-actor.y);
  const nearby=opponents.filter(foe=>foe.hp>0 && Math.hypot(foe.x-actor.x,foe.y-actor.y)<bodyRadius(actor)+bodyRadius(foe)+35);
- if((edge<62 && nearby.length) || nearby.length>=2)actor.crowdedFor=(actor.crowdedFor ?? 0)+dt;
+ if(edge<62 && nearby.length && !nearby.some(foe=>foe.escapeUntil>clock))actor.crowdedFor=(actor.crowdedFor ?? 0)+dt;
  else actor.crowdedFor=0;
- if(actor.crowdedFor>=0.65 && !(actor.escapeUntil>clock)) {
+ if(actor.crowdedFor>=0.35 && !(actor.escapeUntil>clock)) {
   actor.escapeUntil=clock+2.5;
   const points=[];
   for(const x of [canvas.width*.32,canvas.width*.5,canvas.width*.68])
    for(const y of [canvas.height*.3,canvas.height*.5,canvas.height*.7])
     points.push({x,y,score:Math.min(...opponents.filter(foe=>foe.hp>0).map(foe=>Math.hypot(x-foe.x,y-foe.y)))-
      Math.hypot(x-actor.x,y-actor.y)*.35,
-     clear:rockIntersection(actor.x,actor.y,x,y,bodyRadius(actor))});
+     clear:movementClearance(actor,actor.x,actor.y,x,y)});
   actor.escapeGoal=points.sort((a,b)=>(b.clear===1)-(a.clear===1) || b.score-a.score)[0];
  }
  if(!(actor.escapeUntil>clock) || !actor.escapeGoal)return false;
  const dx=actor.escapeGoal.x-actor.x,dy=actor.escapeGoal.y-actor.y;
  const distance=Math.hypot(dx,dy);
  if(distance<20){actor.escapeUntil=0;actor.crowdedFor=0;return false;}
- moveActor(actor,dx/distance,dy/distance,distance,dt,true,null,true);
+ moveActor(actor,dx/distance,dy/distance,distance,dt,true,null,actor.crowdedFor>=1.2);
  return true;
 }
-function act(actor, opponents, dt, teammates=[actor]) {
+function act(actor, opponents, dt) {
  actor.gait = null;
  if(actor.hp<=0) return;
  tickStatus(actor,dt);
@@ -5120,7 +5145,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  actor.charge=Math.max(0,actor.charge-dt);
  if(escapeCrowding(actor,opponents,dt))return;
- if(actor.ailment===6)opponents=[...opponents,...teammates.filter(member=>member!==actor)];
+ if(actor.ailment===6)opponents=[...opponents,...activeTeammates(actor).filter(member=>member!==actor)];
  let target = null;
  let gap = Infinity;
  let distance = 0;
@@ -5281,12 +5306,9 @@ function act(actor, opponents, dt, teammates=[actor]) {
   playSkillSound(move,'release');
   if(weatherMoves[move]) setWeather(weatherMoves[move]);
   if(terrainMoves[move]) setTerrain(terrainMoves[move]);
-  const living=teammates.filter(member=>member.hp>0);
-  const recipients=[13,15].includes(rules.target) ? living :
-   [3,5].includes(rules.target) ? [living.filter(member=>rules.target===5 || member!==actor)
-    .sort((a,b)=>a.hp/a.max-b.hp/b.max)[0] ?? actor] : [actor];
+  const recipients=supportRecipients(actor,move,rules);
   const thief=fieldActors().find(member=>member?.hp>0 && member.friendly!==actor.friendly && member.snatchUntil>clock);
-  const canSteal=rules.changes.some(([,change])=>change>0) || skillHealingPercent(move,rules)>0;
+  const canSteal=move==='Tailwind' || rules.changes.some(([,change])=>change>0) || skillHealingPercent(move,rules)>0;
   if(thief && canSteal)thief.snatchUntil=0;
   for(const recipient of thief && canSteal?[thief]:recipients) {
    applyChanges(recipient,rules.changes,actor);
@@ -5294,8 +5316,8 @@ function act(actor, opponents, dt, teammates=[actor]) {
    const healing=skillHealingPercent(move,rules);
    if(healing) healActor(recipient,Math.round(recipient.max*healing/100));
    const guard=guardMoves.has(move);
-   if(guard) recipient.guard=move==='Protect' || move==='Detect' ? 1 : 2.5;
-   effect(recipient,rules.changes.length ? 'Buff' : healing ? 'Heal' : guard ? 'Guard' : '',1,{status:true});
+   if(guard) recipient.guard=Math.max(recipient.guard,move==='Protect' || move==='Detect' ? 1 : 2.5);
+   effect(recipient,move==='Tailwind' || rules.changes.length ? 'Buff' : healing ? 'Heal' : guard ? 'Guard' : '',1,{status:true});
   }
   return;
  }
@@ -5303,7 +5325,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
  if(shape || rules.radius) {
   const {warning,radius}=arenaMoveGeometry(move,rules);
   const halfAngle=shape==='cone'?Math.PI/7:shape==='arc'?Math.PI/3:0;
-  const line=shape && shape!=='landing' ? skillLane(actor,target,range,shape,halfAngle) : null;
+  const line=shape && shape!=='landing' && shape!=='vortex' ? skillLane(actor,target,range,shape,halfAngle,move) : null;
   const ground={x:clamp(center.x,28,canvas.width-28),y:clamp(center.y,28,canvas.height-28)};
   playSkillSound(move,'warning',shape);
   pendingCasts.push({actor,move,rules,shape,line,center:ground,radius,warning,remaining:warning,started:clock,friendlyFire:actor.ailment===6});
@@ -5311,13 +5333,18 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  resolveOffensiveMove(actor,move,rules,target,[target]);
 }
-function skillLane(actor,target,range,shape,halfAngle) {
+function skillLane(actor,target,range,shape,halfAngle,move) {
  const angle=Math.atan2(target.y-actor.y,target.x-actor.x);
  let dx=Math.cos(angle),dy=Math.sin(angle);
  let length=range+hitboxRadius(actor,dx,dy)+hitboxRadius(target,dx,dy);
  if(shape==='dash') length=Math.min(length,Math.hypot(target.x-actor.x,target.y-actor.y)+24);
  const obstruction=rockIntersection(actor.x,actor.y,actor.x+dx*length,actor.y+dy*length,shape==='dash'?12:0);
  if(shape==='dash' || shape==='projectile')length*=obstruction;
+ if(shape==='beam' && heavyArenaBeams.has(move)) {
+  const wallX=dx>0?(canvas.width-actor.x)/dx:dx<0?-actor.x/dx:Infinity;
+  const wallY=dy>0?(canvas.height-actor.y)/dy:dy<0?-actor.y/dy:Infinity;
+  length=Math.min(length,wallX,wallY);
+ }
  const end={x:actor.x+dx*length,y:actor.y+dy*length};
  if(shape==='dash') {
   end.x=clamp(end.x,28,canvas.width-28);
@@ -5325,7 +5352,7 @@ function skillLane(actor,target,range,shape,halfAngle) {
   length=Math.hypot(end.x-actor.x,end.y-actor.y);
   if(length) {dx=(end.x-actor.x)/length;dy=(end.y-actor.y)/length;}
  }
- return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?42.5:0,radius:shape==='projectile'?10:shape==='dash'?19:14,end,angle,halfAngle};
+ return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?42.5:0,radius:shape==='projectile'?10:shape==='dash'?19:shape==='beam'?(heavyArenaBeams.has(move)?25:17):14,end,angle,halfAngle};
 }
 function nearestLinePoint(point,line) {
  if(line.halfAngle) {
@@ -5375,13 +5402,14 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
  });
  if(weatherMoves[move]) setWeather(weatherMoves[move]);
  if(terrainMoves[move]) setTerrain(terrainMoves[move]);
- if(!cast?.flight) playSkillSound(move,'release',cast?.shape);
+ if(!cast?.flight && !cast?.roaming) playSkillSound(move,'release',cast?.shape);
  const line=cast?.line;
- const radius=cast?.radius ?? rules.radius;
+ const radius=cast?.roaming?0:cast?.radius ?? rules.radius;
+ let pivot=false;
  if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth});
  else if(radius && !cast?.flight && cast?.quakeRing===undefined) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
  const pillars=new Set();
- if(!status && power>0) {
+ if(!status && power>0 && !cast?.roaming) {
   if(line || radius) {
    const origin=line ?? center;
    for(const rock of arenaMap?.rocks ?? []) {
@@ -5402,7 +5430,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
   opponents.filter(other=>other.hp>0 && inSkill(other,center,radius,line)) : opponents;
  for(const victim of victims) {
   if(status && victim.friendly!==actor.friendly && victim.craftyShieldUntil>clock)continue;
-  if(rockIntersection(actor.x,actor.y,victim.x,victim.y)<1) {
+  if(!cast?.roaming && rockIntersection(actor.x,actor.y,victim.x,victim.y)<1) {
    effect(victim,'Blocked',1,{impactOnly:true});
    continue;
   }
@@ -5432,15 +5460,16 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
   if((defender==='Sand Veil' && weather==='Sand') || (defender==='Snow Cloak' && weather==='Snow')) hitChance*=0.8;
   if((weather==='Rain' && ['Thunder','Hurricane'].includes(move)) ||
     (weather==='Snow' && move==='Blizzard'))hitChance=100;
- if(weather==='Sun' && ['Thunder','Hurricane'].includes(move))hitChance*=50/70;
- if(locked || victim.liftedUntil>clock || moveReferences[move]?.[4]===null || attacker==='No Guard' || defender==='No Guard') hitChance=100;
+  if(weather==='Sun' && ['Thunder','Hurricane'].includes(move))hitChance*=50/70;
+ if(cast?.roaming || locked || victim.liftedUntil>clock || moveReferences[move]?.[4]===null || attacker==='No Guard' || defender==='No Guard') hitChance=100;
   if(Math.random()*100>=Math.min(100,hitChance)) {effect(victim,'Miss',1,{impactOnly:Boolean(cast)});continue;}
   const absorbed=!status && move!=='Struggle' && abilityAbsorptions[defender]===element;
   const immunity=!status && move!=='Struggle' && !(defender==='Levitate' && fieldMoveActive('Gravity')) && abilityImmunities[defender];
   const windImmune=!status && defender==='Wind Rider' && windMoves.has(move);
   if(absorbed || windImmune || immunity?.[0]===element) {
    if(absorbed) healActor(victim,victim.max/4);
-   else if(immunity[1]) applyChanges(victim,[[immunity[1],defender==='Well-Baked Body'?2:1]]);
+   else if(windImmune) applyChanges(victim,[[2,1]]);
+   else if(immunity?.[1]) applyChanges(victim,[[immunity[1],defender==='Well-Baked Body'?2:1]]);
    else if(defender==='Flash Fire') victim.flashFire=true;
    effect(victim,0,0,{impactOnly:Boolean(cast)});
    continue;
@@ -5455,6 +5484,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
    resolveOffensiveMove(victim,move,{...rules,radius:0},actor,[actor],null,true);
    continue;
   }
+  const beforeDebuff=move==='Parting Shot'?[...victim.stages]:null;
   const wasAsleep=victim.ailment===2;
   const effectScale=attacker==='Serene Grace'?2:1;
   const secondaryAllowed=status || defender!=='Shield Dust' && attacker!=='Sheer Force';
@@ -5469,6 +5499,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
   if(secondaryAllowed && defender!=='Inner Focus' && Math.random()*100<(moveExtras[move]?.[1] ?? 0)*effectScale)
    victim.flinch=0.5;
   if(status) {
+   if(move==='Parting Shot' && rules.changes.some(([stat])=>victim.stages[stat]!==beforeDebuff[stat]))pivot=true;
    if(Object.hasOwn(additionalStatusMoves,move))additionalStatusMoves[move].apply(actor,victim);
    if(forcedSwitchMoves.has(move)) {
     effect(victim,forceSwitch(victim,defender)?'Forced switch':'Failed',1,{status:true,impactOnly:Boolean(cast)});
@@ -5506,17 +5537,45 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
   const drainChange=Math.round(dealt*drain)*(defender==='Liquid Ooze'?-1:1);
   if(actor.hp>0) actor.hp=Math.max(0,Math.min(actor.max,actor.hp+(actor.healBlockUntil>clock?Math.min(0,drainChange):drainChange)-
    (attacker==='Magic Guard'?0:Math.round(dealt*recoil))));
+  if(dealt>0 && pivotMoves.has(move))pivot=true;
   if(dealt>0 && forcedSwitchMoves.has(move))forceSwitch(victim,defender);
   effect(victim,damage,multiplier,{impactOnly:Boolean(cast)});
-  if(actor.hp<=0) break;
+  if(actor.hp<=0 && !cast?.roaming) break;
  }
+ if(pivot && !fieldMoveActive('Fairy Lock'))forceSwitch(actor,null);
  for(const rock of pillars)damagePillar(rock,actor,power);
  if(sacrifice)actor.hp=0;
+}
+function tickVortex(area,field,dt) {
+ const step=Math.min(dt,area.remaining);
+ const {center,radius}=area;
+ area.turnIn-=step;
+ if(area.turnIn<=0) {
+  area.heading=Math.random()*Math.PI*2;
+  area.turnIn=0.35+Math.random()*0.4;
+ }
+ const dx=Math.cos(area.heading),dy=Math.sin(area.heading);
+ const x=center.x+dx*105*step,y=center.y+dy*105*step;
+ if(x<radius || x>canvas.width-radius)area.heading=Math.atan2(dy,-dx);
+ if(y<radius || y>canvas.height-radius)area.heading=-area.heading;
+ center.x=clamp(x,radius,canvas.width-radius);
+ center.y=clamp(y,radius,canvas.height-radius);
+ const targets=field.filter(actor=>{
+  if(!(actor?.hp>0) || !inSkill(actor,center,radius,null,true))return false;
+  const id=actor.onlineId ?? (actor.friendly?'ally:':'enemy:')+(actor.friendly?allies:enemies).indexOf(actor);
+  if(area.touched.includes(id))return false;
+  area.touched.push(id);
+  return true;
+ });
+ if(targets.length)resolveOffensiveMove(area.actor,area.move,area.rules,center,targets,area);
+ area.remaining-=step;
+ return area.remaining>1e-8;
 }
 function tickSkillCasts(dt) {
  const field=trainerFields ? trainerFields.flat().filter(slot=>!slot.transition).map(slot=>slot.actor) :
   [playerSwitch?null:activePlayer,enemySwitch?null:activeEnemy];
  pendingCasts=pendingCasts.filter(area=>{
+  if(area.roaming)return tickVortex(area,field,dt);
   if(area.actor.hp<=0 || !field.includes(area.actor)) return false;
   if(!area.flight && [2,3].includes(area.actor.ailment))return false;
   if(area.started===clock) return true;
@@ -5557,6 +5616,11 @@ function tickSkillCasts(dt) {
    actor.motionTicks+=step*1.48;
   }
   if(area.remaining>1e-8) return true;
+  if(area.shape==='vortex') {
+   playSkillSound(area.move,'release');
+   Object.assign(area,{roaming:true,remaining:3,heading:0,turnIn:0,touched:[]});
+   return tickVortex(area,field,0);
+  }
   if(area.shape==='projectile') {
    playSkillSound(area.move,'release',area.shape);
    area.flight=true;
@@ -5678,7 +5742,7 @@ function gymReserve(opponent,outgoing) {
 function considerGymSwitch() {
  if(!selectedGym || fieldMoveActive('Fairy Lock') || activeEnemy?.ingrainAt || activeEnemy?.trappedUntil>clock || activeEnemy?.octolockUntil>clock || enemySwitch || playerSwitch || !(activePlayer?.hp>0) || !(activeEnemy?.hp>0) ||
   clock<nextGymSwitchCheck || activeEnemy.attack>0 ||
-  pendingCasts.some(cast=>cast.actor===activeEnemy))return;
+  pendingCasts.some(cast=>cast.actor===activeEnemy && !cast.roaming))return;
  nextGymSwitchCheck=clock+1;
  const reserve=gymReserve(activePlayer,activeEnemy);
  if(!reserve)return;
@@ -6151,7 +6215,30 @@ function clipPillarShadows(origin) {
   ctx.clip('evenodd');
  }
 }
-function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,travel,move,quakeRing}) {
+function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,travel,move,quakeRing,roaming}) {
+ if(roaming) {
+  ctx.save();
+  ctx.translate(center.x,center.y);
+  ctx.beginPath();
+  ctx.arc(0,0,radius,0,2*Math.PI);
+  ctx.fillStyle='#9bdcff44';
+  ctx.fill();
+  ctx.strokeStyle='#d9f7ff';
+  ctx.lineWidth=2.5;
+  for(let arm=0;arm<3;arm++) {
+   ctx.beginPath();
+   for(let i=0;i<=28;i++) {
+    const r=radius*i/28;
+    const angle=remaining*9+arm*2*Math.PI/3+r/radius*4;
+    const x=Math.cos(angle)*r,y=Math.sin(angle)*r;
+    if(i===0)ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
+   }
+   ctx.stroke();
+  }
+  ctx.restore();
+  return;
+ }
  const progress=clamp(1-remaining/warning,0,1);
  const color=actor.friendly?'#72d9ff':'#ff947c';
  ctx.save();
