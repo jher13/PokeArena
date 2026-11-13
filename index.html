@@ -171,6 +171,8 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 #account-email,#account-password{width:100%;padding:12px;border:1px solid #655578;border-radius:8px;background:#161223;color:white;font:inherit}
 #account-submit{width:100%;margin-top:8px}
 #account-status{font-size:13px;color:#e6cfed}
+#arena-sync-error{position:fixed;bottom:12px;left:12px;right:12px;z-index:60;margin:auto;max-width:550px;padding:10px;background:#311d2b;color:#ffe8df;border-radius:8px;text-align:center}
+.online-unit{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}.online-unit progress{width:90px}.online-unit canvas{display:inline-block}.online-unit span{font-size:12px} #home-dialog{max-height:85vh;overflow:auto} #home-dialog-content button,#home-dialog-content input,#home-dialog-content select{margin:4px}
 </style>
 <main><header id="arena-header"><h1>Pokemon Arena</h1><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -4748,17 +4750,11 @@ byId('toolbar-settings').onclick=()=>{
  const sfx=element('button',sfxButton.textContent);
  music.onclick=()=>{musicButton.onclick();music.textContent=musicButton.textContent;updateHomeSound();};
  sfx.onclick=()=>{sfxButton.onclick();sfx.textContent=sfxButton.textContent;updateHomeSound();};
- openHomeDialog('Settings',music,sfx,byId('arena-cloud-panel'));
+ openHomeDialog('Settings',music,sfx);
 };
 byId('toolbar-logout').onclick=openLogin;
 phase='login';
 showScreen('login');
 byId('login').hidden=true;
 requestAnimationFrame(frame);
-</script><details id="arena-cloud-panel">
-<summary>Cloud saves</summary>
-<button id="arena-cloud-save">Save now</button>
-<button id="arena-cloud-load">Download cloud save</button>
-<button id="arena-cloud-signout">Sign out online</button>
-<p id="arena-cloud-status" role="status"></p>
-</details><script src="./cloud.js"></script></html>
+</script><p id="arena-sync-error" role="alert" hidden></p><script src="./cloud.js"></script><script src="./multiplayer.js"></script></html>

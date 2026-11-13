@@ -37,7 +37,7 @@ let cloudRevision=null;
 let saveTimer;
 let saving=false;
 let dirty=false;
-const cloudStatus=byId('arena-cloud-status');
+const syncError=byId('arena-sync-error');
 async function fetchArenaSave(client,id) {
  const {data,error}=await client.from('arena_saves').select('save_data,updated_at').eq('user_id',id).maybeSingle();
  if(error) throw error;
@@ -55,13 +55,14 @@ async function flushArenaSave() {
    ?query.update(values).eq('user_id',cloudAccount).eq('updated_at',cloudRevision)
    :query.insert({...values,user_id:cloudAccount})).select('updated_at');
   if(error) throw error;
-  if(!data?.length) throw new Error('Cloud progress changed on another device. Download that save before continuing.');
+  if(!data?.length) throw new Error('Progress changed on another device. Reload and log in again to get the latest save.');
   cloudRevision=data[0].updated_at;
-  cloudStatus.textContent='Saved to the cloud.';
+  syncError.hidden=true;
   if(dirty) window.queueArenaSave();
  } catch(error) {
   dirty=true;
-  cloudStatus.textContent='Cloud save failed. '+error.message;
+  syncError.textContent='Progress could not sync. '+error.message;
+  syncError.hidden=false;
   throw error;
  } finally {saving=false;}
 }
@@ -69,7 +70,6 @@ window.queueArenaSave=()=>{
  if(!cloudAccount) return;
  dirty=true;
  clearTimeout(saveTimer);
- cloudStatus.textContent='Saving progress…';
  saveTimer=setTimeout(()=>flushArenaSave().catch(()=>{}),350);
 };
 async function enterCloudAccount(client,user,proceed,allowGuestImport=false) {
@@ -89,26 +89,12 @@ async function enterCloudAccount(client,user,proceed,allowGuestImport=false) {
  }
  cloudAccount=id;
  cloudRevision=row?.updated_at ?? null;
- cloudStatus.textContent=row?'Cloud save connected.':'Cloud saves start after you choose a starter.';
  proceed();
 }
-byId('arena-cloud-save').onclick=()=>{
- if(!cloudAccount) {cloudStatus.textContent='Log in to enable cloud saves.';return;}
- dirty=true;
- flushArenaSave().catch(()=>{});
-};
-byId('arena-cloud-load').onclick=async()=>{
- try {
-  if(!cloudAccount || saving) return;
-  const row=await fetchArenaSave(await cloudClient(),cloudAccount);
-  if(!row) throw new Error('No cloud save exists yet.');
-  if(window.confirm('Replace this device’s progress with the cloud save?')) {
-   clearTimeout(saveTimer);
-   restoreArenaSave(row.save_data);
-   window.location.reload();
-  }
- } catch(error) {cloudStatus.textContent=error.message;}
-};
+window.addEventListener('online',()=>flushArenaSave().catch(()=>{}));
+document.addEventListener('visibilitychange',()=>{
+ if(document.visibilityState==='hidden') flushArenaSave().catch(()=>{});
+});
 let returnToAccountGate;
 function installAccountGate() {
  const gate=byId('account-gate');
@@ -186,7 +172,6 @@ function installAccountGate() {
    openHomeDialog('Log out',element('p',error.message || 'Could not sign out.'));
   }
  };
- byId('arena-cloud-signout').onclick=()=>byId('toolbar-logout').onclick();
  if(onlineSaveId) cloudClient().then(async client=>{
   const {data,error}=await client.auth.getUser();
   if(error || !data.user || data.user.id!==onlineSaveId) throw new Error('Log in again to load your cloud save.');
