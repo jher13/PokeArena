@@ -202,6 +202,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 @media(max-width:759px), (orientation:portrait){
  #battle #arena{max-height:45dvh;width:auto;max-width:100%;justify-self:center}
 }
+.pc-learnable-skills{margin-top:1rem}.pc-learnable-skills summary{cursor:pointer;font-weight:700}.pc-learnable-skills input{margin-top:.5rem;width:100%;box-sizing:border-box}.pc-learnable-skills ul{max-height:18rem;overflow:auto;padding:0;list-style:none}.pc-learnable-skills li{display:grid;gap:.2rem;padding:.4rem 0;border-bottom:1px solid #ffffff24}.pc-learnable-skills small{color:#c4d6ee}
 </style>
 <main><header id="arena-header"><h1>Pokemon Arena</h1><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -1315,7 +1316,7 @@ function renderDetail() {
  body.append(summary,individualTable(name,profile));
  if(owned) body.append(heldItemPicker(name),capsuleControl(name),vitaminControls(name),battleAIControls(name),pcCollectionControls(name));
  body.append(element('h4','Moves','move-heading'));
- body.append(renderSkillSlots(name));
+ body.append(renderSkillSlots(name),renderLearnableSkills(name));
  const actions=element('div',null,'detail-actions');
  const existing=team.indexOf(name);
  actions.append(element('span',existing>=0?'Battle team · Slot '+(existing+1):team[activeSlot]?'Replace '+team[activeSlot]:'Empty team slot'));
@@ -1953,6 +1954,34 @@ function openSkillShop() {
  phase='skill-shop';
  showScreen('skill-shop');
  renderSkillShop();
+}
+function renderLearnableSkills(name) {
+ const moves=legalMoves(name).filter(isVisibleArenaMove).sort((a,b)=>a.localeCompare(b));
+ const equipped=new Set(movesFor(name));
+ const section=element('details',null,'pc-learnable-skills');
+ section.open=true;
+ const search=element('input');
+ search.type='search';
+ search.placeholder='Search skills or types';
+ search.setAttribute('aria-label','Search learnable skills');
+ const list=element('ul');
+ function renderList() {
+  const query=search.value.trim().toLowerCase();
+  const matches=moves.filter(move=>(move+' '+moveCatalog[move][0]).toLowerCase().includes(query));
+  list.replaceChildren(...matches.map(move=>{
+   const row=element('li');
+   const item=skillItem(move);
+   const count=wildProgress.skills[move] ?? 0;
+   const status=equipped.has(move)?'Equipped':count?'Owned ×'+count:item.price.toLocaleString()+' coins in Skill Shop';
+   row.append(element('strong',move),element('small',moveCatalog[move][0]+' · '+item.name.split(' · ')[0]+' · '+status));
+   return row;
+  }));
+  if(!matches.length)list.append(element('li',query?'No matching skills.':'No teachable arena skills.'));
+ }
+ search.oninput=renderList;
+ section.append(element('summary','Learnable Skills ('+moves.length+')'),search,list);
+ renderList();
+ return section;
 }
 function renderSkillSlots(name) {
  const grid=element('div',null,'move-grid');
