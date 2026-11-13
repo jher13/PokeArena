@@ -2429,7 +2429,7 @@ musicButton.onclick=()=>{
  battleMusicEnabled=!battleMusicEnabled;
  try {playerStorage.setItem('pokemon-arena-music',battleMusicEnabled?'on':'off');} catch {}
  updateMusicButton();
- if(battleMusicEnabled && (phase==='setup' || phase==='battle')) startBattleMusic();
+ if(battleMusicEnabled && (phase==='setup' || phase==='battle' || phase==='online-battle')) startBattleMusic();
  else stopBattleMusic();
 };
 updateMusicButton();
@@ -2831,8 +2831,8 @@ const throwDuration = 0.85;
 const releaseDuration = 0.38;
 const recallDelay = 5;
 const sendOut = {player:{x:240,y:240},enemy:{x:720,y:240}};
-function restoreOpponentTeam() {
- for(const actor of enemies) {
+function restoreOpponentTeam(opponents=enemies) {
+ for(const actor of opponents) {
   if(actor.hp<=0) continue;
   actor.hp=Math.min(actor.max,actor.hp+Math.max(1,Math.round(actor.max*0.15)));
   actor.moveTimers=actor.moveTimers.map((remaining,index)=>
@@ -2964,16 +2964,17 @@ const activePanels = [
 function displayedPokemon(active,transition) {
  return transition ? transition.stage==='recall' ? transition.outgoing : transition.incoming : active;
 }
-function updateActivePanels() {
+function updateActivePanels(onlineFields) {
+ const fields=onlineFields ?? trainerFields;
  const current = phase==='setup' ? [allies[selected],enemies[0]] :
   [displayedPokemon(activePlayer,playerSwitch),displayedPokemon(activeEnemy,enemySwitch)];
- const multiple=selectedTrainer?.format>1;
+ const multiple=onlineFields || selectedTrainer?.format>1;
  if(multiple && !trainerPanels) {
   trainerPanels=activePanels.flatMap(panel=>{
    const container=byId(panel.id);
    container.replaceChildren();
    panel.actor=null;
-   return Array.from({length:selectedTrainer.format},()=>{
+   return Array.from({length:onlineFields ? onlineFields[panel.id==='player-active'?0:1].length : selectedTrainer.format},()=>{
     const node=element('div',null,'trainer-active-slot');
     container.append(node);
     return {node,label:panel.label};
@@ -2983,12 +2984,12 @@ function updateActivePanels() {
   trainerPanels=null;
   for(const panel of activePanels) {byId(panel.id).replaceChildren();panel.actor=null;}
  }
- const shown=multiple ? trainerFields ? trainerFields.flat().map(slot=>displayedPokemon(slot.actor,slot.transition)) :
+ const shown=multiple ? fields ? fields.flat().map(slot=>displayedPokemon(slot.actor,slot.transition)) :
   [...trainerLeads(allies,true),...trainerLeads(enemies,false)] : current;
  (multiple ? trainerPanels : activePanels).forEach((panel,index)=>{
   const actor=shown[index];
   const node=panel.node ?? byId(panel.id);
-  if(!actor) return;
+  if(!actor) {if(onlineFields){node.replaceChildren();panel.actor=null;}return;}
   if(panel.actor!==actor) {
    panel.actor=actor;
    const header=element('div',null,'active-header');
@@ -3218,6 +3219,7 @@ function renderControls() {
   loss:'Your team was knocked out. Return to the main menu to change your moves.'
  }[phase];
  byId('start').disabled = phase !== 'setup';
+ byId('speed').disabled=Boolean(selectedGym);
  byId('speed').textContent = speed + '× speed';
  byId('speed').setAttribute('aria-pressed',String(speed>1));
  byId('choices').replaceChildren();
@@ -3256,6 +3258,7 @@ byId('legendary-intro').onanimationend=event=>{
 byId('start').onclick=startBattle;
 byId('reset').onclick = openMenu;
 byId('speed').onclick = () => {
+ if(selectedGym || phase==='online-battle') return;
  speed = speed>=maximumBattleSpeed()?1:speed+1;
  if(selectedWild) {wildProgress.speed=speed;saveWildProgress();}
  if(selectedTrainer) setTrainerOption('speed',speed);
@@ -3908,13 +3911,7 @@ function advanceBattleSwitches(dt,realDt) {
   enemySwitch=null;
  }
 }
-function advance(dt,realDt=dt) {
- refreshBerriesAfterKnockout();
- sendNextTrainerReserve();
- if(awaitingPlayerReserve()) sendNextWildReserve();
- advanceBattleSwitches(dt,realDt);
- const sides=combatSides();
- if(sides.some(side=>!side.length)) lastDamageClock+=dt;
+function advanceCombat(dt,realDt,sides) {
  clock+=dt;
  weatherTime=Math.max(0,weatherTime-dt);
  if(!weatherTime) battleWeather=null;
@@ -3931,6 +3928,15 @@ function advance(dt,realDt=dt) {
  recallCooldown=Math.max(0,recallCooldown-realDt);
  actBattleFields(sides,dt);
  tickSkillCasts(dt);
+}
+function advance(dt,realDt=dt) {
+ refreshBerriesAfterKnockout();
+ sendNextTrainerReserve();
+ if(awaitingPlayerReserve()) sendNextWildReserve();
+ advanceBattleSwitches(dt,realDt);
+ const sides=combatSides();
+ if(sides.some(side=>!side.length)) lastDamageClock+=dt;
+ advanceCombat(dt,realDt,sides);
  refreshBerriesAfterKnockout();
  const playerReserve=allies.find(actor=>actor.hp>0);
  const enemyReserve=enemies.find(actor=>actor.hp>0);
@@ -4198,7 +4204,7 @@ function paint() {
  const visible=trainerFields ? trainerFields.flat().filter(slot=>!slot.transition && slot.actor?.hp>0).map(slot=>slot.actor) :
   phase==='setup' ? [allies[selected],enemies[0]] :
   [playerSwitch?null:activePlayer,enemySwitch?null:activeEnemy].filter(Boolean);
- if(phase==='battle') for(const area of pendingCasts) drawSkillWarning(area);
+ if(phase==='battle' || phase==='online-battle') for(const area of pendingCasts) drawSkillWarning(area);
  for(const effect of effects) drawMove(effect);
  for(const actor of visible.sort((a,b)=>a.y-b.y)) drawUnit(actor);
  if(playerSwitch) drawSwitch(playerSwitch);
@@ -4630,6 +4636,7 @@ function frame(now) {
  const dt = Math.min(0.04,(now-(previous ?? now))/1000);
  previous = now;
  if(byId('battle').hidden) {requestAnimationFrame(frame);return;}
+ if(phase==='online-battle') {window.paintOnlineBattle(dt);requestAnimationFrame(frame);return;}
  const wasBattling=phase==='battle';
  const before=clock;
  if(wasBattling) advance(dt*speed,dt);
