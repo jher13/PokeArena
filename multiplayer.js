@@ -5,6 +5,7 @@
  let frameAge=0, soundsPlayed=new Set(), battleSnapshot=null;
  function arenaView(match, picks, togglePick, ready, leave) {
   if(phase!=='online-battle') {
+   lastDpsRender=-1;renderBattleDps(0,[]);
    arenaActors=new Map();rosterRows=new Map();soundsPlayed=new Set();displayedTurn=-1;
    recallSlotOnline=null;battleSnapshot=null;trainerFields=[[],[]];trainerPanels=null;
    phase='online-battle';speed=1;
@@ -81,6 +82,7 @@
   pendingCasts=data.casts.map(cast=>({...cast,actor:actorFor(cast.actor),
    center:cast.center?{...cast.center,x:mx(cast.center.x)}:null,line:lineView(cast.line)}));
   battleWeather=data.weather;battleTerrain=data.terrain;
+  byId('score').textContent='Online battle · 1×'+(data.weather?' · '+data.weather+' '+Math.ceil(data.weatherTime ?? 0)+'s'+(abilityWeather()?'':' (suppressed)'):'');
   const freshSounds=new Set();
   for(const sound of data.sounds ?? []) {
    const key=[sound.clock,sound.move,sound.event,sound.shape].join(':');
@@ -89,6 +91,7 @@
   }
   soundsPlayed=freshSounds;
   battleSnapshot=data;
+  renderBattleDps(data.clock,data.damageBuckets ?? [],mirror);
   frameAge=0;
   updateOnlineRoster(send);
  }

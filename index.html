@@ -539,10 +539,12 @@ const moveCatalog = {"Absorb":["Grass",20,100,0,false,0.5,0.0,false],"Accelerock
 for(const [name,type] of Object.entries(moveElements)) moveCatalog[name] ??= [type,55,100,0,false,0,0,false];
 // Move targeting and secondary effects from PokeAPI. Listed move attributes and Pokédex typing from Pokémon Database.
 const moveData = {"Pound":[10,2,[],0,0,0,0],"Karate Chop":[10,2,[],0,0,0,0],"Double Slap":[10,2,[],0,0,0,0],"Comet Punch":[10,2,[],0,0,0,0],"Mega Punch":[10,2,[],0,0,0,0],"Pay Day":[10,2,[],0,0,0,0],"Fire Punch":[10,2,[],0,4,10,0],"Ice Punch":[10,2,[],0,3,10,0],"Scratch":[10,2,[],0,0,0,0],"Razor Wind":[11,3,[],0,0,0,0],"Swords Dance":[7,1,[[2,2]],0,0,0,0],"Gust":[10,3,[],0,0,0,0],"Wing Attack":[10,2,[],0,0,0,0],"Whirlwind":[10,1,[],0,0,0,0],"Fly":[10,2,[],0,0,0,0],"Bind":[10,2,[],0,8,100,0],"Slam":[10,2,[],0,0,0,0],"Vine Whip":[10,2,[],0,0,0,0],"Stomp":[10,2,[],0,0,0,0],"Double Kick":[10,2,[],0,0,0,0],"Mega Kick":[10,2,[],0,0,0,0],"Jump Kick":[10,2,[],0,0,0,0],"Rolling Kick":[10,2,[],0,0,0,0],"Sand Attack":[10,1,[[7,-1]],0,0,0,0],"Headbutt":[10,2,[],0,0,0,0],"Fury Attack":[10,2,[],0,0,0,0],"Tackle":[10,2,[],0,0,0,0],"Body Slam":[10,2,[],0,1,30,0],"Wrap":[10,2,[],0,8,100,0],"Take Down":[10,2,[],0,0,0,0],"Thrash":[8,2,[],0,0,0,0],"Double Edge":[10,2,[],0,0,0,0],"Tail Whip":[11,1,[[3,-1]],0,0,0,0],"Poison Sting":[10,2,[],0,5,30,0],"Twineedle":[10,2,[],0,5,20,0],"Pin Missile":[10,2,[],0,0,0,0],"Leer":[11,1,[[3,-1]],100,0,0,0],"Bite":[10,2,[],0,0,0,0],"Growl":[11,1,[[2,-1]],0,0,0,0],"Roar":[10,1,[],0,0,0,0],"Sing":[10,1,[],0,2,0,0],"Supersonic":[10,1,[],0,6,0,0],"Sonic Boom":[10,3,[],0,0,0,0],"Acid":[11,3,[[5,-1]],10,0,0,0],"Ember":[10,3,[],0,4,10,0],"Flamethrower":[10,3,[],0,4,10,0],"Water Gun":[10,3,[],0,0,0,0],"Hydro Pump":[10,3,[],0,0,0,0],"Surf":[9,3,[],0,0,0,0],"Ice Beam":[10,3,[],0,3,10,0],"Blizzard":[11,3,[],0,3,10,0],"Psybeam":[10,3,[],0,6,10,0],"Bubble Beam":[10,3,[[6,-1]],10,0,0,0],"Aurora Beam":[10,3,[[2,-1]],10,0,0,0],"Hyper Beam":[10,3,[],0,0,0,0],"Peck":[10,2,[],0,0,0,0],"Drill Peck":[10,2,[],0,0,0,0],"Low Kick":[10,2,[],0,0,0,0],"Absorb":[10,3,[],0,0,0,0],"Mega Drain":[10,3,[],0,0,0,0],"Leech Seed":[10,1,[],0,18,0,0],"Growth":[7,1,[[2,1],[4,1]],0,0,0,0],"Razor Leaf":[11,2,[],0,0,0,0],"Solar Beam":[10,3,[],0,0,0,0],"Poison Powder":[10,1,[],0,5,0,0],"Stun Spore":[10,1,[],0,1,0,0],"Sleep Powder":[10,1,[],0,2,0,0],"Petal Dance":[8,3,[],0,0,0,0],"String Shot":[11,1,[[6,-2]],0,0,0,0],"Dragon Rage":[10,3,[],0,0,0,0],"Fire Spin":[10,3,[],0,8,100,0],"Thunder Shock":[10,3,[],0,1,10,0],"Thunderbolt":[10,3,[],0,1,10,0],"Thunder Wave":[10,1,[],0,1,0,0],"Thunder":[10,3,[],0,1,30,0],"Rock Throw":[10,2,[],0,0,0,0],"Earthquake":[9,2,[],0,0,0,0],"Dig":[10,2,[],0,0,0,0],"Toxic":[10,1,[],0,5,0,0],"Confusion":[10,3,[],0,6,10,0],"Psychic":[10,3,[[5,-1]],10,0,0,0],"Hypnosis":[10,1,[],0,2,0,0],"Meditate":[7,1,[[2,1]],0,0,0,0],"Agility":[7,1,[[6,2]],0,0,0,0],"Quick Attack":[10,2,[],0,0,0,0],"Rage":[10,2,[],0,0,0,0],"Night Shade":[10,3,[],0,0,0,0],"Screech":[10,1,[[3,-2]],0,0,0,0],"Recover":[7,1,[],0,0,0,50],"Harden":[7,1,[[3,1]],0,0,0,0],"Smokescreen":[10,1,[[7,-1]],0,0,0,0],"Confuse Ray":[10,1,[],0,6,0,0],"Withdraw":[7,1,[[3,1]],0,0,0,0],"Defense Curl":[7,1,[[3,1]],0,0,0,0],"Barrier":[7,1,[[3,2]],0,0,0,0],"Egg Bomb":[10,2,[],0,0,0,0],"Lick":[10,2,[],0,1,30,0],"Smog":[10,3,[],0,5,40,0],"Sludge":[10,3,[],0,5,30,0],"Bone Club":[10,2,[],0,0,0,0],"Fire Blast":[10,3,[],0,4,10,0],"Waterfall":[10,2,[],0,0,0,0],"Clamp":[10,2,[],0,8,100,0],"Swift":[11,3,[],0,0,0,0],"Skull Bash":[10,2,[],0,0,100,0],"Amnesia":[7,1,[[5,2]],0,0,0,0],"Kinesis":[10,1,[[7,-1]],0,0,0,0],"Soft Boiled":[7,1,[],0,0,0,50],"High Jump Kick":[10,2,[],0,0,0,0],"Glare":[10,1,[],0,1,0,0],"Poison Gas":[11,1,[],0,5,0,0],"Leech Life":[10,2,[],0,0,0,0],"Lovely Kiss":[10,1,[],0,2,0,0],"Sky Attack":[10,2,[],0,0,0,0],"Bubble":[11,3,[[6,-1]],10,0,0,0],"Dizzy Punch":[10,2,[],0,6,20,0],"Spore":[10,1,[],0,2,0,0],"Psywave":[10,3,[],0,0,0,0],"Acid Armor":[7,1,[[3,2]],0,0,0,0],"Crabhammer":[10,2,[],0,0,0,0],"Fury Swipes":[10,2,[],0,0,0,0],"Bonemerang":[10,2,[],0,0,0,0],"Rest":[7,1,[],0,0,0,0],"Rock Slide":[11,2,[],0,0,0,0],"Hyper Fang":[10,2,[],0,0,0,0],"Tri Attack":[10,3,[],0,-1,20,0],"Super Fang":[10,2,[],0,0,0,0],"Slash":[10,2,[],0,0,0,0],"Substitute":[7,1,[],0,0,0,0],"Triple Kick":[10,2,[],0,0,0,0],"Thief":[10,2,[],0,0,0,0],"Spider Web":[10,1,[],0,0,0,0],"Flame Wheel":[10,2,[],0,4,10,0],"Flail":[10,2,[],0,0,0,0],"Cotton Spore":[11,1,[[6,-2]],0,0,0,0],"Reversal":[10,2,[],0,0,0,0],"Powder Snow":[11,3,[],0,3,10,0],"Protect":[7,1,[],0,43,0,0],"Mach Punch":[10,2,[],0,0,0,0],"Scary Face":[10,1,[[6,-2]],0,0,0,0],"Feint Attack":[10,2,[],0,0,0,0],"Sweet Kiss":[10,1,[],0,6,0,0],"Sludge Bomb":[10,3,[],0,5,30,0],"Mud Slap":[10,3,[[7,-1]],100,0,0,0],"Octazooka":[10,3,[[7,-1]],50,0,0,0],"Spikes":[6,1,[],0,0,0,0],"Zap Cannon":[10,3,[],0,1,100,0],"Icy Wind":[11,3,[[6,-1]],100,0,0,0],"Detect":[7,1,[],0,43,0,0],"Outrage":[8,2,[],0,0,0,0],"Sandstorm":[12,1,[],0,0,0,0],"Giga Drain":[10,3,[],0,0,0,0],"Endure":[7,1,[],0,0,0,0],"Charm":[10,1,[[2,-2]],0,0,0,0],"Rollout":[10,2,[],0,0,0,0],"Spark":[10,2,[],0,1,30,0],"Fury Cutter":[10,2,[],0,0,0,0],"Steel Wing":[10,2,[[3,1]],10,0,0,0],"Mean Look":[10,1,[],0,0,0,0],"Return":[10,2,[],0,0,0,0],"Present":[10,2,[],0,0,0,0],"Magnitude":[9,2,[],0,0,0,0],"Dynamic Punch":[10,2,[],0,6,100,0],"Megahorn":[10,2,[],0,0,0,0],"Dragon Breath":[10,3,[],0,1,30,0],"Pursuit":[10,2,[],0,0,0,0],"Rapid Spin":[10,2,[[6,1]],100,0,0,0],"Sweet Scent":[11,1,[[8,-2]],0,0,0,0],"Iron Tail":[10,2,[[3,-1]],30,0,0,0],"Metal Claw":[10,2,[[2,1]],10,0,0,0],"Vital Throw":[10,2,[],0,0,0,0],"Moonlight":[7,1,[],0,0,0,50],"Hidden Power":[10,3,[],0,0,0,0],"Cross Chop":[10,2,[],0,0,0,0],"Twister":[11,3,[],0,0,0,0],"Rain Dance":[12,1,[],0,0,0,0],"Sunny Day":[12,1,[],0,0,0,0],"Crunch":[10,2,[[3,-1]],20,0,0,0],"Extreme Speed":[10,2,[],0,0,0,0],"Ancient Power":[10,3,[[2,1],[3,1],[4,1],[5,1],[6,1]],10,0,0,0],"Shadow Ball":[10,3,[[5,-1]],20,0,0,0],"Future Sight":[10,3,[],0,0,0,0],"Rock Smash":[10,2,[[3,-1]],50,0,0,0],"Whirlpool":[10,3,[],0,8,100,0],"Beat Up":[10,2,[],0,0,0,0],"Fake Out":[10,2,[],0,0,0,0],"Uproar":[8,3,[],0,0,0,0],"Stockpile":[7,1,[[3,1],[5,1]],0,0,0,0],"Swallow":[7,1,[],0,0,0,25],"Heat Wave":[11,3,[],0,4,10,0],"Hail":[12,1,[],0,0,0,0],"Flatter":[10,1,[[4,1]],0,6,0,0],"Will O Wisp":[10,1,[],0,4,0,0],"Smelling Salts":[10,2,[],0,0,0,0],"Charge":[7,1,[[5,1]],0,0,0,0],"Wish":[7,1,[],0,0,0,0],"Ingrain":[7,1,[],0,21,0,0],"Superpower":[10,2,[[2,-1],[3,-1]],100,0,0,0],"Yawn":[10,1,[],0,14,0,0],"Knock Off":[10,2,[],0,0,0,0],"Endeavor":[10,2,[],0,0,0,0],"Eruption":[11,3,[],0,0,0,0],"Dive":[10,2,[],0,0,0,0],"Arm Thrust":[10,2,[],0,0,0,0],"Tail Glow":[7,1,[[4,3]],0,0,0,0],"Mist Ball":[10,3,[[4,-1]],50,0,0,0],"Feather Dance":[10,1,[[2,-2]],0,0,0,0],"Teeter Dance":[9,1,[],0,6,0,0],"Mud Sport":[12,1,[],0,0,0,0],"Ice Ball":[10,2,[],0,0,0,0],"Needle Arm":[10,2,[],0,0,0,0],"Slack Off":[7,1,[],0,0,0,50],"Hyper Voice":[11,3,[],0,0,0,0],"Poison Fang":[10,2,[],0,5,50,0],"Crush Claw":[10,2,[[3,-1]],50,0,0,0],"Blast Burn":[10,3,[],0,0,0,0],"Hydro Cannon":[10,3,[],0,0,0,0],"Meteor Mash":[10,2,[[2,1]],20,0,0,0],"Astonish":[10,2,[],0,0,0,0],"Weather Ball":[10,3,[],0,0,0,0],"Fake Tears":[10,1,[[5,-2]],0,0,0,0],"Overheat":[10,3,[[4,-2]],100,0,0,0],"Rock Tomb":[10,2,[[6,-1]],100,0,0,0],"Silver Wind":[10,3,[[2,1],[3,1],[4,1],[5,1],[6,1]],10,0,0,0],"Metal Sound":[10,1,[[5,-2]],0,0,0,0],"Grass Whistle":[10,1,[],0,2,0,0],"Cosmic Power":[7,1,[[3,1],[5,1]],0,0,0,0],"Water Spout":[11,3,[],0,0,0,0],"Shadow Punch":[10,2,[],0,0,0,0],"Extrasensory":[10,3,[],0,0,0,0],"Sky Uppercut":[10,2,[],0,0,0,0],"Sand Tomb":[10,2,[],0,8,100,0],"Muddy Water":[11,3,[[7,-1]],30,0,0,0],"Bullet Seed":[10,2,[],0,0,0,0],"Aerial Ace":[10,2,[],0,0,0,0],"Icicle Spear":[10,2,[],0,0,0,0],"Iron Defense":[7,1,[[3,2]],0,0,0,0],"Howl":[13,1,[[2,1]],0,0,0,0],"Dragon Claw":[10,2,[],0,0,0,0],"Bulk Up":[7,1,[[2,1],[3,1]],0,0,0,0],"Bounce":[10,2,[],0,1,30,0],"Mud Shot":[10,3,[[6,-1]],100,0,0,0],"Poison Tail":[10,2,[],0,5,10,0],"Covet":[10,2,[],0,0,0,0],"Magical Leaf":[10,3,[],0,0,0,0],"Calm Mind":[7,1,[[4,1],[5,1]],0,0,0,0],"Leaf Blade":[10,2,[],0,0,0,0],"Dragon Dance":[7,1,[[2,1],[6,1]],0,0,0,0],"Rock Blast":[10,2,[],0,0,0,0],"Shock Wave":[10,3,[],0,0,0,0],"Water Pulse":[10,3,[],0,6,20,0],"Doom Desire":[10,3,[],0,0,0,0],"Psycho Boost":[10,3,[[4,-2]],100,0,0,0],"Roost":[7,1,[],0,0,0,50],"Wake Up Slap":[10,2,[],0,0,0,0],"Hammer Arm":[10,2,[[6,-1]],100,0,0,0],"Gyro Ball":[10,2,[],0,0,0,0],"Brine":[10,3,[],0,0,0,0],"Feint":[10,2,[],0,0,0,0],"Pluck":[10,2,[],0,0,0,0],"U Turn":[10,2,[],0,0,0,0],"Close Combat":[10,2,[[3,-1],[5,-1]],100,0,0,0],"Payback":[10,2,[],0,0,0,0],"Assurance":[10,2,[],0,0,0,0],"Wring Out":[10,3,[],0,0,0,0],"Punishment":[10,2,[],0,0,0,0],"Sucker Punch":[10,2,[],0,0,0,0],"Toxic Spikes":[6,1,[],0,0,0,0],"Aqua Ring":[7,1,[],0,0,0,0],"Flare Blitz":[10,2,[],0,4,10,0],"Force Palm":[10,2,[],0,1,30,0],"Aura Sphere":[10,3,[],0,0,0,0],"Poison Jab":[10,2,[],0,5,30,0],"Dark Pulse":[10,3,[],0,0,0,0],"Night Slash":[10,2,[],0,0,0,0],"Aqua Tail":[10,2,[],0,0,0,0],"Seed Bomb":[10,2,[],0,0,0,0],"Air Slash":[10,3,[],0,0,0,0],"X Scissor":[10,2,[],0,0,0,0],"Bug Buzz":[10,3,[[5,-1]],10,0,0,0],"Dragon Pulse":[10,3,[],0,0,0,0],"Dragon Rush":[10,2,[],0,0,0,0],"Power Gem":[10,3,[],0,0,0,0],"Energy Ball":[10,3,[[5,-1]],10,0,0,0],"Brave Bird":[10,2,[],0,0,0,0],"Earth Power":[10,3,[[5,-1]],10,0,0,0],"Giga Impact":[10,2,[],0,0,0,0],"Nasty Plot":[7,1,[[4,2]],0,0,0,0],"Bullet Punch":[10,2,[],0,0,0,0],"Avalanche":[10,2,[],0,0,0,0],"Ice Shard":[10,2,[],0,0,0,0],"Shadow Claw":[10,2,[],0,0,0,0],"Thunder Fang":[10,2,[],0,1,10,0],"Ice Fang":[10,2,[],0,3,10,0],"Shadow Sneak":[10,2,[],0,0,0,0],"Mud Bomb":[10,3,[[7,-1]],30,0,0,0],"Psycho Cut":[10,2,[],0,0,0,0],"Zen Headbutt":[10,2,[],0,0,0,0],"Mirror Shot":[10,3,[[7,-1]],30,0,0,0],"Flash Cannon":[10,3,[[5,-1]],10,0,0,0],"Rock Climb":[10,2,[],0,6,20,0],"Draco Meteor":[10,3,[[4,-2]],100,0,0,0],"Discharge":[9,3,[],0,1,30,0],"Lava Plume":[9,3,[],0,4,30,0],"Leaf Storm":[10,3,[[4,-2]],100,0,0,0],"Power Whip":[10,2,[],0,0,0,0],"Rock Wrecker":[10,2,[],0,0,0,0],"Cross Poison":[10,2,[],0,5,10,0],"Gunk Shot":[10,2,[],0,5,30,0],"Iron Head":[10,2,[],0,0,0,0],"Stone Edge":[10,2,[],0,0,0,0],"Captivate":[11,1,[[4,-2]],0,0,0,0],"Grass Knot":[10,3,[],0,0,0,0],"Chatter":[10,3,[],0,6,100,0],"Judgment":[10,3,[],0,0,0,0],"Bug Bite":[10,2,[],0,0,0,0],"Charge Beam":[10,3,[[4,1]],70,0,0,0],"Wood Hammer":[10,2,[],0,0,0,0],"Aqua Jet":[10,2,[],0,0,0,0],"Head Smash":[10,2,[],0,0,0,0],"Roar Of Time":[10,3,[],0,0,0,0],"Crush Grip":[10,2,[],0,0,0,0],"Magma Storm":[10,3,[],0,8,100,0],"Seed Flare":[10,3,[[5,-2]],40,0,0,0],"Ominous Wind":[10,3,[[2,1],[3,1],[4,1],[5,1],[6,1]],10,0,10,0],"Shadow Force":[10,2,[],0,0,0,0],"Hone Claws":[7,1,[[2,1],[7,1]],0,0,0,0],"Wide Guard":[4,1,[],0,0,0,0],"Psyshock":[10,3,[],0,0,0,0],"Venoshock":[10,3,[],0,0,0,0],"Autotomize":[7,1,[[6,2]],0,0,0,0],"Smack Down":[10,2,[],0,-1,100,0],"Flame Burst":[10,3,[],0,0,0,0],"Sludge Wave":[9,3,[],0,5,10,0],"Quiver Dance":[7,1,[[4,1],[5,1],[6,1]],0,0,0,0],"Heavy Slam":[10,2,[],0,0,0,0],"Electro Ball":[10,3,[],0,0,0,0],"Flame Charge":[10,2,[[6,1]],100,0,0,0],"Coil":[7,1,[[2,1],[3,1],[7,1]],0,0,0,0],"Acid Spray":[10,3,[[5,-2]],100,0,0,0],"Foul Play":[10,2,[],0,0,0,0],"Echoed Voice":[10,3,[],0,0,0,0],"Chip Away":[10,2,[],0,0,0,0],"Clear Smog":[10,3,[],0,0,0,0],"Stored Power":[10,3,[],0,0,0,0],"Quick Guard":[4,1,[],0,0,0,0],"Scald":[10,3,[],0,4,30,0],"Hex":[10,3,[],0,0,0,0],"Shift Gear":[7,1,[[2,1],[6,2]],0,0,0,0],"Circle Throw":[10,2,[],0,0,0,0],"Incinerate":[11,3,[],0,0,0,0],"Acrobatics":[10,2,[],0,0,0,0],"Retaliate":[10,2,[],0,0,0,0],"Inferno":[10,3,[],0,4,100,0],"Bulldoze":[9,2,[[6,-1]],100,0,0,0],"Dragon Tail":[10,2,[],0,0,0,0],"Work Up":[7,1,[[2,1],[4,1]],0,0,0,0],"Electroweb":[11,3,[[6,-1]],100,0,0,0],"Wild Charge":[10,2,[],0,0,0,0],"Dual Chop":[10,2,[],0,0,0,0],"Horn Leech":[10,2,[],0,0,0,0],"Sacred Sword":[10,2,[],0,0,0,0],"Razor Shell":[10,2,[[3,-1]],50,0,0,0],"Leaf Tornado":[10,3,[[7,-1]],50,0,0,0],"Steamroller":[10,2,[],0,0,0,0],"Cotton Guard":[7,1,[[3,3]],0,0,0,0],"Night Daze":[10,3,[[7,-1]],40,0,0,0],"Tail Slap":[10,2,[],0,0,0,0],"Hurricane":[10,3,[],0,6,30,0],"Gear Grind":[10,2,[],0,0,0,0],"Techno Blast":[10,3,[],0,0,0,0],"Relic Song":[11,3,[],0,2,10,0],"Bolt Strike":[10,2,[],0,1,20,0],"Blue Flare":[10,3,[],0,4,20,0],"Snarl":[11,3,[[4,-1]],100,0,0,0],"Icicle Crash":[10,2,[],0,0,0,0],"V Create":[10,2,[[3,-1],[5,-1],[6,-1]],100,0,0,0],"Fusion Bolt":[10,2,[],0,0,0,0],"Fell Stinger":[10,2,[],0,0,0,0],"Phantom Force":[10,2,[],0,0,0,0],"Noble Roar":[10,1,[[2,-1],[4,-1]],100,0,0,0],"Petal Blizzard":[9,2,[],0,0,0,0],"Freeze Dry":[10,3,[],0,3,10,0],"Disarming Voice":[11,3,[],0,0,0,0],"Draining Kiss":[10,3,[],0,0,0,0],"Misty Terrain":[12,1,[],0,0,0,0],"Play Rough":[10,2,[[2,-1]],10,0,0,0],"Fairy Wind":[10,3,[],0,0,0,0],"Moonblast":[10,3,[[4,-1]],30,0,0,0],"Boomburst":[9,3,[],0,0,0,0],"Kings Shield":[7,1,[],0,0,0,0],"Play Nice":[10,1,[[2,-1]],100,0,0,0],"Diamond Storm":[11,2,[[3,2]],50,0,0,0],"Steam Eruption":[10,3,[],0,4,30,0],"Hyperspace Hole":[10,3,[],0,0,0,0],"Water Shuriken":[10,3,[],0,0,0,0],"Mystical Fire":[10,3,[[4,-1]],100,0,0,0],"Spiky Shield":[7,1,[],0,0,0,0],"Eerie Impulse":[10,1,[[4,-2]],0,0,0,0],"Venom Drench":[11,1,[[2,-1],[4,-1],[6,-1]],100,0,0,0],"Magnetic Flux":[13,1,[[3,1],[5,1]],0,0,0,0],"Electric Terrain":[12,1,[],0,0,0,0],"Dazzling Gleam":[11,3,[],0,0,0,0],"Baby Doll Eyes":[10,1,[[2,-1]],0,0,0,0],"Nuzzle":[10,2,[],0,1,100,0],"Infestation":[10,3,[],0,8,100,0],"Power Up Punch":[10,2,[[2,1]],100,0,0,0],"Oblivion Wing":[10,3,[],0,0,0,0],"Thousand Arrows":[11,2,[],0,-1,100,0],"Precipice Blades":[11,2,[],0,0,0,0],"Dragon Ascent":[10,2,[[3,-1],[5,-1]],100,0,0,0],"First Impression":[10,2,[],0,0,0,0],"Baneful Bunker":[7,1,[],0,0,0,0],"Darkest Lariat":[10,2,[],0,0,0,0],"Sparkling Aria":[9,3,[],0,0,0,0],"Ice Hammer":[10,2,[[6,-1]],100,0,0,0],"High Horsepower":[10,2,[],0,0,0,0],"Strength Sap":[10,1,[[2,-1]],100,0,0,0],"Solar Blade":[10,2,[],0,0,0,0],"Leafage":[10,2,[],0,0,0,0],"Gear Up":[13,1,[[2,1],[4,1]],0,0,0,0],"Throat Chop":[10,2,[],0,24,100,0],"Pollen Puff":[10,3,[],0,0,0,0],"Psychic Terrain":[12,1,[],0,0,0,0],"Lunge":[10,2,[[2,-1]],100,0,0,0],"Power Trip":[10,2,[],0,0,0,0],"Burn Up":[10,3,[],0,0,0,0],"Revelation Dance":[10,3,[],0,0,0,0],"Trop Kick":[10,2,[[2,-1]],100,0,0,0],"Shell Trap":[11,3,[],0,0,0,0],"Fleur Cannon":[10,3,[[4,-2]],100,0,0,0],"Psychic Fangs":[10,2,[],0,0,0,0],"Stomping Tantrum":[10,2,[],0,0,0,0],"Accelerock":[10,2,[],0,0,0,0],"Liquidation":[10,2,[[3,-1]],20,0,0,0],"Prismatic Laser":[10,3,[],0,0,0,0],"Sunsteel Strike":[10,2,[],0,0,0,0],"Moongeist Beam":[10,3,[],0,0,0,0],"Tearful Look":[10,1,[[2,-1],[4,-1]],100,0,0,0],"Zing Zap":[10,2,[],0,0,0,0],"Mind Blown":[9,3,[],0,0,0,0],"Double Iron Bash":[10,2,[],0,0,0,0],"Snipe Shot":[10,3,[],0,0,0,0],"Jaw Lock":[10,2,[],0,0,0,0],"Dragon Darts":[10,2,[],0,0,0,0],"Bolt Beak":[10,2,[],0,0,0,0],"Fishious Rend":[10,2,[],0,0,0,0],"Drum Beating":[10,2,[[6,-1]],100,0,0,0],"Pyro Ball":[10,2,[],0,4,10,0],"Aura Wheel":[10,2,[[6,1]],100,0,0,0],"Breaking Swipe":[11,2,[[2,-1]],100,0,0,0],"Branch Poke":[10,2,[],0,0,0,0],"Apple Acid":[10,3,[[5,-1]],100,0,0,0],"Grav Apple":[10,2,[[3,-1]],100,0,0,0],"Life Dew":[13,1,[],0,0,0,25],"Obstruct":[7,1,[],0,0,0,0],"False Surrender":[10,2,[],0,0,0,0],"Eternabeam":[10,3,[],0,0,0,0],"Steel Beam":[10,3,[],0,0,0,0],"Steel Roller":[10,2,[],0,0,0,0],"Meteor Beam":[10,3,[],0,0,100,0],"Grassy Glide":[10,2,[],0,0,0,0],"Terrain Pulse":[10,3,[],0,0,0,0],"Skitter Smack":[10,2,[[4,-1]],100,0,0,0],"Poltergeist":[10,2,[],0,0,0,0],"Flip Turn":[10,2,[],0,0,0,0],"Dragon Energy":[11,3,[],0,0,0,0],"Springtide Storm":[11,3,[],0,0,0,0],"Mystical Power":[10,3,[],0,0,0,0],"Raging Fury":[8,2,[],0,0,0,0],"Wave Crash":[10,2,[],0,0,0,0],"Headlong Rush":[10,2,[],0,0,0,0],"Barb Barrage":[10,2,[],0,0,0,0],"Wildbolt Storm":[11,3,[],0,0,0,0],"Sandsear Storm":[11,3,[],0,0,0,0],"Tera Blast":[10,3,[[2,-1],[4,-1]],0,0,0,0],"Axe Kick":[10,2,[],0,0,0,0],"Last Respects":[10,2,[],0,0,0,0],"Order Up":[10,2,[],0,0,0,0],"Jet Punch":[10,2,[],0,0,0,0],"Spin Out":[10,2,[[6,-2]],0,0,0,0],"Glaive Rush":[10,2,[],0,0,0,0],"Salt Cure":[10,2,[],0,0,0,0],"Kowtow Cleave":[10,2,[],0,0,0,0],"Flower Trick":[10,2,[],0,0,0,0],"Raging Bull":[10,2,[],0,0,0,0],"Make It Rain":[11,3,[[4,-1]],0,0,0,0],"Psyblade":[10,2,[],0,0,0,0],"Collision Course":[10,2,[],0,0,0,0],"Snowscape":[12,1,[],0,0,0,0],"Pounce":[10,2,[[6,-1]],0,0,0,0],"Hyper Drill":[10,2,[],0,0,0,0],"Armor Cannon":[10,3,[[3,-1],[5,-1]],0,0,0,0],"Double Shock":[10,2,[],0,0,0,0],"Gigaton Hammer":[10,2,[],0,0,0,0],"Aqua Cutter":[10,2,[],0,0,0,0],"Electro Shot":[10,3,[[4,1]],0,0,0,0],"Tera Starstorm":[11,3,[],0,0,0,0],"Fickle Beam":[10,3,[],0,0,0,0],"Alluring Voice":[10,3,[],0,0,0,0],"Acupressure":[5,1,[],0,0,0,0],"Aeroblast":[10,3,[],0,0,0,0],"After You":[10,1,[],0,0,0,0],"Air Cutter":[11,3,[],0,0,0,0],"Ally Switch":[7,1,[],0,0,0,0],"Anchor Shot":[10,2,[],0,0,0,0],"Aqua Step":[10,2,[[6,1]],0,0,0,0],"Aromatherapy":[13,1,[],0,0,0,0],"Aromatic Mist":[3,1,[[5,1]],0,0,0,0],"Assist":[7,1,[],0,0,0,0],"Astral Barrage":[11,3,[],0,0,0,0],"Attack Order":[10,2,[],0,0,0,0],"Attract":[10,1,[],0,7,0,0],"Aurora Veil":[4,1,[],0,0,0,0],"Baddy Bad":[10,3,[],0,0,0,0],"Barrage":[10,2,[],0,0,0,0],"Baton Pass":[7,1,[],0,0,0,0],"Beak Blast":[10,2,[],0,0,0,0],"Behemoth Bash":[10,2,[],0,0,0,0],"Behemoth Blade":[10,2,[],0,0,0,0],"Belch":[10,3,[],0,0,0,0],"Belly Drum":[7,1,[],0,0,0,0],"Bestow":[10,1,[],0,0,0,0],"Bide":[7,2,[],0,0,0,0],"Bitter Blade":[10,2,[],0,0,0,0],"Bitter Malice":[10,3,[],0,0,0,0],"Blaze Kick":[10,2,[],0,4,10,0],"Blazing Torque":[10,2,[],0,0,0,0],"Bleakwind Storm":[11,3,[],0,0,0,0],"Block":[10,1,[],0,0,0,0],"Blood Moon":[10,3,[],0,0,0,0],"Body Press":[10,2,[],0,0,0,0],"Bone Rush":[10,2,[],0,0,0,0],"Bouncy Bubble":[10,3,[],0,0,0,0],"Brick Break":[10,2,[],0,0,0,0],"Brutal Swing":[9,2,[],0,0,0,0],"Burning Bulwark":[7,1,[],0,0,0,0],"Burning Jealousy":[11,3,[],0,4,100,0],"Buzzy Buzz":[10,3,[],0,1,100,0],"Camouflage":[7,1,[],0,0,0,0],"Ceaseless Edge":[10,2,[],0,0,0,0],"Celebrate":[7,1,[],0,0,0,0],"Chilling Water":[10,3,[[2,-1]],0,0,0,0],"Chilly Reception":[12,1,[],0,0,0,0],"Chloroblast":[10,3,[],0,0,0,0],"Clanging Scales":[11,3,[[3,-1]],100,0,0,0],"Clangorous Soul":[7,1,[[2,1],[3,1],[4,1],[5,1],[6,1]],100,0,0,-33],"Coaching":[13,1,[[2,1],[3,1]],100,0,0,0],"Combat Torque":[10,2,[],0,0,0,0],"Comeuppance":[1,2,[],0,0,0,0],"Confide":[10,1,[[4,-1]],100,0,0,0],"Constrict":[10,2,[[6,-1]],10,0,0,0],"Conversion":[7,1,[],0,0,0,0],"Conversion 2":[10,1,[],0,0,0,0],"Copycat":[7,1,[],0,0,0,0],"Core Enforcer":[11,3,[],0,0,0,0],"Corrosive Gas":[9,1,[],0,0,0,0],"Counter":[1,2,[],0,0,0,0],"Court Change":[12,1,[],0,0,0,0],"Crafty Shield":[4,1,[],0,0,0,0],"Curse":[1,1,[],0,0,0,0],"Cut":[10,2,[],0,0,0,0],"Dark Void":[11,1,[],0,2,0,0],"Decorate":[10,1,[[2,2],[4,2]],100,0,0,0],"Defend Order":[7,1,[[3,1],[5,1]],0,0,0,0],"Defog":[10,1,[[8,-1]],0,0,0,0],"Destiny Bond":[7,1,[],0,0,0,0],"Dire Claw":[10,2,[],0,0,0,0],"Disable":[10,1,[],0,13,0,0],"Doodle":[10,1,[],0,0,0,0],"Double Hit":[10,2,[],0,0,0,0],"Double Team":[7,1,[[8,1]],0,0,0,0],"Dragon Cheer":[15,1,[],0,0,0,0],"Dragon Hammer":[10,2,[],0,0,0,0],"Drain Punch":[10,2,[],0,0,0,0],"Dream Eater":[10,3,[],0,0,0,0],"Drill Run":[10,2,[],0,0,0,0],"Dual Wingbeat":[10,2,[],0,0,0,0],"Dynamax Cannon":[10,3,[],0,0,0,0],"Eerie Spell":[10,3,[],0,0,0,0],"Electrify":[10,1,[],0,0,0,0],"Electro Drift":[10,3,[],0,0,0,0],"Embargo":[10,1,[],0,19,0,0],"Encore":[10,1,[],0,0,0,0],"Entrainment":[10,1,[],0,0,0,0],"Esper Wing":[10,3,[],0,0,0,0],"Expanding Force":[10,3,[],0,0,0,0],"Explosion":[9,2,[],0,0,0,0],"Facade":[10,2,[],0,0,0,0],"Fairy Lock":[12,1,[],0,0,0,0],"False Swipe":[10,2,[],0,0,0,0],"Fiery Dance":[10,3,[[4,1]],50,0,0,0],"Fiery Wrath":[11,3,[],0,0,0,0],"Fillet Away":[7,1,[[2,2],[4,2],[6,2]],0,0,0,0],"Final Gambit":[10,3,[],0,0,0,0],"Fire Fang":[10,2,[],0,4,10,0],"Fire Lash":[10,2,[[3,-1]],100,0,0,0],"Fire Pledge":[10,3,[],0,0,0,0],"Fissure":[10,2,[],0,0,0,0],"Flash":[10,1,[[7,-1]],0,0,0,0],"Fling":[10,2,[],0,0,0,0],"Floaty Fall":[10,2,[],0,0,0,0],"Floral Healing":[10,1,[],0,0,0,50],"Flower Shield":[14,1,[[3,1]],100,0,0,0],"Flying Press":[10,2,[],0,0,0,0],"Focus Blast":[10,3,[[5,-1]],10,0,0,0],"Focus Energy":[7,1,[],0,0,0,0],"Focus Punch":[10,2,[],0,0,0,0],"Follow Me":[7,1,[],0,0,0,0],"Foresight":[10,1,[],0,17,0,0],"Forest's Curse":[10,1,[],0,0,0,0],"Freeze Shock":[10,2,[],0,1,30,0],"Freezing Glare":[10,3,[],0,3,10,0],"Freezy Frost":[10,3,[],0,0,0,0],"Frenzy Plant":[10,3,[],0,0,0,0],"Frost Breath":[10,3,[],0,0,100,0],"Frustration":[10,2,[],0,0,0,0],"Fusion Flare":[10,3,[],0,0,0,0],"Gastro Acid":[10,1,[],0,0,0,0],"Geomancy":[7,1,[[4,2],[5,2],[6,2]],0,0,0,0],"Glacial Lance":[11,2,[],0,0,0,0],"Glaciate":[11,3,[[6,-1]],100,0,0,0],"Glitzy Glow":[10,3,[],0,0,0,0],"Grass Pledge":[10,3,[],0,0,0,0],"Grassy Terrain":[12,1,[],0,0,0,0],"Gravity":[12,1,[],0,0,0,0],"Grudge":[7,1,[],0,0,0,0],"Guard Split":[10,1,[],0,0,0,0],"Guard Swap":[10,1,[],0,0,0,0],"Guillotine":[10,2,[],0,0,0,0],"Happy Hour":[4,1,[],0,0,0,0],"Hard Press":[10,2,[],0,0,0,0],"Haze":[12,1,[],0,0,0,0],"Head Charge":[10,2,[],0,0,0,0],"Heal Bell":[13,1,[],0,0,0,0],"Heal Block":[11,1,[],0,15,0,0],"Heal Order":[7,1,[],0,0,0,50],"Heal Pulse":[10,1,[],0,0,0,50],"Healing Wish":[7,1,[],0,0,0,0],"Heart Stamp":[10,2,[],0,0,0,0],"Heart Swap":[10,1,[],0,0,0,0],"Heat Crash":[10,2,[],0,0,0,0],"Helping Hand":[3,1,[],0,0,0,0],"Hold Back":[10,2,[],0,0,0,0],"Hold Hands":[3,1,[],0,0,0,0],"Horn Attack":[10,2,[],0,0,0,0],"Horn Drill":[10,2,[],0,0,0,0],"Hydro Steam":[10,3,[],0,0,0,0],"Hyperspace Fury":[10,2,[[3,-1]],100,0,0,0],"Ice Burn":[10,3,[],0,4,30,0],"Ice Spinner":[10,2,[],0,0,0,0],"Imprison":[7,1,[],0,0,0,0],"Infernal Parade":[10,3,[],0,0,0,0],"Instruct":[10,1,[],0,0,0,0],"Ion Deluge":[12,1,[],0,0,0,0],"Ivy Cudgel":[10,2,[],0,0,0,0],"Jungle Healing":[13,1,[],0,0,0,25],"Land's Wrath":[11,2,[],0,0,0,0],"Laser Focus":[7,1,[],0,0,0,0],"Lash Out":[10,2,[],0,0,0,0],"Last Resort":[10,2,[],0,0,0,0],"Light of Ruin":[10,3,[],0,0,0,0],"Light Screen":[4,1,[],0,0,0,0],"Lock-On":[10,1,[],0,0,0,0],"Low Sweep":[10,2,[[6,-1]],100,0,0,0],"Lucky Chant":[4,1,[],0,0,0,0],"Lumina Crash":[10,3,[[5,-2]],0,0,0,0],"Lunar Blessing":[15,1,[],0,0,0,0],"Lunar Dance":[7,1,[],0,0,0,0],"Luster Purge":[10,3,[[5,-1]],50,0,0,0],"Magic Coat":[7,1,[],0,0,0,0],"Magic Powder":[10,1,[],0,0,0,0],"Magic Room":[12,1,[],0,0,0,0],"Magical Torque":[10,2,[],0,0,0,0],"Magnet Bomb":[10,2,[],0,0,0,0],"Magnet Rise":[7,1,[],0,0,0,0],"Malignant Chain":[10,3,[],0,0,0,0],"Mat Block":[4,1,[],0,0,0,0],"Matcha Gotcha":[10,3,[],0,0,0,0],"Me First":[2,1,[],0,0,0,0],"Memento":[10,1,[[2,-2],[4,-2]],0,0,0,0],"Metal Burst":[1,2,[],0,0,0,0],"Meteor Assault":[10,2,[],0,0,0,0],"Metronome":[7,1,[],0,0,0,0],"Mighty Cleave":[10,2,[],0,0,0,0],"Milk Drink":[7,1,[],0,0,0,50],"Mimic":[10,1,[],0,0,0,0],"Mind Reader":[10,1,[],0,0,0,0],"Minimize":[7,1,[[8,2]],0,0,0,0],"Miracle Eye":[10,1,[],0,17,0,0],"Mirror Coat":[1,3,[],0,0,0,0],"Mirror Move":[10,1,[],0,0,0,0],"Mist":[4,1,[],0,0,0,0],"Misty Explosion":[9,3,[],0,0,0,0],"Morning Sun":[7,1,[],0,0,0,50],"Mortal Spin":[11,2,[],0,0,0,0],"Mountain Gale":[10,2,[],0,0,0,0],"Multi-Attack":[10,2,[],0,0,0,0],"Natural Gift":[10,2,[],0,0,0,0],"Nature Power":[10,1,[],0,0,0,0],"Nature's Madness":[10,3,[],0,0,0,0],"Nightmare":[10,1,[],0,9,0,0],"No Retreat":[7,1,[[2,1],[3,1],[4,1],[5,1],[6,1]],100,0,0,0],"Noxious Torque":[10,2,[],0,0,0,0],"Octolock":[10,1,[],0,0,0,0],"Odor Sleuth":[10,1,[],0,17,0,0],"Origin Pulse":[11,3,[],0,0,0,0],"Overdrive":[11,3,[],0,0,0,0],"Pain Split":[10,1,[],0,0,0,0],"Parabolic Charge":[9,3,[],0,0,0,0],"Parting Shot":[10,1,[[2,-1],[4,-1]],100,0,0,0],"Perish Song":[14,1,[],0,20,0,0],"Photon Geyser":[10,3,[],0,0,0,0],"Pika Papow":[10,3,[],0,0,0,0],"Plasma Fists":[10,2,[],0,0,0,0],"Population Bomb":[10,2,[],0,0,0,0],"Powder":[10,1,[],0,0,0,0],"Power Shift":[7,1,[],0,0,0,0],"Power Split":[10,1,[],0,0,0,0],"Power Swap":[10,1,[],0,0,0,0],"Power Trick":[7,1,[],0,0,0,0],"Psych Up":[10,1,[],0,0,0,0],"Psychic Noise":[10,3,[],0,0,0,0],"Psycho Shift":[10,1,[],0,0,0,0],"Psyshield Bash":[10,2,[],0,0,0,0],"Psystrike":[10,3,[],0,0,0,0],"Purify":[10,1,[],0,0,0,50],"Quash":[10,1,[],0,0,0,0],"Rage Fist":[10,2,[],0,0,0,0],"Rage Powder":[7,1,[],0,0,0,0],"Recycle":[7,1,[],0,0,0,0],"Reflect":[4,1,[],0,0,0,0],"Reflect Type":[10,1,[],0,0,0,0],"Refresh":[7,1,[],0,0,0,0],"Revenge":[10,2,[],0,0,0,0],"Revival Blessing":[16,1,[],0,0,0,0],"Rising Voltage":[10,3,[],0,0,0,0],"Rock Polish":[7,1,[[6,2]],0,0,0,0],"Role Play":[10,1,[],0,0,0,0],"Rototiller":[14,1,[[2,1],[4,1]],100,0,0,0],"Round":[10,3,[],0,0,0,0],"Ruination":[10,3,[],0,0,0,0],"Sacred Fire":[10,2,[],0,4,50,0],"Safeguard":[4,1,[],0,0,0,0],"Sappy Seed":[10,2,[],0,18,100,0],"Scale Shot":[10,2,[],0,0,0,0],"Scorching Sands":[10,3,[],0,4,30,0],"Searing Shot":[9,3,[],0,4,30,0],"Secret Power":[10,2,[],0,0,30,0],"Secret Sword":[10,3,[],0,0,0,0],"Seismic Toss":[10,2,[],0,0,0,0],"Self-Destruct":[9,2,[],0,0,0,0],"Shadow Bone":[10,2,[[3,-1]],20,0,0,0],"Sharpen":[7,1,[[2,1]],0,0,0,0],"Shed Tail":[7,1,[],0,0,0,0],"Sheer Cold":[10,3,[],0,0,0,0],"Shell Side Arm":[10,3,[],0,5,20,0],"Shell Smash":[7,1,[[3,-1],[5,-1],[2,2],[4,2],[6,2]],0,0,0,0],"Shelter":[7,1,[],0,0,0,0],"Shore Up":[7,1,[],0,0,0,50],"Signal Beam":[10,3,[],0,6,10,0],"Silk Trap":[7,1,[[6,-1]],0,0,0,0],"Simple Beam":[10,1,[],0,0,0,0],"Sizzly Slide":[10,2,[],0,4,100,0],"Sketch":[10,1,[],0,0,0,0],"Skill Swap":[10,1,[],0,0,0,0],"Sky Drop":[10,2,[],0,0,0,0],"Sleep Talk":[7,1,[],0,0,0,0],"Smart Strike":[10,2,[],0,0,0,0],"Snap Trap":[10,2,[],0,8,100,0],"Snatch":[7,1,[],0,0,0,0],"Snore":[10,3,[],0,0,0,0],"Soak":[10,1,[],0,0,0,0],"Spacial Rend":[10,3,[],0,0,0,0],"Sparkly Swirl":[10,3,[],0,0,0,0],"Spectral Thief":[10,2,[],0,0,0,0],"Speed Swap":[10,1,[],0,0,0,0],"Spicy Extract":[10,1,[[2,2],[3,-2]],0,0,0,0],"Spike Cannon":[10,2,[],0,0,0,0],"Spirit Break":[10,2,[[4,-1]],100,0,0,0],"Spirit Shackle":[10,2,[],0,0,0,0],"Spit Up":[10,3,[],0,0,0,0],"Spite":[10,1,[],0,0,0,0],"Splash":[7,1,[],0,0,0,0],"Splishy Splash":[11,3,[],0,1,30,0],"Spotlight":[10,1,[],0,0,0,0],"Stealth Rock":[6,1,[],0,0,0,0],"Sticky Web":[6,1,[],0,0,0,0],"Stone Axe":[10,2,[],0,0,0,0],"Storm Throw":[10,2,[],0,0,0,0],"Strange Steam":[10,3,[],0,6,20,0],"Strength":[10,2,[],0,0,0,0],"Struggle Bug":[11,3,[[4,-1]],100,0,0,0],"Stuff Cheeks":[7,1,[[3,2]],100,0,0,0],"Submission":[10,2,[],0,0,0,0],"Supercell Slam":[10,2,[],0,0,0,0],"Surging Strikes":[10,2,[],0,0,0,0],"Swagger":[10,1,[[2,2]],0,6,0,0],"Switcheroo":[10,1,[],0,0,0,0],"Synchronoise":[9,3,[],0,0,0,0],"Synthesis":[7,1,[],0,0,0,50],"Syrup Bomb":[10,3,[[6,-1]],100,0,0,0],"Tachyon Cutter":[10,3,[],0,0,0,0],"Tailwind":[4,1,[],0,0,0,0],"Take Heart":[15,1,[],0,0,0,0],"Tar Shot":[10,1,[[6,-1]],100,42,100,0],"Taunt":[10,1,[],0,0,0,0],"Teatime":[14,1,[],0,0,0,0],"Telekinesis":[10,1,[],0,-1,0,0],"Teleport":[7,1,[],0,0,0,0],"Temper Flare":[10,2,[],0,0,0,0],"Thousand Waves":[11,2,[],0,0,0,0],"Thunder Cage":[10,3,[],0,8,100,0],"Thunder Punch":[10,2,[],0,1,10,0],"Thunderclap":[10,3,[],0,0,0,0],"Thunderous Kick":[10,2,[[3,-1]],100,0,0,0],"Tickle":[10,1,[[2,-1],[3,-1]],0,0,0,0],"Tidy Up":[7,1,[[2,1],[6,1]],0,0,0,0],"Topsy-Turvy":[10,1,[],0,0,0,0],"Torch Song":[10,3,[[4,1]],0,0,0,0],"Torment":[10,1,[],0,12,0,0],"Toxic Thread":[10,1,[[6,-1]],100,5,100,0],"Trailblaze":[10,2,[[6,1]],0,0,0,0],"Transform":[10,1,[],0,0,0,0],"Trick":[10,1,[],0,0,0,0],"Trick Room":[12,1,[],0,0,0,0],"Trick-or-Treat":[10,1,[],0,0,0,0],"Triple Arrows":[10,2,[],0,0,0,0],"Triple Axel":[10,2,[],0,0,0,0],"Triple Dive":[10,2,[],0,0,0,0],"Trump Card":[10,3,[],0,0,0,0],"Twin Beam":[10,3,[],0,0,0,0],"Upper Hand":[10,2,[],0,0,0,0],"Vacuum Wave":[10,3,[],0,0,0,0],"Veevee Volley":[10,2,[],0,0,0,0],"Victory Dance":[7,1,[],0,0,0,0],"Volt Switch":[10,3,[],0,0,0,0],"Volt Tackle":[10,2,[],0,1,10,0],"Water Pledge":[10,3,[],0,0,0,0],"Water Sport":[12,1,[],0,0,0,0],"Wicked Blow":[10,2,[],0,0,0,0],"Wicked Torque":[10,2,[],0,0,0,0],"Wonder Room":[12,1,[],0,0,0,0],"Worry Seed":[10,1,[],0,0,0,0],"Zippy Zap":[10,2,[[8,1]],100,0,0,0]};
+const weatherMoves={'Rain Dance':'Rain','Sunny Day':'Sun',Sandstorm:'Sand',Hail:'Snow',Snowscape:'Snow'};
+const terrainMoves={'Electric Terrain':'Electric','Grassy Terrain':'Grass','Misty Terrain':'Fairy','Psychic Terrain':'Psychic'};
 function moveRules(move) {
  const [target,category,changes,statChance,ailment,ailmentChance,healing] = moveData[move] ?? [10,2,[],0,0,0,0];
  const [type,power,,priority,status,drain,,configuredArea] = moveCatalog[move];
- const scope = [3,4,5,7,13,15].includes(target) ? 'ally' :
+ const scope = (Object.hasOwn(weatherMoves,move) || Object.hasOwn(terrainMoves,move) || [3,4,5,7,13,15].includes(target)) ? 'ally' :
   configuredArea || [6,9,11,12,14].includes(target) ? 'area' : 'single';
  const melee = ['Tackle','Scratch','Bite','Quick Attack','Aqua Tail','Flame Wheel','Struggle'].includes(move)
   || (category===2 && !['Rock','Ground','Flying'].includes(type));
@@ -1393,9 +1395,7 @@ const abilityImmunities={
 };
 const weatherAbilities={Drizzle:'Rain',Drought:'Sun','Sand Stream':'Sand','Snow Warning':'Snow',
  'Desolate Land':'Sun','Primordial Sea':'Rain'};
-const weatherMoves={'Rain Dance':'Rain','Sunny Day':'Sun',Sandstorm:'Sand',Hail:'Snow',Snowscape:'Snow'};
 const terrainAbilities={'Electric Surge':'Electric','Grassy Surge':'Grass','Misty Surge':'Fairy','Psychic Surge':'Psychic','Hadron Engine':'Electric'};
-const terrainMoves={'Electric Terrain':'Electric','Grassy Terrain':'Grass','Misty Terrain':'Fairy','Psychic Terrain':'Psychic'};
 const windMoves=new Set(['Air Cutter','Blizzard','Bleakwind Storm','Gust','Heat Wave','Hurricane','Icy Wind','Petal Blizzard',
  'Razor Wind','Sandsear Storm','Springtide Storm','Twister','Wildbolt Storm']);
 function isGrounded(actor) {
@@ -1724,6 +1724,9 @@ function skillDescription(move) {
  if(rules.scope!=='ally' && skillConditions[rules.ailment] && (status || rules.ailmentChance)) {
   notes.push((status?'Inflicts ':rules.ailmentChance+'% chance to inflict ')+skillConditions[rules.ailment]+' on a hit.');
  }
+ const blast=sacrificeProfiles.get(move);
+ if(blast)notes.push('Below 40% HP, has a 50% chance to begin charging when selected. Charges for '+blast.charge+
+  ' seconds, with '+blast.radius+'× blast radius and '+blast.damage+'× damage. The user faints after the blast.');
  if(!status && drain) notes.push('Restores '+Math.round(drain*100)+'% of damage dealt as HP.');
  if(!status && recoil) notes.push('User takes recoil equal to '+Math.round(recoil*100)+'% of damage dealt.');
  if(weatherMoves[move]) notes.push('Sets '+weatherMoves[move].toLowerCase()+' weather for 25 battle seconds.');
@@ -3144,11 +3147,13 @@ const dashSkills=new Set([
  'Flame Wheel','Steamroller','Heat Crash','Heavy Slam','Wave Crash','Raging Bull',
  'Collision Course','Electro Drift','Psyshield Bash','Zing Zap','Flip Turn',
 ]);
-const coneSkills=new Set(['Flamethrower','Icy Wind','Incinerate','Heat Wave','Dragon Breath','Snarl']);
+const coneSkills=new Set(['Flamethrower','Icy Wind','Incinerate','Dragon Breath','Snarl']);
 const landingSkills=new Set(['Fly','Bounce']);
 const projectileSkills=new Set(['Shadow Ball','Aura Sphere','Energy Ball','Focus Blast','Weather Ball','Electro Ball','Sludge Bomb']);
 const arcSkills=new Set(['Slash','Night Slash','Scratch','Cut','X-Scissor','Leaf Blade']);
+const wideWaveSkills=new Set(['Surf','Muddy Water','Sludge Wave','Heat Wave','Blizzard','Glacial Lance','Sandsear Storm']);
 function skillShape(move) {
+ if(wideWaveSkills.has(move))return 'wave';
  if(dashSkills.has(move)) return 'dash';
  if(coneSkills.has(move)) return 'cone';
  if(landingSkills.has(move)) return 'landing';
@@ -3160,7 +3165,8 @@ let pendingCasts=[];
 let trainerFields=null;
 let recallSlot=null;
 function fieldActors() {
- return trainerFields ? trainerFields.flat().map(slot=>slot.actor).filter(Boolean) : [activePlayer,activeEnemy];
+ return trainerFields ? trainerFields.flat().filter(slot=>!slot.transition).map(slot=>slot.actor).filter(Boolean) :
+  [playerSwitch?null:activePlayer,enemySwitch?null:activeEnemy];
 }
 function trainerLeads(roster,friendly) {
  return friendly ? [roster[selected],...roster.filter((_,i)=>i!==selected)].slice(0,selectedTrainer.format) :
@@ -3616,7 +3622,7 @@ function renderControls() {
 function updateScore() {
  const yourCount = selectedWild ? (allies[selected]?.hp>0?1:0) : allies.filter(actor => actor.hp > 0).length;
  const opponentCount = enemies.filter(actor => actor.hp > 0).length;
- byId('score').textContent = 'Your team '+yourCount+' · Opponent '+opponentCount+(abilityWeather()?' · '+abilityWeather():'')+(battleTerrain?' · '+battleTerrain+' terrain':'');
+ byId('score').textContent = 'Your team '+yourCount+' · Opponent '+opponentCount+(battleWeather?' · '+battleWeather+' '+Math.ceil(weatherTime)+'s'+(abilityWeather()?'':' (suppressed)'):'')+(battleTerrain?' · '+battleTerrain+' terrain':'');
 }
 const clamp = (n,min,max) => Math.max(min,Math.min(max,n));
 function startBattle() {
@@ -3937,6 +3943,13 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
   }
  }
 }
+const sacrificeActivationChance=0.5;
+const sacrificeProfiles=new Map([
+ ['Explosion',{charge:5,radius:2,damage:3}],
+ ['Misty Explosion',{charge:5,radius:2,damage:3}],
+ ['Self-Destruct',{charge:3,radius:1.65,damage:2.5}],
+]);
+
 function tacticalMoveScore(actor,target,move,rules,gap) {
  const [type,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
  const defender=targetAbility(actor,target);
@@ -3951,10 +3964,12 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
   const guard=guardMoves.has(move) && !actor.guard && target.charge<0.35 && gap<90;
   const ailment=rules.ailment && !target.ailment && !ally;
-  const field=(weatherMoves[move] && weatherMoves[move]!==abilityWeather()) ||
+  const weather=weatherMoves[move];
+  if(weather && fieldActors().some(member=>member?.hp>0 && ['Cloud Nine','Air Lock'].includes(activeAbility(member))))return 0;
+  const field=(weather && (weather!==battleWeather || weatherTime<=3)) ||
    (terrainMoves[move] && terrainMoves[move]!==battleTerrain);
   return (healing*(health<0.45?180:70)+stages*17+(guard?30:0)+
-   (ailment?30:0)+(field?18:0)+(move==='Tailwind' && actor.stages[6]<2?25:0))*(accuracy ?? 100)/100;
+   (ailment?30:0)+(field?(weather?55:18):0)+(move==='Tailwind' && actor.stages[6]<2?25:0))*(accuracy ?? 100)/100;
  }
  const flags=moveFlags[move] ?? [];
  let multiplier=effectiveness(type,target);
@@ -3968,9 +3983,11 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
     (defender==='Wind Rider' && windMoves.has(move)) ||
     (defender==='Soundproof' && flags.includes(9)) || (defender==='Bulletproof' && flags.includes(18)) ||
     (battleTerrain==='Psychic' && priority>0 && isGrounded(target))) return 0;
- if(['Self-Destruct','Explosion','Misty Explosion'].includes(move) &&
-    (health>0.25 || [activeAbility(actor),defender].includes('Damp'))) return 0;
- const damage=battleDamage(actor,target,power,multiplier,rules.category!==3,type,move);
+ const damage=battleDamage(actor,target,power,multiplier,rules.category!==3,type,move)*(sacrificeProfiles.get(move)?.damage ?? 1);
+ const sacrifice=sacrificeProfiles.has(move);
+ if(sacrifice && (fieldActors().some(member=>member?.hp>0 && activeAbility(member)==='Damp') ||
+    health>=0.4))return 0;
+ if(sacrifice)return 120+(damage>=target.hp?60:0);
  return (100*Math.min(damage,target.hp)/target.max+Math.min(damage,target.hp)*0.35+
   (damage>=target.hp?35:0)+Math.min(1-health,drain)*20-recoil*15+
   (!target.ailment && rules.ailment ? rules.ailmentChance*0.12 : 0))*(accuracy ?? 100)/100;
@@ -3990,6 +4007,27 @@ function moveActor(actor,dx,dy,remaining,dt,run) {
   actor.y=clamp(actor.y+dy*step,28,canvas.height-28);
   actor.direction=pmdDirection(dx,dy);
   if(Math.abs(dx)>0.05) actor.facing=Math.sign(dx);
+}
+function retreatRoute(actor,target,opponents) {
+ const heading=Math.atan2(actor.y-target.y,actor.x-target.x);
+ const clearance=(x,y)=>Math.min(x-28,canvas.width-28-x,y-28,canvas.height-28-y);
+ const separation=(x,y)=>Math.min(...opponents.filter(foe=>foe.hp>0).map(foe=>Math.hypot(x-foe.x,y-foe.y)));
+ const current=separation(actor.x,actor.y);
+ let best=null;
+ for(const turn of [0,1,-1,2,-2,3,-3,4]) {
+  const angle=heading+turn*Math.PI/4;
+  const dx=Math.cos(angle),dy=Math.sin(angle);
+  const x=clamp(actor.x+dx*56,28,canvas.width-28);
+  const y=clamp(actor.y+dy*56,28,canvas.height-28);
+  const travel=Math.hypot(x-actor.x,y-actor.y);
+  if(travel<12)continue;
+  const gain=separation(x,y)-current;
+  const wall=clearance(x,y);
+  if(gain<2 && (gain<-10 || wall<clearance(actor.x,actor.y)+16))continue;
+  const score=gain+Math.min(70,wall)*0.65+travel*0.15;
+  if(!best || score>best.score)best={dx:(x-actor.x)/travel,dy:(y-actor.y)/travel,score};
+ }
+ return best;
 }
 function dodgeSkill(actor,dt) {
  const hazard=pendingCasts.find(area=>area.actor.hp>0 && area.actor.friendly!==actor.friendly &&
@@ -4062,7 +4100,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  if(!target) return;
  if(actor.attack>0 || pendingCasts.some(cast=>cast.actor===actor && !cast.flight &&
-   (cast.shape==='dash' || cast.shape==='landing')) || dodgeSkill(actor,dt)) return;
+   (cast.shape==='dash' || cast.shape==='landing' || sacrificeProfiles.has(cast.move))) || dodgeSkill(actor,dt)) return;
  if(distance>1) {
   actor.direction=pmdDirection(target.x-actor.x,target.y-actor.y);
   if(Math.abs(target.x-actor.x)>3) actor.facing=Math.sign(target.x-actor.x);
@@ -4077,8 +4115,8 @@ function act(actor, opponents, dt, teammates=[actor]) {
   const move=actor.moves[slot];
   const rules=moveRules(move);
   const shape=skillShape(move);
-  const selfCentered=!shape && rules.scope==='area' && [9,12,14].includes(rules.target);
-  const range=shape==='dash'?90:shape==='arc'?26:selfCentered?rules.radius:rules.range;
+  const selfCentered=sacrificeProfiles.has(move) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
+  const range=shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?rules.radius*(sacrificeProfiles.get(move)?.radius ?? 1):rules.range;
   const remaining=rules.scope==='ally' ? 0 : Math.max(0,gap-range);
   const score=tacticalMoveScore(actor,target,move,rules,gap);
   if(score>0 && !moveCatalog[move][4]) {
@@ -4115,26 +4153,32 @@ function act(actor, opponents, dt, teammates=[actor]) {
    return;
   }
   if(!close && !ready && gap<goal-12) {
-   const x=clamp(actor.x-dx*12,28,canvas.width-28);
-   const y=clamp(actor.y-dy*12,28,canvas.height-28);
-   if(Math.hypot(x-target.x,y-target.y)>distance+1) {
-    moveActor(actor,-dx,-dy,goal-gap,dt,true);
+   const route=retreatRoute(actor,target,opponents);
+   if(route) {
+    moveActor(actor,route.dx,route.dy,goal-gap,dt,true);
     return;
    }
   }
  }
  const retreat=preferredGap===null && (actor.ai?.style!=='Aggressive' || actor.ai?.target==='Ranged attacks') && meleeThreat && gap<48 && rangedReadyIn>0 && rangedReadyIn<=1.2 &&
   (!choice || actor.charge>0) && distance>1;
- const remaining=retreat ? 48-gap : choice?.remaining ?? 0;
+ const route=retreat?retreatRoute(actor,target,opponents):null;
+ if(route) {
+  moveActor(actor,route.dx,route.dy,48-gap,dt,true);
+  return;
+ }
+ const remaining=choice?.remaining ?? 0;
  if(remaining>0.01 && distance>1) {
-  const direction=retreat ? -1 : 1;
-  moveActor(actor,direction*(target.x-actor.x)/distance,direction*(target.y-actor.y)/distance,
-   remaining,dt,remaining>100 || retreat);
+  moveActor(actor,(target.x-actor.x)/distance,(target.y-actor.y)/distance,remaining,dt,remaining>100);
   return;
  }
  if(!choice || actor.charge>0 || remaining>0.01) return;
  const {slot,move,rules,shape,range,selfCentered}=choice;
  const [element,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
+ if(sacrificeProfiles.has(move) && Math.random()>=sacrificeActivationChance) {
+  actor.moveTimers[slot]=3;
+  return;
+ }
  if(slot>=0) actor.moveTimers[slot]=actor.moveCooldowns[slot];
  actor.charge=actor.cooldown*(priority>0 ? 0.82 : power>=100 ? 1.18 : 1);
  actor.attackStyle=rules.scope!=='ally' && rules.range<=25 ? 'lunge' : 'attack';
@@ -4170,11 +4214,11 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  const center=selfCentered ? actor : target;
  if(shape || rules.radius) {
-  const warning=shape==='dash' ? (priority>0?0.35:0.55) : shape==='arc'?0.45:
+  const warning=sacrificeProfiles.has(move)?sacrificeProfiles.get(move).charge:shape==='dash' ? (priority>0?0.35:0.55) : shape==='arc'?0.45:
    shape==='projectile'?0.55:castWindup;
   const halfAngle=shape==='cone'?Math.PI/7:shape==='arc'?Math.PI/3:0;
   const line=shape && shape!=='landing' ? skillLane(actor,target,range,shape,halfAngle) : null;
-  const radius=shape==='landing'?42:rules.radius;
+  const radius=shape==='landing'?42:rules.radius*(sacrificeProfiles.get(move)?.radius ?? 1);
   const ground={x:clamp(center.x,28,canvas.width-28),y:clamp(center.y,28,canvas.height-28)};
   playSkillSound(move,'warning',shape);
   pendingCasts.push({actor,move,rules,shape,line,center:ground,radius,warning,remaining:warning,started:clock});
@@ -4194,7 +4238,7 @@ function skillLane(actor,target,range,shape,halfAngle) {
   length=Math.hypot(end.x-actor.x,end.y-actor.y);
   if(length) {dx=(end.x-actor.x)/length;dy=(end.y-actor.y)/length;}
  }
- return {x:actor.x,y:actor.y,dx,dy,length,radius:shape==='projectile'?10:shape==='dash'?19:14,end,angle,halfAngle};
+ return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?85:0,radius:shape==='projectile'?10:shape==='dash'?19:14,end,angle,halfAngle};
 }
 function nearestLinePoint(point,line) {
  if(line.halfAngle) {
@@ -4209,6 +4253,14 @@ function nearestLinePoint(point,line) {
  return {x:line.x+line.dx*along,y:line.y+line.dy*along};
 }
 function inSkill(actor,center,radius,line) {
+ if(line?.halfWidth) {
+  const x=actor.x-line.x,y=actor.y-line.y;
+  const along=clamp(x*line.dx+y*line.dy,0,line.length);
+  const across=clamp(y*line.dx-x*line.dy,-line.halfWidth,line.halfWidth);
+  const dx=x-along*line.dx+across*line.dy;
+  const dy=y-along*line.dy-across*line.dx;
+  return Math.hypot(dx,dy)<=hitboxRadius(actor,dx,dy);
+ }
  const point=line ? nearestLinePoint(actor,line) : center;
  const dx=actor.x-point.x;
  const dy=actor.y-point.y;
@@ -4216,6 +4268,8 @@ function inSkill(actor,center,radius,line) {
 }
 function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
  const [element,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
+ const sacrifice=sacrificeProfiles.has(move);
+ if(sacrifice && fieldActors().some(member=>member?.hp>0 && activeAbility(member)==='Damp'))return;
  const color=moveColors[element] ?? '#f6e7af';
  const effect=(victim,damage,multiplier,extra={})=>effects.push({
   x:actor.x,y:actor.y,tx:victim.x,ty:victim.y,damage,color,move,multiplier,life:0.58,...extra
@@ -4225,7 +4279,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
  if(!cast?.flight) playSkillSound(move,'release',cast?.shape);
  const line=cast?.line;
  const radius=cast?.radius ?? rules.radius;
- if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape});
+ if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth});
  else if(radius && !cast?.flight) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
  const victims=cast?.flight ? opponents : line || radius ?
   opponents.filter(other=>other.hp>0 && inSkill(other,center,radius,line)) : opponents;
@@ -4244,7 +4298,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
   const flags=moveFlags[move] ?? [];
   if((defender==='Soundproof' && flags.includes(9)) || (defender==='Bulletproof' && flags.includes(18)) ||
    (flags.includes(15) && (defender==='Overcoat' || [victim.type,extraTypes[victim.name]].includes('Grass')))) multiplier=0;
-  if(['Self-Destruct','Explosion','Misty Explosion'].includes(move) &&
+  if(sacrificeProfiles.has(move) &&
    [attacker,defender].includes('Damp')) multiplier=0;
   if(!multiplier) {effect(victim,0,0,{impactOnly:Boolean(cast)});continue;}
   let hitChance=accuracy*stageFactor(actor,7)/stageFactor(victim,8);
@@ -4253,7 +4307,10 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
   if(attacker==='Hustle' && rules.category===2) hitChance*=0.8;
   const weather=abilityWeather();
   if((defender==='Sand Veil' && weather==='Sand') || (defender==='Snow Cloak' && weather==='Snow')) hitChance*=0.8;
-  if(moveReferences[move]?.[4]===null || attacker==='No Guard' || defender==='No Guard') hitChance=100;
+  if((weather==='Rain' && ['Thunder','Hurricane'].includes(move)) ||
+    (weather==='Snow' && move==='Blizzard'))hitChance=100;
+ if(weather==='Sun' && ['Thunder','Hurricane'].includes(move))hitChance*=50/70;
+ if(moveReferences[move]?.[4]===null || attacker==='No Guard' || defender==='No Guard') hitChance=100;
   if(Math.random()*100>=Math.min(100,hitChance)) {effect(victim,'Miss',1,{impactOnly:Boolean(cast)});continue;}
   const absorbed=!status && move!=='Struggle' && abilityAbsorptions[defender]===element;
   const immunity=!status && move!=='Struggle' && abilityImmunities[defender];
@@ -4285,7 +4342,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
   const critical=!['Battle Armor','Shell Armor'].includes(defender) &&
    (attacker==='Merciless' && victim.ailment===5 || Math.random()<([1/24,1/8,1/2,1][Math.min(3,criticalStage)] ?? 0));
   const boosted=attacker==='Flash Fire' && actor.flashFire && element==='Fire' ? multiplier*1.5 : multiplier;
-  const damage=battleDamage(actor,victim,power,boosted,rules.category!==3,element,move,critical);
+  const damage=battleDamage(actor,victim,power,boosted,rules.category!==3,element,move,critical)*(sacrificeProfiles.get(move)?.damage ?? 1);
   const dealt=Math.min(victim.hp===victim.max && defender==='Sturdy' && victim.hp>1?victim.hp-1:victim.hp,damage);
   victim.hp-=dealt;
   if(dealt>0) playSkillSound(move,'impact');
@@ -4303,10 +4360,10 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
   const drainChange=Math.round(dealt*drain)*(defender==='Liquid Ooze'?-1:1);
   if(actor.hp>0) actor.hp=Math.max(0,Math.min(actor.max,actor.hp+drainChange-
    (attacker==='Magic Guard'?0:Math.round(dealt*recoil))));
-  if(['Self-Destruct','Explosion','Misty Explosion'].includes(move)) actor.hp=0;
   effect(victim,damage,multiplier,{impactOnly:Boolean(cast)});
   if(actor.hp<=0) break;
  }
+ if(sacrifice)actor.hp=0;
 }
 function tickSkillCasts(dt) {
  const field=trainerFields ? trainerFields.flat().filter(slot=>!slot.transition).map(slot=>slot.actor) :
@@ -4851,6 +4908,17 @@ function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,tra
   ctx.restore();
   return;
  }
+ if(line?.halfWidth) {
+  ctx.translate(line.x,line.y);
+  ctx.rotate(Math.atan2(line.dy,line.dx));
+  ctx.fillStyle=color;
+  ctx.globalAlpha=0.16+progress*0.28;
+  ctx.fillRect(0,-line.halfWidth,line.length,2*line.halfWidth);
+  ctx.globalAlpha=0.95;ctx.strokeStyle=color;ctx.lineWidth=2;
+  ctx.strokeRect(0,-line.halfWidth,line.length,2*line.halfWidth);
+  ctx.restore();
+  return;
+ }
  if(line) {
   ctx.lineCap='round';
   ctx.beginPath();
@@ -5089,7 +5157,12 @@ function drawMove(e) {
  ctx.fillStyle = e.color;
  ctx.lineWidth = 3;
  const head = distance*t;
- if(e.line && e.move!=='Bubble Beam') {
+ if(e.shape==='wave') {
+  ctx.globalAlpha*=0.45;
+  ctx.fillRect(0,-e.halfWidth,head,2*e.halfWidth);
+  ctx.globalAlpha*=2;
+  ctx.fillRect(Math.max(0,head-14),-e.halfWidth,Math.min(14,head),2*e.halfWidth);
+ } else if(e.line && e.move!=='Bubble Beam') {
   drawSkillBeam(distance,e.color,age,e.shape==='dash');
  } else if(!e.impactOnly) switch(e.move) {
   case 'Bubble Beam':
