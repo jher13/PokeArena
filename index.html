@@ -1742,7 +1742,7 @@ function arenaMoveGeometry(move,rules) {
  const selfCentered=move==='Earthquake' || Boolean(blast) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
  const radius=shape==='vortex'?38:move==='Earthquake'?rules.radius*2:shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
  const range=shape==='beam'?(heavyArenaBeams.has(move)?Math.hypot(canvas.width,canvas.height):rules.range*2):shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?radius:rules.range;
- const warning=castWindup;
+ const warning=move==='Hyper Beam'?2:castWindup;
  return {shape,selfCentered,radius,range,warning};
 }
 function skillDescription(move) {
@@ -1764,6 +1764,7 @@ function skillDescription(move) {
  };
  if(shape)notes[0]=(status?type+' status move.': 'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage.')+' '+geometryNotes[shape];
  if(rules.scope!=='ally' && (shape || radius))notes.push('The warning lasts '+warning+' battle seconds.');
+ if(move==='Hyper Beam')notes.push('Charges for 2 battle seconds and deals double damage in a 50% wider beam.');
  if(move==='Earthquake')notes.push('Three rings strike outward, 0.5 battle seconds apart. The inner ring deals full damage, the middle deals 50% damage, and the outer deals 25% damage.');
  if(conditionalPowerNotes[move])notes.push(conditionalPowerNotes[move]);
  const [criticalStage,flinchChance]=moveExtras[move] ?? [];
@@ -1795,10 +1796,11 @@ function skillDescription(move) {
  if(['Seismic Toss','Night Shade'].includes(move)) notes.push('Fixed damage scales with the user’s level after the Arena damage reduction, with a minimum of 1 HP.');
  if(move==='Dragon Rage') notes.push('Deals '+scaledBattleDamage(40)+' base fixed HP damage on a hit.');
  if(move==='Sonic Boom') notes.push('Deals '+scaledBattleDamage(20)+' base fixed HP damage on a hit.');
- if(move==='Baton Pass')notes.push('Switches to a random healthy reserve and passes the user’s stat stages.');
+ if(move==='Baton Pass')notes.push('Switches to a healthy reserve suited to the matchup and passes the user’s stat stages.');
  if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +3.');
  if(move==='Confuse Ray' && !skillConditions[6])notes.push('Inflicts confusion for 6 battle seconds.');
- if(pivotMoves.has(move))notes.push('After the move connects, recalls the user and sends out a random healthy reserve.');
+ if(selfRecallMoves.has(move))notes.push('After switching out with a move, the recall effect is locked for 10 battle seconds on re-entry. Damaging moves can still hit.');
+ if(pivotMoves.has(move))notes.push('After the move connects, recalls the user and sends out a healthy reserve suited to the matchup.');
  if(forcedSwitchMoves.has(move))notes.push('Forces the target to switch to a random healthy reserve.');
  if(Object.hasOwn(additionalStatusMoves,move))notes.push(additionalStatusMoves[move].description);
  if(status && notes.length===1 && !Object.hasOwn(additionalStatusMoves,move)) notes.push(unsupportedMoveNote);
@@ -3615,8 +3617,11 @@ function updateActivePanels(onlineFields) {
   const health=actor.hp+'/'+actor.max+' HP';
   if(panel.hp.textContent!==health) panel.hp.textContent=health;
   panel.moves.forEach(({timer,bar},slot)=>{
-   const remaining=actor.moveTimers[slot];
-   const label=remaining>0 ? (Math.ceil(remaining*10)/10).toFixed(1)+'s' : 'Ready';
+   const move=actor.moves[slot];
+   const recallWait=recallMoveWait(actor,move);
+   const remaining=Math.max(actor.moveTimers[slot],moveCatalog[move][4]?recallWait:0);
+   const label=remaining>0 ? (Math.ceil(remaining*10)/10).toFixed(1)+'s' :
+    recallWait>0?'Attack ready · recall '+(Math.ceil(recallWait*10)/10).toFixed(1)+'s':'Ready';
    if(timer.textContent!==label) timer.textContent=label;
    bar.value=clamp(1-remaining/actor.moveCooldowns[slot],0,1);
   });
@@ -3713,7 +3718,7 @@ function startSwitch(outgoing,incoming) {
  incoming.direction=incoming.friendly ? 2 : 6;
  incoming.motionTicks=0;
  incoming.fieldTime=0;
- incoming.hazardsApplied=false;incoming.crowdedFor=0;incoming.escapeUntil=0;
+ incoming.hazardsApplied=false;incoming.crowdedFor=0;incoming.escapeUntil=0;incoming.escapeGoal=null;incoming.committedTarget=null;
  incoming.actedSinceEntry=false;
  for(const motion of ['idle','walk','run']) {
   for(const frame of pmdMotion(incoming,motion)?.frames ?? []) pmdImage(frame.page);
@@ -3735,7 +3740,12 @@ function stepSwitch(transition,dt,realDt=dt) {
   transition.elapsed=0;
   return false;
  }
+ finishArenaEntry(transition.incoming);
  return true;
+}
+function finishArenaEntry(actor) {
+ actor.recallMovesReadyAt=clock+(actor.recalledWithMove?recallMoveReentryCooldown:recallMoveEntryDelay);
+ actor.recalledWithMove=false;
 }
 function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):5,runMember=null,gymSlot) {
  const [,primary,,,,baseSpeed]=dex[name];
@@ -4394,7 +4404,26 @@ const sacrificeProfiles=new Map([
 ]);
 
 const pivotMoves=new Set(['U Turn','Volt Switch','Flip Turn','Parting Shot']);
+const selfRecallMoves=new Set([...pivotMoves,'Teleport','Chilly Reception','Baton Pass','Shed Tail']);
+const recallMoveEntryDelay=1;
+const recallMoveReentryCooldown=10;
+function recallWithMove(actor,passStages=false,passSubstitute=0) {
+ if(fieldMoveActive('Fairy Lock') || !forceSwitch(actor,null,passStages,passSubstitute,true))return false;
+ actor.recalledWithMove=true;
+ return true;
+}
 const forcedSwitchMoves=new Set(['Whirlwind','Roar','Dragon Tail','Circle Throw']);
+function reserveMatchup(actor) {
+ const foes=combatSides()[actor.friendly?1:0];
+ const matchup=foes.map(foe=>{
+  const offense=Math.max(.25,...actor.moves.filter(move=>!moveCatalog[move][4])
+   .map(move=>effectiveness(moveCatalog[move][0],foe)));
+  const threat=Math.max(.25,...foe.moves.filter(move=>!moveCatalog[move][4])
+   .map(move=>effectiveness(moveCatalog[move][0],actor)));
+  return Math.log2(offense/threat);
+ });
+ return 2*actor.hp/actor.max+matchup.reduce((sum,value)=>sum+value,0)/Math.max(1,foes.length);
+}
 function forcedSwitchOptions(victim,defender) {
  if(victim.hp<=0 || defender==='Suction Cups' || victim.ingrainAt)return [];
  const roster=victim.friendly?allies:enemies;
@@ -4404,10 +4433,10 @@ function forcedSwitchOptions(victim,defender) {
  return roster.filter(actor=>actor!==victim && actor.hp>0 &&
   (!victim.side || victim.side===actor.side) && (!slots || !trainerOnField(actor,slots)));
 }
-function forceSwitch(victim,defender,passStages=false,passSubstitute=0) {
+function forceSwitch(victim,defender,passStages=false,passSubstitute=0,chooseReserve=false) {
  const reserves=forcedSwitchOptions(victim,defender);
  if(!reserves.length)return false;
- const incoming=reserves[Math.floor(Math.random()*reserves.length)];
+ const incoming=chooseReserve?reserves.sort((a,b)=>reserveMatchup(b)-reserveMatchup(a))[0]:reserves[Math.floor(Math.random()*reserves.length)];
  if(trainerFields) {
   const slot=trainerFields.flat().find(entry=>entry.actor===victim);
   trainerSend(slot,incoming);
@@ -4542,11 +4571,12 @@ function callArenaAttack(actor,target,move) {
  actor.moveLabel=move;
  actor.labelTime=0.95;
  const rules=moveRules(move);
- if(vortexMoves.has(move)) {
-  const {shape,warning,radius}=arenaMoveGeometry(move,rules);
+ if(vortexMoves.has(move) || move==='Hyper Beam') {
+  const {shape,warning,radius,range}=arenaMoveGeometry(move,rules);
   const center={x:target.x,y:target.y};
   playSkillSound(move,'warning',shape);
-  pendingCasts.push({actor,move,rules,shape,line:null,center,radius,warning,remaining:warning,started:clock});
+  const line=shape==='beam'?skillLane(actor,target,range,shape,0,move):null;
+  pendingCasts.push({actor,move,rules,shape,line,center,radius,warning,remaining:warning,started:clock});
   return;
  }
  resolveOffensiveMove(actor,move,rules,target,[target]);
@@ -4652,13 +4682,13 @@ const additionalStatusMoves={
    const cost=Math.max(1,Math.floor(actor.max/4));
    if(!actor.substituteHP && actor.hp>cost){actor.hp-=cost;actor.substituteHP=cost;}
   }},
- 'Shed Tail':{description:'Spends half of max HP to switch out and give a random healthy reserve a decoy worth one-quarter of the user’s max HP.',
+ 'Shed Tail':{description:'Spends half of max HP to switch out and give a healthy reserve suited to the matchup a decoy worth one-quarter of the user’s max HP.',
   score:actor=>actor.hp>actor.max*.5 && !fieldMoveActive('Fairy Lock') && !(actor.trappedUntil>clock) &&
    forcedSwitchOptions(actor,null).length?48:0,
   apply:actor=>{
    const cost=Math.max(1,Math.floor(actor.max/2));
    if(actor.hp>cost && !fieldMoveActive('Fairy Lock') && !(actor.trappedUntil>clock) &&
-      forceSwitch(actor,null,false,Math.max(1,Math.floor(actor.max/4))))actor.hp-=cost;
+      recallWithMove(actor,false,Math.max(1,Math.floor(actor.max/4))))actor.hp-=cost;
   }},
  'Revival Blessing':{description:'Once per battle, revives a knocked-out reserve with half its max HP.',
   score:actor=>!actor.revivalUsed && arenaBench(actor).some(member=>member.hp<=0)?85:0,
@@ -4866,12 +4896,21 @@ const additionalStatusMoves={
  Doodle:{description:'Copies the target’s ability to the user and active allies.',
   score:(actor,target)=>target.ability && target.ability!==actor.ability?38:0,
   apply:(actor,target)=>{if(target.ability)for(const ally of fieldActors())if(ally?.hp>0 && ally.friendly===actor.friendly)ally.ability=target.ability;}},
- Teleport:{description:'Recalls the user and sends out a random healthy reserve.',
-  score:actor=>!(actor.trappedUntil>clock) && actor.hp<actor.max*.35 && forcedSwitchOptions(actor,null).length?58:0,
-  apply:actor=>{if(!(actor.trappedUntil>clock))forceSwitch(actor,null);}},
- 'Chilly Reception':{description:'Starts snow and switches the user to a random healthy reserve.',
+ Teleport:{description:'Recalls the user and sends out a healthy reserve suited to the matchup.',
+  score:(actor,target)=>{
+   if(actor.trappedUntil>clock || actor.octolockUntil>clock || fieldMoveActive('Fairy Lock'))return 0;
+   const reserves=forcedSwitchOptions(actor,null);
+   if(!reserves.length)return 0;
+   const danger=pendingCasts.some(cast=>cast.actor.friendly!==actor.friendly &&
+    inSkill(actor,cast.center,cast.radius,cast.line,cast.roaming));
+   const gain=Math.max(...reserves.map(reserveMatchup))-reserveMatchup(actor);
+   const health=actor.hp/actor.max;
+   return health<.35 || danger || gain>1.4 ? Math.max(0,35+(1-health)*20+gain*10+(danger?20:0)):0;
+  },
+  apply:actor=>{if(!(actor.trappedUntil>clock))recallWithMove(actor);}},
+ 'Chilly Reception':{description:'Starts snow and switches the user to a healthy reserve suited to the matchup.',
   score:actor=>forcedSwitchOptions(actor,null).length && (battleWeather!=='Snow' || actor.hp<actor.max*.35)?48:0,
-  apply:actor=>{setWeather('Snow');forceSwitch(actor,null);}},
+  apply:actor=>{setWeather('Snow');recallWithMove(actor);}},
 
  'Heal Pulse':allyHealingMove(12.5),
  'Floral Healing':allyHealingMove(12.5),
@@ -4938,6 +4977,17 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   if(move==='Belly Drum')return actor.hp>Math.floor(actor.max/2) && actor.stages[2]<battleStageCap?55:0;
   if(forcedSwitchMoves.has(move))return forcedSwitchOptions(target,defender).length && !(move==='Roar' && defender==='Soundproof')?45:0;
   const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
+  if(move==='Tailwind')return recipients.reduce((score,member)=>
+   score+14*Math.min(2,Math.max(0,battleStageCap-member.stages[6])),0);
+  if(move==='Reflect' || move==='Light Screen') {
+   const category=move==='Reflect'?2:3;
+   const foes=combatSides()[actor.friendly?1:0];
+   return recipients.reduce((score,member)=>score+(member.guard>0?0:foes.reduce((risk,foe)=>{
+    const distance=Math.hypot(foe.x-member.x,foe.y-member.y);
+    const threats=foe.moves.map(moveRules).filter(rule=>rule.category===category && distance<rule.range+65);
+    return risk+(threats.length?Math.min(25,12+threats.length*4):0);
+   },0)),0);
+  }
   const guard=guardMoves.has(move) && recipients.some(member=>!member.guard) && target.charge<0.35 && gap<90;
   const ailment=rules.ailment && !target.ailment && !ally;
   const weather=weatherMoves[move];
@@ -4945,7 +4995,7 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   const field=(weather && (weather!==battleWeather || weatherTime<=3)) ||
    (terrainMoves[move] && terrainMoves[move]!==battleTerrain);
   return (healing*(health<0.45?180:70)+stages*17+(guard?30:0)+
-   (ailment?30:0)+(field?(weather?55:18):0)+(move==='Tailwind' && recipients.some(member=>member.stages[6]<battleStageCap)?25:0))*(accuracy ?? 100)/100;
+   (ailment?30:0)+(field?(weather?55:18):0))*(accuracy ?? 100)/100;
  }
  const flags=moveFlags[move] ?? [];
  let multiplier=effectiveness(type,target);
@@ -4967,7 +5017,9 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
  if(sacrifice)return 120+(damage>=target.hp?60:0);
  return (100*Math.min(damage,target.hp)/target.max+Math.min(damage,target.hp)*0.35+
   (damage>=target.hp?35:0)+Math.min(1-health,drain)*20-recoil*15+
-  (!target.ailment && rules.ailment ? rules.ailmentChance*0.12 : 0))*(accuracy ?? 100)/100;
+  (!target.ailment && rules.ailment ? rules.ailmentChance*0.12 : 0)+
+  (pivotMoves.has(move) && !recallMoveWait(actor,move) && !fieldMoveActive('Fairy Lock')?
+   Math.max(0,...forcedSwitchOptions(actor,null).map(reserve=>12*(reserveMatchup(reserve)-reserveMatchup(actor)))):0))*(accuracy ?? 100)/100;
 }
 function moveActor(actor,dx,dy,remaining,dt,run,navigationTarget,escape=false) {
  if(actor.ingrainAt)return;
@@ -5045,27 +5097,63 @@ function tryDashDodge(actor,hazard,angle) {
  playSkillSound(move,'release','dash');
  return true;
 }
+function battleActorId(actor) {
+ return actor.onlineId ?? (actor.friendly?'ally:':'enemy:')+(actor.friendly?allies:enemies).indexOf(actor);
+}
+function projectedHazard(cast) {
+ if(!cast.roaming)return cast;
+ const travel=105*Math.min(.25,cast.remaining,cast.turnIn);
+ return {...cast,original:cast,center:{
+  x:clamp(cast.center.x+Math.cos(cast.heading)*travel,cast.radius,canvas.width-cast.radius),
+  y:clamp(cast.center.y+Math.sin(cast.heading)*travel,cast.radius,canvas.height-cast.radius),
+ }};
+}
 function dodgeSkill(actor,dt) {
- const hazard=pendingCasts.find(area=>(area.roaming || area.actor.hp>0 && area.actor.friendly!==actor.friendly) &&
-  (area.roaming || area.remaining<=area.warning*0.8) && inSkill(actor,area.center,area.radius,area.line,area.roaming) &&
-  (!area.flight || (actor.x-area.line.x)*area.line.dx+(actor.y-area.line.y)*area.line.dy>=area.travel-area.line.radius));
- if(!hazard) return false;
- const center=hazard.line ? nearestLinePoint(actor,hazard.line) : hazard.center;
- const angle=Math.atan2(actor.y-center.y,actor.x-center.x);
- if(tryDashDodge(actor,hazard,angle))return true;
- let direction=null;
- let best=Math.hypot(actor.x-center.x,actor.y-center.y);
- for(const heading of [angle,angle+Math.PI/2,angle-Math.PI/2,angle+Math.PI]) {
-  const dx=Math.cos(heading),dy=Math.sin(heading);
-  const x=clamp(actor.x+dx*28,28,canvas.width-28);
-  const y=clamp(actor.y+dy*28,28,canvas.height-28);
-  const point=hazard.line ? nearestLinePoint({x,y},hazard.line) : center;
-  const distance=Math.hypot(x-point.x,y-point.y);
-  if(distance>best) {best=distance;direction={dx,dy};}
+ const hazards=pendingCasts.filter(cast=>cast.roaming?!cast.touched.includes(battleActorId(actor)):
+  cast.actor.hp>0 && cast.actor!==actor && (cast.friendlyFire || cast.actor.friendly!==actor.friendly) &&
+  (!cast.flight || (actor.x-cast.line.x)*cast.line.dx+(actor.y-cast.line.y)*cast.line.dy>=cast.travel-cast.line.radius))
+  .map(projectedHazard);
+ const hits=(point,cast)=>inSkill(point,cast.center,cast.radius,cast.line,cast.roaming);
+ const hazard=hazards.find(cast=>hits(actor,cast));
+ if(!hazard)return false;
+ const center=hazard.line?nearestLinePoint(actor,hazard.line):hazard.center;
+ const heading=Math.atan2(actor.y-center.y,actor.x-center.x);
+ const pace=actor.pace*stageFactor(actor,6)*1.22;
+ const time=hazard.flight?Math.max(0,((actor.x-hazard.line.x)*hazard.line.dx+
+  (actor.y-hazard.line.y)*hazard.line.dy-hazard.travel)/460):hazard.roaming ? .25 : hazard.remaining;
+ let best=null;
+ for(const turn of [0,1,-1,2,-2,3,-3,4]) {
+  const angle=heading+turn*Math.PI/4;
+  for(const step of [12,24,36,48,60,72,84,96,108,120]) {
+   const x=clamp(actor.x+Math.cos(angle)*step,28,canvas.width-28);
+   const y=clamp(actor.y+Math.sin(angle)*step,28,canvas.height-28);
+   const distance=Math.hypot(x-actor.x,y-actor.y);
+   if(distance<1 || movementClearance(actor,actor.x,actor.y,x,y)<1)break;
+   if(hazards.some(cast=>hits({...actor,x,y},cast)))continue;
+   if(!best || distance<best.distance)best={x,y,distance};
+   break;
+  }
  }
- if(!direction) return false;
- moveActor(actor,direction.dx,direction.dy,Infinity,dt,true);
+ if(best && best.distance/pace<time-.22 && !hazard.roaming)return false;
+ if((!best || best.distance/pace>time) && tryDashDodge(actor,hazard.original ?? hazard,heading))return true;
+ if(!best) {
+  const route=retreatRoute(actor,center,combatSides()[actor.friendly?1:0]);
+  if(!route)return false;
+  moveActor(actor,route.dx,route.dy,48,dt,true);
+  return true;
+ }
+ moveActor(actor,(best.x-actor.x)/best.distance,(best.y-actor.y)/best.distance,best.distance,dt,true);
  return true;
+}
+function readyKnockout(actor,target,gap) {
+ return actor.moves.some((move,slot)=>{
+  const [type,power,accuracy,,status]=moveCatalog[move];
+  if(status || accuracy<80 || actor.moveTimers[slot]>0 || moveRestricted(actor,move))return false;
+  const rules=moveRules(move);
+  return !vortexMoves.has(move) && gap<=arenaMoveGeometry(move,rules).range &&
+   tacticalMoveScore(actor,target,move,rules,gap)>0 &&
+   battleDamage(actor,target,power,effectiveness(type,target),rules.category===2,type,move)>=target.hp;
+ });
 }
 function targetPreference(actor,opponent,gap) {
  if(opponent.friendly!==actor.friendly && (opponent.redirectUntil>clock ||
@@ -5093,7 +5181,11 @@ function targetPreference(actor,opponent,gap) {
   default:return gap;
  }
 }
+function recallMoveWait(actor,move) {
+ return selfRecallMoves.has(move)?Math.max(0,(actor.recallMovesReadyAt ?? recallMoveEntryDelay)-clock):0;
+}
 function moveRestricted(actor,move) {
+ if(recallMoveWait(actor,move)>0 && moveCatalog[move][4])return true;
  if(fieldActors().some(member=>member?.hp>0 && member.friendly!==actor.friendly &&
   member.imprisonUntil>clock && member.moves.includes(move)))return true;
  return actor.ingrainAt && ['dash','landing'].includes(skillShape(move)) ||
@@ -5111,19 +5203,28 @@ function escapeCrowding(actor,opponents,dt) {
  else actor.crowdedFor=0;
  if(actor.crowdedFor>=0.35 && !(actor.escapeUntil>clock)) {
   actor.escapeUntil=clock+2.5;
-  const points=[];
-  for(const x of [canvas.width*.32,canvas.width*.5,canvas.width*.68])
-   for(const y of [canvas.height*.3,canvas.height*.5,canvas.height*.7])
-    points.push({x,y,score:Math.min(...opponents.filter(foe=>foe.hp>0).map(foe=>Math.hypot(x-foe.x,y-foe.y)))-
-     Math.hypot(x-actor.x,y-actor.y)*.35,
-     clear:movementClearance(actor,actor.x,actor.y,x,y)});
-  actor.escapeGoal=points.sort((a,b)=>(b.clear===1)-(a.clear===1) || b.score-a.score)[0];
+  actor.escapeGoal=null;
  }
- if(!(actor.escapeUntil>clock) || !actor.escapeGoal)return false;
+ if(!(actor.escapeUntil>clock))return false;
+ const clear=point=>movementClearance(actor,actor.x,actor.y,point.x,point.y)===1;
+ if(!actor.escapeGoal || !clear(actor.escapeGoal)) {
+  const points=[];
+  for(const distance of [55,105,165])for(let direction=0;direction<16;direction++) {
+   const angle=direction*Math.PI/8;
+   const x=clamp(actor.x+Math.cos(angle)*distance,28,canvas.width-28);
+   const y=clamp(actor.y+Math.sin(angle)*distance,28,canvas.height-28);
+   if(Math.hypot(x-actor.x,y-actor.y)<22 || !clear({x,y}))continue;
+   const separation=Math.min(...opponents.filter(foe=>foe.hp>0).map(foe=>Math.hypot(x-foe.x,y-foe.y)));
+   const wall=Math.min(x-28,canvas.width-28-x,y-28,canvas.height-28-y);
+   points.push({x,y,score:Math.min(125,separation)+Math.min(105,wall)*1.3-distance*.2});
+  }
+  actor.escapeGoal=points.sort((a,b)=>b.score-a.score)[0] ?? null;
+ }
+ if(!actor.escapeGoal)return false;
  const dx=actor.escapeGoal.x-actor.x,dy=actor.escapeGoal.y-actor.y;
  const distance=Math.hypot(dx,dy);
- if(distance<20){actor.escapeUntil=0;actor.crowdedFor=0;return false;}
- moveActor(actor,dx/distance,dy/distance,distance,dt,true,null,actor.crowdedFor>=1.2);
+ if(distance<20){actor.escapeUntil=0;actor.crowdedFor=0;actor.escapeGoal=null;return false;}
+ moveActor(actor,dx/distance,dy/distance,distance,dt,true);
  return true;
 }
 function act(actor, opponents, dt) {
@@ -5134,6 +5235,7 @@ function act(actor, opponents, dt) {
  tickAbility(actor,dt);
  actor.flinch=Math.max(0,(actor.flinch ?? 0)-dt);
  if(actor.hp<=0 || actor.flinch>0 || actor.ailment===3)return;
+ if(pendingCasts.some(cast=>cast.actor===actor && cast.move==='Hyper Beam') && actor.ailment!==2)return;
  if(actor.ailment===2) {
   const slot=actor.moves.indexOf('Sleep Talk');
   const target=opponents.find(other=>other.hp>0 && Math.hypot(other.x-actor.x,other.y-actor.y)<=115);
@@ -5144,7 +5246,7 @@ function act(actor, opponents, dt) {
   return;
  }
  actor.charge=Math.max(0,actor.charge-dt);
- if(escapeCrowding(actor,opponents,dt))return;
+ if(actor.attack<=0 && dodgeSkill(actor,dt) || escapeCrowding(actor,opponents,dt))return;
  if(actor.ailment===6)opponents=[...opponents,...activeTeammates(actor).filter(member=>member!==actor)];
  let target = null;
  let gap = Infinity;
@@ -5156,14 +5258,18 @@ function act(actor, opponents, dt) {
   const dy = opponent.y-actor.y;
   const centerDistance = Math.hypot(dx,dy);
   const separation = centerDistance-bodyRadius(actor)-bodyRadius(opponent);
-  const rank=targetPreference(actor,opponent,separation);
+  const preference=targetPreference(actor,opponent,separation);
+  const covered=rockIntersection(actor.x,actor.y,opponent.x,opponent.y)<1;
+  const rank=preference<=-1e6?preference:!covered && readyKnockout(actor,opponent,separation)?-1e5:
+   !covered && battleActorId(opponent)===actor.committedTarget?-1e4:preference+(covered?80:0);
   if(rank<targetRank || (rank===targetRank && separation<gap)) {
    target=opponent;gap=separation;distance=centerDistance;targetRank=rank;
   }
  }
+ actor.committedTarget=target?battleActorId(target):null;
  if(!target) return;
  if(actor.attack>0 || pendingCasts.some(cast=>cast.actor===actor && !cast.flight &&
-   (cast.shape==='dash' || cast.shape==='landing' || sacrificeProfiles.has(cast.move))) || dodgeSkill(actor,dt)) return;
+   (cast.shape==='dash' || cast.shape==='landing' || sacrificeProfiles.has(cast.move)))) return;
  if(distance>1) {
   actor.direction=pmdDirection(target.x-actor.x,target.y-actor.y);
   if(Math.abs(target.x-actor.x)>3) actor.facing=Math.sign(target.x-actor.x);
@@ -5171,7 +5277,9 @@ function act(actor, opponents, dt) {
  let choice=null;
  let rangedReadyIn=Infinity;
  let attackReach=0;
- const preferredGap=battlePositions[actor.ai?.position ?? 'Auto'];
+ const position=actor.ai?.position ?? 'Auto';
+ const formation=position==='Frontline' || position==='Backline';
+ const preferredGap=formation?null:battlePositions[position];
  const close=preferredGap!==null && preferredGap<=28;
  let usableAttack=false;
  for(let slot=0;slot<actor.moves.length;slot++) {
@@ -5202,6 +5310,21 @@ function act(actor, opponents, dt) {
   const move='Struggle';
   const rules=moveRules(move);
   choice={slot:-1,move,rules,range:rules.range,remaining:Math.max(0,gap-rules.range)};
+ }
+ if(formation && choice?.rules.scope!=='ally' && (!choice || choice.remaining>0 || actor.charge>0)) {
+  const team=activeTeammates(actor).filter(member=>member!==actor);
+  if(team.length) {
+   const x=team.reduce((sum,member)=>sum+member.x,0)/team.length;
+   const y=team.reduce((sum,member)=>sum+member.y,0)/team.length;
+   const direction=Math.atan2(target.y-y,target.x-x)+(position==='Backline'?Math.PI:0);
+   const goalX=clamp(x+Math.cos(direction)*72,28,canvas.width-28);
+   const goalY=clamp(y+Math.sin(direction)*72,28,canvas.height-28);
+   const travel=Math.hypot(goalX-actor.x,goalY-actor.y);
+   if(travel>20 && Math.hypot(goalX-target.x,goalY-target.y)<=attackReach+bodyRadius(actor)+bodyRadius(target)) {
+    moveActor(actor,(goalX-actor.x)/travel,(goalY-actor.y)/travel,travel,dt,travel>65);
+    return;
+   }
+  }
  }
  const meleeThreat=target.moves.some(move=>moveRules(move).range===16) &&
   !target.moves.some(move=>!moveCatalog[move][4] && moveRules(move).range>=90);
@@ -5284,7 +5407,7 @@ function act(actor, opponents, dt) {
   x:actor.x,y:actor.y,tx:victim.x,ty:victim.y,damage,color,move,multiplier,life:0.58,...extra
  });
  if(move==='Baton Pass') {
-  forceSwitch(actor,null,true);
+  recallWithMove(actor,true);
   return;
  }
  if(move==='Belly Drum') {
@@ -5352,7 +5475,7 @@ function skillLane(actor,target,range,shape,halfAngle,move) {
   length=Math.hypot(end.x-actor.x,end.y-actor.y);
   if(length) {dx=(end.x-actor.x)/length;dy=(end.y-actor.y)/length;}
  }
- return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?42.5:0,radius:shape==='projectile'?10:shape==='dash'?19:shape==='beam'?(heavyArenaBeams.has(move)?25:17):14,end,angle,halfAngle};
+ return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?42.5:0,radius:shape==='projectile'?10:shape==='dash'?19:shape==='beam'?(move==='Hyper Beam'?37.5:heavyArenaBeams.has(move)?25:17):14,end,angle,halfAngle};
 }
 function nearestLinePoint(point,line) {
  if(line.halfAngle) {
@@ -5406,7 +5529,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
  const line=cast?.line;
  const radius=cast?.roaming?0:cast?.radius ?? rules.radius;
  let pivot=false;
- if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth});
+ if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth,beamScale:move==='Hyper Beam'?1.5:1});
  else if(radius && !cast?.flight && cast?.quakeRing===undefined) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
  const pillars=new Set();
  if(!status && power>0 && !cast?.roaming) {
@@ -5513,7 +5636,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
    (focused || attacker==='Merciless' && victim.ailment===5 || Math.random()<([1/24,1/8,1/2,1][Math.min(3,criticalStage)] ?? 0));
   const boosted=attacker==='Flash Fire' && actor.flashFire && element==='Fire' ? multiplier*1.5 : multiplier;
   const baseDamage=battleDamage(actor,victim,power,boosted,rules.category!==3,element,move,critical)*(cast?.quakeRing===2?0.25:cast?.quakeRing===1?0.5:1);
-  const damage=Math.round(baseDamage*(sacrificeProfiles.get(move)?.damage ?? 1)*(wasAsleep?1.25:1)*(helped?1.5:1));
+  const damage=Math.round(baseDamage*(move==='Hyper Beam'?2:1)*(sacrificeProfiles.get(move)?.damage ?? 1)*(wasAsleep?1.25:1)*(helped?1.5:1));
   const dealt=Math.min(victim.hp===victim.max && defender==='Sturdy' && victim.hp>1?victim.hp-1:victim.hp,damage);
   victim.hp-=dealt;
   if(victim.hp<=0 && dealt>0) {
@@ -5542,7 +5665,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
   effect(victim,damage,multiplier,{impactOnly:Boolean(cast)});
   if(actor.hp<=0 && !cast?.roaming) break;
  }
- if(pivot && !fieldMoveActive('Fairy Lock'))forceSwitch(actor,null);
+ if(pivot && !recallMoveWait(actor,move))recallWithMove(actor);
  for(const rock of pillars)damagePillar(rock,actor,power);
  if(sacrifice)actor.hp=0;
 }
@@ -5562,7 +5685,7 @@ function tickVortex(area,field,dt) {
  center.y=clamp(y,radius,canvas.height-radius);
  const targets=field.filter(actor=>{
   if(!(actor?.hp>0) || !inSkill(actor,center,radius,null,true))return false;
-  const id=actor.onlineId ?? (actor.friendly?'ally:':'enemy:')+(actor.friendly?allies:enemies).indexOf(actor);
+  const id=battleActorId(actor);
   if(area.touched.includes(id))return false;
   area.touched.push(id);
   return true;
@@ -6487,14 +6610,14 @@ function drawSkillSector(line,color,shape,age) {
  }
  ctx.restore();
 }
-function drawSkillBeam(distance,color,age,dash) {
+function drawSkillBeam(distance,color,age,dash,widthScale=1) {
  const fade=1-clamp(age/0.58,0,1);
  const head=distance*clamp(age/(dash?0.09:0.13)+0.15,0,1);
  ctx.lineCap='round';
  for(const [width,alpha,tint] of [[28,0.18,color],[15,0.55,color],[5,0.95,'#fff4d8']]) {
   ctx.strokeStyle=tint;
   ctx.globalAlpha=alpha*fade;
-  ctx.lineWidth=width*(0.55+fade*0.45);
+  ctx.lineWidth=width*widthScale*(0.55+fade*0.45);
   ctx.beginPath();
   ctx.moveTo(0,0);
   ctx.lineTo(head,0);
@@ -6541,7 +6664,7 @@ function drawMove(e) {
   ctx.globalAlpha*=2;
   ctx.fillRect(Math.max(0,head-14),-e.halfWidth,Math.min(14,head),2*e.halfWidth);
  } else if(e.line && e.move!=='Bubble Beam') {
-  drawSkillBeam(distance,e.color,age,e.shape==='dash');
+  drawSkillBeam(distance,e.color,age,e.shape==='dash',e.beamScale);
  } else if(!e.impactOnly) switch(e.move) {
   case 'Bubble Beam':
    for(let i=0;i<7;i++) {
