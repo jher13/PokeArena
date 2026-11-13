@@ -1459,7 +1459,7 @@ function abilityFor(name,profile) {
 }
 // Historical machine categories across game versions. Other catalog moves use Arena TMs.
 const machineKinds = {"Mega Punch":"TM","Dynamic Punch":"TM","Hone Claws":"TM","Work Up":"TR","Headbutt":"TM","Mega Kick":"TM","Razor Wind":"TM","Dragon Claw":"TR","Pay Day":"TM","Swords Dance":"TR","Water Pulse":"TM","Psyshock":"TR","Fire Punch":"TM","Whirlwind":"TM","Rollout":"TM","Calm Mind":"TR","Ice Punch":"TM","Roar":"TM","Rest":"TM","Toxic":"TM","Fly":"HM","Zap Cannon":"TM","Hail":"TM","Protect":"TM","Pin Missile":"TM","Body Slam":"TR","Rock Smash":"HM","Bulk Up":"TR","Substitute":"TR","Hyper Beam":"TM","Take Down":"TM","Bullet Seed":"TM","Venoshock":"TM","Giga Impact":"TM","Double Edge":"TM","Hidden Power":"TM","Dig":"TM","Magical Leaf":"TM","Bubble Beam":"TM","Sunny Day":"TM","Will O Wisp":"TM","Solar Beam":"TM","Water Gun":"TM","Sweet Scent":"TM","Solar Blade":"TM","Ice Beam":"TR","Fire Spin":"TM","Blizzard":"TR","Thunder Wave":"TM","Icy Wind":"TM","Screech":"TM","Dragon Tail":"TM","Rain Dance":"TM","U Turn":"TM","Giga Drain":"TM","Roost":"TM","Iron Tail":"TR","Rage":"TM","Endure":"TR","Dark Pulse":"TR","Mega Drain":"TM","Foul Play":"TR","Rock Slide":"TM","Dragon Rage":"TM","Smack Down":"TM","Thief":"TM","Thunderbolt":"TR","Dragon Breath":"TM","X Scissor":"TR","Thunder":"TR","Waterfall":"HM","Earthquake":"TR","Poison Jab":"TR","Scary Face":"TM","Return":"TM","Leech Life":"TR","Tri Attack":"TR","Psychic":"TR","Scald":"TR","Charm":"TM","Shadow Ball":"TR","Steel Wing":"TM","Mud Slap":"TM","Dazzling Gleam":"TR","Sandstorm":"TM","Shock Wave":"TM","Sludge Wave":"TR","Dragon Pulse":"TR","Flamethrower":"TR","Sludge Bomb":"TR","Whirlpool":"HM","Egg Bomb":"TM","Beat Up":"TM","Fire Blast":"TR","Swift":"TM","Rock Tomb":"TM","Outrage":"TR","Skull Bash":"TM","Defense Curl":"TM","Aerial Ace":"TM","Soft Boiled":"TM","Sky Attack":"TM","Detect":"TM","Flame Charge":"TM","Play Rough":"TR","Dive":"HM","Psywave":"TM","Weather Ball":"TM","Surf":"HM","Fake Tears":"TM","Fury Cutter":"TM","Echoed Voice":"TM","Superpower":"TR","Sand Tomb":"TM","Overheat":"TR","Icicle Spear":"TM","Bounce":"TM","Energy Ball":"TR","Mud Shot":"TM","Flash Cannon":"TR","Rock Blast":"TM","Brine":"TM","Charge Beam":"TM","Payback":"TM","Assurance":"TM","Incinerate":"TM","Megahorn":"TR","Silver Wind":"TM","Acrobatics":"TM","Avalanche":"TM","Shadow Claw":"TM","Thunder Fang":"TM","Retaliate":"TM","Ice Fang":"TM","Psycho Cut":"TM","Stone Edge":"TR","Cross Poison":"TM","Gyro Ball":"TR","Hex":"TM","Captivate":"TM","Bulldoze":"TM","Electroweb":"TM","Infestation":"TM","Razor Shell":"TM","Tail Slap":"TM","Snarl":"TM","Grass Knot":"TR","Phantom Force":"TM","Draining Kiss":"TM","Pluck":"TM","Misty Terrain":"TM","Electric Terrain":"TM","Psychic Terrain":"TM","Mystical Fire":"TM","Wild Charge":"TR","Eerie Impulse":"TM","Air Slash":"TM","Power Up Punch":"TM","Stomping Tantrum":"TM","Breaking Swipe":"TM","Hydro Pump":"TR","Low Kick":"TR","Rock Climb":"HM","Agility":"TR","Amnesia":"TR","Reversal":"TR","Spikes":"TR","Crunch":"TR","Future Sight":"TR","Uproar":"TR","Heat Wave":"TR","Hyper Voice":"TR","Cosmic Power":"TR","Muddy Water":"TR","Iron Defense":"TR","Leaf Blade":"TR","Dragon Dance":"TR","Close Combat":"TR","Toxic Spikes":"TR","Flare Blitz":"TR","Aura Sphere":"TR","Seed Bomb":"TR","Bug Buzz":"TR","Power Gem":"TR","Brave Bird":"TR","Earth Power":"TR","Nasty Plot":"TR","Zen Headbutt":"TR","Leaf Storm":"TR","Power Whip":"TR","Gunk Shot":"TR","Iron Head":"TR","Heavy Slam":"TR","Electro Ball":"TR","Stored Power":"TR","Hurricane":"TR","Venom Drench":"TR","Darkest Lariat":"TR","High Horsepower":"TR","Throat Chop":"TR","Pollen Puff":"TR","Psychic Fangs":"TR","Liquidation":"TR","Acid Spray":"TM","Psybeam":"TM","Confuse Ray":"TM","Disarming Voice":"TM","Pounce":"TM","Poison Tail":"TM","Metal Claw":"TM","Night Shade":"TM","Snowscape":"TM","Blast Burn":"TM","Hydro Cannon":"TM","Draco Meteor":"TM","Steel Beam":"TM","Tera Blast":"TM","Charge":"TM","Knock Off":"TM","Bug Bite":"TM","Super Fang":"TM","Lunge":"TM","Grassy Glide":"TM","Flip Turn":"TM","Poltergeist":"TM","Endeavor":"TM","Petal Blizzard":"TM","Feather Dance":"TM","Skitter Smack":"TM","Meteor Beam":"TM","Metal Sound":"TM","Alluring Voice":"TM","Night Slash":"TM","Discharge":"TM","Comet Punch":"TM","Sing":"TM","Shadow Punch":"TM","Ominous Wind":"TM","Ancient Power":"TM","Poison Fang":"TM","Circle Throw":"TM","Dual Chop":"TM","Fake Out":"TM","First Impression":"TM","Petal Dance":"TM","Air Cutter":"TM","Ally Switch":"TR","Attract":"TM","Aurora Veil":"TM","Baton Pass":"TR","Bide":"TM","Blaze Kick":"TR","Body Press":"TR","Brick Break":"TM","Brutal Swing":"TM","Burning Jealousy":"TM","Chilling Water":"TM","Coaching":"TM","Confide":"TM","Counter":"TM","Curse":"TM","Cut":"HM","Defog":"HM","Double Hit":"TM","Double Team":"TM","Dragon Cheer":"TM","Drain Punch":"TM","Dream Eater":"TM","Drill Run":"TR","Dual Wingbeat":"TM","Embargo":"TM","Encore":"TR","Expanding Force":"TM","Explosion":"TM","Facade":"TM","False Swipe":"TM","Fire Fang":"TM","Fire Pledge":"TM","Fissure":"TM","Flash":"HM","Fling":"TM","Focus Blast":"TR","Focus Energy":"TR","Focus Punch":"TM","Frenzy Plant":"TM","Frost Breath":"TM","Frustration":"TM","Grass Pledge":"TM","Grassy Terrain":"TM","Gravity":"TM","Guard Swap":"TM","Hard Press":"TM","Haze":"TM","Heal Block":"TM","Heat Crash":"TR","Helping Hand":"TM","Horn Drill":"TM","Ice Spinner":"TM","Imprison":"TM","Lash Out":"TM","Light Screen":"TM","Low Sweep":"TM","Magic Room":"TM","Magnet Bomb":"TM","Metronome":"TR","Mimic":"TM","Misty Explosion":"TM","Natural Gift":"TM","Nature Power":"TM","Nightmare":"TM","Pain Split":"TM","Power Swap":"TM","Psych Up":"TM","Psychic Noise":"TM","Quash":"TM","Recycle":"TM","Reflect":"TM","Revenge":"TM","Rock Polish":"TM","Round":"TM","Safeguard":"TM","Scale Shot":"TM","Scorching Sands":"TM","Secret Power":"TM","Seismic Toss":"TM","Self-Destruct":"TM","Sheer Cold":"TM","Skill Swap":"TR","Sky Drop":"TM","Sleep Talk":"TR","Smart Strike":"TM","Snatch":"TM","Snore":"TM","Speed Swap":"TM","Spite":"TM","Stealth Rock":"TR","Storm Throw":"TM","Strength":"HM","Struggle Bug":"TM","Submission":"TM","Supercell Slam":"TM","Swagger":"TM","Tailwind":"TM","Taunt":"TR","Telekinesis":"TM","Teleport":"TM","Temper Flare":"TM","Thunder Punch":"TM","Torment":"TM","Trailblaze":"TM","Trick":"TR","Trick Room":"TM","Triple Axel":"TM","Upper Hand":"TM","Vacuum Wave":"TM","Volt Switch":"TM","Water Pledge":"TM","Wonder Room":"TM"};
-const guardMoves=new Set(['Protect','Detect','Endure','Wide Guard','Quick Guard','Reflect','Light Screen']);
+const guardMoves=new Set(['Protect','Detect','Endure','Wide Guard','Quick Guard']);
 function skillItem(move) {
  const kind=machineKinds[move] ?? 'TM';
  const name=(Object.hasOwn(machineKinds,move)?kind:'Arena TM')+' · '+move;
@@ -1754,6 +1754,8 @@ function skillDescription(move) {
   rules.scope==='area' ? (selfArea?'enemies around the user':'enemies around the target') : 'one enemy';
  const notes=[status?'Targets '+target+'.':
   'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage to '+target+'.'];
+ if(move==='Reflect' || move==='Light Screen')notes.push('Protects your side for 14 seconds, halving '+(move==='Reflect'?'physical':'special')+' damage.');
+ if(['Brick Break','Psychic Fangs','Raging Bull'].includes(move))notes.push('Clears enemy screens on hit.');
  const geometryNotes={
   wave:'Sweeps a wide forward rectangle.',beam:heavyArenaBeams.has(move)?'Fires a wide beam that can reach across the arena.':'Fires a forward beam with double its base range.',
   cone:'Hits enemies in a forward cone.',arc:'Sweeps a short forward arc.',
@@ -2563,19 +2565,501 @@ function renderWildResult() {
  if(wildProgress.autoRepeat && !difficultyMenu && !captureMenu) panel.append(element('p','Auto repeat will start another encounter shortly.','wild-victory-note'));
 }
 const gymRegions=[["Kanto",1,[["Brock","Pewter City","Rock","Boulder","Onix"],["Misty","Cerulean City","Water","Cascade","Starmie"],["Lt. Surge","Vermilion City","Electric","Thunder","Raichu"],["Erika","Celadon City","Grass","Rainbow","Vileplume"],["Koga","Fuchsia City","Poison","Soul","Weezing"],["Sabrina","Saffron City","Psychic","Marsh","Alakazam"],["Blaine","Cinnabar Island","Fire","Volcano","Arcanine"],["Giovanni","Viridian City","Ground","Earth","Rhydon"]]],["Johto",2,[["Falkner","Violet City","Flying","Zephyr","Pidgeotto"],["Bugsy","Azalea Town","Bug","Hive","Scyther"],["Whitney","Goldenrod City","Normal","Plain","Miltank"],["Morty","Ecruteak City","Ghost","Fog","Gengar"],["Chuck","Cianwood City","Fighting","Storm","Poliwrath"],["Jasmine","Olivine City","Steel","Mineral","Steelix"],["Pryce","Mahogany Town","Ice","Glacier","Piloswine"],["Clair","Blackthorn City","Dragon","Rising","Kingdra"]]],["Hoenn",3,[["Roxanne","Rustboro City","Rock","Stone","Nosepass"],["Brawly","Dewford Town","Fighting","Knuckle","Makuhita"],["Wattson","Mauville City","Electric","Dynamo","Magneton"],["Flannery","Lavaridge Town","Fire","Heat","Torkoal"],["Norman","Petalburg City","Normal","Balance","Slaking"],["Winona","Fortree City","Flying","Feather","Altaria"],["Tate & Liza","Mossdeep City","Psychic","Mind","Solrock,Lunatone"],["Wallace","Sootopolis City","Water","Rain","Milotic"]]],["Sinnoh",4,[["Roark","Oreburgh City","Rock","Coal","Cranidos"],["Gardenia","Eterna City","Grass","Forest","Roserade"],["Maylene","Veilstone City","Fighting","Cobble","Lucario"],["Crasher Wake","Pastoria City","Water","Fen","Floatzel"],["Fantina","Hearthome City","Ghost","Relic","Mismagius"],["Byron","Canalave City","Steel","Mine","Bastiodon"],["Candice","Snowpoint City","Ice","Icicle","Abomasnow"],["Volkner","Sunyshore City","Electric","Beacon","Luxray"]]],["Unova",5,[["Cilan, Chili & Cress","Striaton City","Grass,Fire,Water","Trio","Pansage,Pansear,Panpour"],["Lenora","Nacrene City","Normal","Basic","Watchog"],["Roxie","Virbank City","Poison","Toxic","Whirlipede"],["Burgh","Castelia City","Bug","Insect","Leavanny"],["Elesa","Nimbasa City","Electric","Bolt","Zebstrika"],["Clay","Driftveil City","Ground","Quake","Excadrill"],["Skyla","Mistralton City","Flying","Jet","Swanna"],["Brycen","Icirrus City","Ice","Freeze","Beartic"],["Drayden","Opelucid City","Dragon","Legend","Haxorus"],["Marlon","Humilau City","Water","Wave","Jellicent"]]],["Kalos",6,[["Viola","Santalune City","Bug","Bug","Vivillon"],["Grant","Cyllage City","Rock","Cliff","Tyrunt"],["Korrina","Shalour City","Fighting","Rumble","Hawlucha"],["Ramos","Coumarine City","Grass","Plant","Gogoat"],["Clemont","Lumiose City","Electric","Voltage","Heliolisk"],["Valerie","Laverre City","Fairy","Fairy","Sylveon"],["Olympia","Anistar City","Psychic","Psychic","Meowstic"],["Wulfric","Snowbelle City","Ice","Iceberg","Avalugg"]]],["Galar",8,[["Milo","Turffield","Grass","Grass","Eldegoss"],["Nessa","Hulbury","Water","Water","Drednaw"],["Kabu","Motostoke","Fire","Fire","Centiskorch"],["Bea","Stow-on-Side","Fighting","Fighting","Machamp"],["Allister","Stow-on-Side","Ghost","Ghost","Gengar"],["Opal","Ballonlea","Fairy","Fairy","Alcremie"],["Gordie","Circhester","Rock","Rock","Coalossal"],["Melony","Circhester","Ice","Ice","Lapras"],["Piers","Spikemuth","Dark","Dark","Obstagoon"],["Raihan","Hammerlocke","Dragon","Dragon","Duraludon"]]],["Paldea",9,[["Katy","Cortondo","Bug","Bug","Teddiursa"],["Brassius","Artazon","Grass","Grass","Sudowoodo"],["Iono","Levincia","Electric","Electric","Mismagius"],["Kofu","Cascarrafa","Water","Water","Crabominable"],["Larry","Medali","Normal","Normal","Staraptor"],["Ryme","Montenevera","Ghost","Ghost","Toxtricity"],["Tulip","Alfornada","Psychic","Psychic","Florges"],["Grusha","Glaseado","Ice","Ice","Altaria"]]]];
-const generationLastId=[151,251,386,493,649,721,809,905,980];
-const gymTeams=gymRegions.flatMap(([region,generation,gyms])=>gyms.map(([leader,city,types,badge,signature])=>{
+// Each entry lists the lead first, followed by the reserves and designated aces.
+const gymPlans={
+ Brock:{tactic:'hazards',brief:'Pressure the hazard lead. Onix closes through the pillar lanes.',tip:'Lead with immediate pressure or bring a reserve that takes little Stealth Rock damage.',pillarY:[155,240,325],team:[
+  ['Geodude','lead','Mid-Range',['Stealth Rock','Rock Throw','Bulldoze']],
+  ['Graveler','pivot','Melee',['Rock Slide','Bulldoze','Protect']],
+  ['Kabuto','pivot','Mid-Range',['Aqua Jet','Rock Slide']],
+  ['Omanyte','support','Ranged',['Water Pulse','Ancient Power']],
+  ['Rhyhorn','pivot','Melee',['Bulldoze','Rock Blast']],
+  ['Onix','ace','Melee',['Rock Slide','Bulldoze','Head Smash']]]},
+ "Misty":{tactic:"rain",aceHealth:0.6,brief:"Rain opens a lane for Starmie. Quagsire punishes an Electric-only plan.",tip:"Bring coverage for Quagsire and save a weather change for Starmie.",pillarY:[123, 297, 386],team:[
+  ["Staryu", "lead", "Ranged", ["Rain Dance", "Surf", "Hydro Pump", "Scald"], "Sitrus Berry"],
+  ["Golduck", "support", "Ranged", ["Rain Dance", "Surf", "Future Sight", "Hydro Pump"], "Leftovers"],
+  ["Quagsire", "pivot", "Mid-Range", ["Yawn", "High Horsepower", "Liquidation", "Double Edge"], "Shell Bell"],
+  ["Lapras", "pivot", "Mid-Range", ["Ice Beam", "Sparkling Aria", "Outrage", "Double Edge"], "Shell Bell"],
+  ["Gyarados", "pivot", "Melee", ["Thunder Wave", "Waterfall", "Skull Bash", "Outrage"], "Shell Bell"],
+  ["Starmie", "ace", "Ranged", ["Recover", "Surf", "Ice Beam", "Psychic"], "Mystic Water"]]},
+ 'Lt. Surge':{tactic:'pivot',brief:'His Electric pivots draw out Ground types before Raichu takes a lane.',tip:'Keep a second answer ready for Electabuzz’s coverage and Raichu’s follow-up.',pillarY:[110,280,380],team:[
+  ['Voltorb','lead','Mid-Range',['Volt Switch','Thunder Wave','Swift']],
+  ['Magneton','support','Ranged',['Light Screen','Volt Switch','Flash Cannon']],
+  ['Pikachu','pivot','Mid-Range',['Volt Switch','Electro Ball','Quick Attack']],
+  ['Electrode','pivot','Ranged',['Volt Switch','Electro Ball','Taunt']],
+  ['Electabuzz','pivot','Melee',['Ice Punch','Thunder Punch','Low Kick']],
+  ['Raichu','ace','Ranged',['Thunderbolt','Grass Knot','Quick Attack']]]},
+ "Erika":{tactic:"sun",brief:"Sun powers the flower team. Tangela and Parasect wear down early attackers.",tip:"Disrupt sun and keep a reserve that can handle sleep.",pillarY:[105, 249, 373],team:[
+  ["Victreebel", "lead", "Mid-Range", ["Sunny Day", "Leaf Storm", "Sludge Wave", "Power Whip"], "Sitrus Berry"],
+  ["Tangela", "support", "Ranged", ["Energy Ball", "Sludge Bomb", "Ancient Power", "Hyper Beam"], "Leftovers"],
+  ["Parasect", "pivot", "Mid-Range", ["X Scissor", "Leech Life", "Energy Ball", "Slash"], "Shell Bell"],
+  ["Exeggutor", "pivot", "Ranged", ["Future Sight", "Leaf Storm", "Draco Meteor", "Psychic"], "Shell Bell"],
+  ["Bellossom", "pivot", "Ranged", ["Toxic", "Petal Dance", "Leaf Storm", "Solar Blade"], "Shell Bell"],
+  ["Vileplume", "ace", "Ranged", ["Sleep Powder", "Moonlight", "Petal Dance", "Sludge Wave"], "Sitrus Berry"]]},
+ "Koga":{tactic:"hazards",brief:"Toxic Spikes make repeated recalls costly while Golbat and Venomoth disrupt the lead.",tip:"Bring a grounded Poison type or win the opening matchup without switching.",pillarY:[157, 251, 306],team:[
+  ["Qwilfish", "lead", "Mid-Range", ["Spikes", "Gunk Shot", "Liquidation", "Double Edge"], "Sitrus Berry"],
+  ["Golbat", "support", "Mid-Range", ["Protect", "Sky Attack", "Cross Poison", "Fly"], "Leftovers"],
+  ["Muk", "pivot", "Melee", ["Toxic", "Gunk Shot", "Poison Jab", "Body Slam"], "Shell Bell"],
+  ["Venomoth", "pivot", "Ranged", ["U Turn", "Sludge Wave", "Bug Buzz", "Sludge Bomb"], "Shell Bell"],
+  ["Tentacruel", "pivot", "Ranged", ["Flip Turn", "Sludge Wave", "Surf", "Sludge Bomb"], "Shell Bell"],
+  ["Weezing", "ace", "Mid-Range", ["Pain Split", "Belch", "Double Edge", "Gunk Shot"], "Muscle Band"]]},
+ Sabrina:{tactic:'screens',brief:'Expect a screen before Alakazam takes a firing lane.',tip:'Bring mixed offense or a screen-clearing move, then pressure Alakazam outside its preferred range.',pillarY:[110,240,370],team:[
+  ['Mr. Mime','lead','Ranged',['Reflect','Light Screen','Psychic']],
+  ['Drowzee','pivot','Mid-Range',['Hypnosis','Psybeam']],
+  ['Kadabra','pivot','Ranged',['Psybeam','Shadow Ball']],
+  ['Hypno','support','Mid-Range',['Reflect','Light Screen','Psychic']],
+  ['Jynx','pivot','Ranged',['Ice Beam','Psychic']],
+  ['Alakazam','ace','Ranged',['Psychic','Shadow Ball','Calm Mind']]]},
+ "Blaine":{tactic:"sun",brief:"Ninetales establishes sun. Rapidash closes gaps before Arcanine takes over.",tip:"Change the weather and keep a healthy answer to fast Fire attacks.",pillarY:[109, 253, 338],team:[
+  ["Ninetales", "lead", "Mid-Range", ["Sunny Day", "Overheat", "Flare Blitz", "Flamethrower"], "Sitrus Berry"],
+  ["Rapidash", "support", "Mid-Range", ["Flare Blitz", "Double Edge", "Megahorn", "High Horsepower"], "Leftovers"],
+  ["Magmar", "pivot", "Ranged", ["Taunt", "Overheat", "Flare Blitz", "Flamethrower"], "Shell Bell"],
+  ["Flareon", "pivot", "Mid-Range", ["Yawn", "Flare Blitz", "Skull Bash", "Overheat"], "Shell Bell"],
+  ["Charizard", "pivot", "Ranged", ["Overheat", "Air Slash", "Flamethrower", "Fire Blast"], "Shell Bell"],
+  ["Arcanine", "ace", "Melee", ["Extreme Speed", "Flare Blitz", "Crunch", "Morning Sun"], "Charcoal"]]},
+ Giovanni:{tactic:'hazards',brief:'Expect entry hazards, coverage against Water and Grass, and forced recalls.',tip:'Save a healthy Rhydon answer and budget HP for every forced entry.',pillarY:[140,290,360],team:[
+  ['Dugtrio','lead','Mid-Range',['Stealth Rock','Earth Power','Rock Slide']],
+  ['Nidoking','pivot','Ranged',['Sludge Bomb','Thunderbolt','Earth Power']],
+  ['Nidoqueen','support','Mid-Range',['Toxic Spikes','Sludge Bomb','Earth Power']],
+  ['Marowak','pivot','Melee',['Bonemerang','Fire Punch','Rock Slide']],
+  ['Sandslash','pivot','Melee',['Bulldoze','Rock Slide','High Horsepower']],
+  ['Rhydon','ace','Mid-Range',['Roar','Earthquake','Rock Slide']]]},
+ "Falkner":{tactic:"boost",brief:"The birds build speed and Gligar checks Electric attacks before Pidgeotto enters.",tip:"Keep Ice or Water coverage for Gligar and pressure speed setup early.",pillarY:[121, 255, 350],team:[
+  ["Noctowl", "lead", "Mid-Range", ["Tailwind", "Uproar", "Future Sight", "Air Slash"], "Sitrus Berry"],
+  ["Farfetch’d", "support", "Mid-Range", ["Swords Dance", "Sky Attack", "Double Edge", "Brave Bird"], "Leftovers"],
+  ["Doduo", "pivot", "Mid-Range", ["Sky Attack", "Thrash", "Brave Bird", "Double Edge"], "Shell Bell"],
+  ["Murkrow", "pivot", "Mid-Range", ["U Turn", "Sky Attack", "Foul Play", "Brave Bird"], "Shell Bell"],
+  ["Gligar", "pivot", "Mid-Range", ["U Turn", "High Horsepower", "Double Edge", "Earthquake"], "Shell Bell"],
+  ["Pidgeotto", "ace", "Mid-Range", ["Agility", "Sky Attack", "Brave Bird", "Uproar"], "Muscle Band"]]},
+ "Bugsy":{tactic:"hazards",brief:"Shuckle taxes switches while the rest of the team alternates status and physical pressure.",tip:"Remove the hazard setter early and keep a faster answer for Scyther.",pillarY:[163, 257, 312],team:[
+  ["Shuckle", "lead", "Mid-Range", ["Stealth Rock", "Stone Edge", "Bug Bite", "Sludge Bomb"], "Sitrus Berry"],
+  ["Beedrill", "support", "Melee", ["Toxic Spikes", "X Scissor", "Poison Jab", "Outrage"], "Leftovers"],
+  ["Butterfree", "pivot", "Ranged", ["U Turn", "Air Slash", "Bug Buzz", "Dream Eater"], "Shell Bell"],
+  ["Pinsir", "pivot", "Melee", ["X Scissor", "Close Combat", "Outrage", "Thrash"], "Shell Bell"],
+  ["Heracross", "pivot", "Melee", ["Close Combat", "Megahorn", "Skull Bash", "Outrage"], "Shell Bell"],
+  ["Scyther", "ace", "Melee", ["X Scissor", "Close Combat", "Double Edge", "Lunge"], "Muscle Band"]]},
+ "Whitney":{tactic:"disruption",aceHealth:0.62,brief:"Status and bulky reserves slow the fight before Miltank can recover between exchanges.",tip:"Bring special offense and save burst or healing denial for Miltank.",pillarY:[145, 264, 339],team:[
+  ["Wigglytuff", "lead", "Mid-Range", ["Thunder Wave", "Uproar", "Moonblast", "Double Edge"], "Sitrus Berry"],
+  ["Furret", "support", "Melee", ["Protect", "Double Edge", "Body Slam", "Take Down"], "Leftovers"],
+  ["Granbull", "pivot", "Melee", ["Thunder Wave", "Play Rough", "Outrage", "Close Combat"], "Shell Bell"],
+  ["Clefable", "pivot", "Ranged", ["Thunder Wave", "Moonblast", "Future Sight", "Meteor Beam"], "Shell Bell"],
+  ["Ursaring", "pivot", "Melee", ["Yawn", "Thrash", "Double Edge", "Close Combat"], "Shell Bell"],
+  ["Miltank", "ace", "Mid-Range", ["Milk Drink", "Body Slam", "Rollout", "Zen Headbutt"], "Leftovers"]]},
+ "Morty":{tactic:"disruption",brief:"Ghosts spread status and change the matchup with Sableye before Gengar attacks.",tip:"Bring a status answer and coverage that works against both Ghost and Dark.",pillarY:[147, 227, 341],team:[
+  ["Misdreavus", "lead", "Ranged", ["Thunder Wave", "Shadow Ball", "Future Sight", "Thunderbolt"], "Sitrus Berry"],
+  ["Gastly", "support", "Ranged", ["Toxic", "Sludge Wave", "Shadow Ball", "Sludge Bomb"], "Leftovers"],
+  ["Haunter", "pivot", "Ranged", ["Toxic", "Sludge Wave", "Shadow Ball", "Sludge Bomb"], "Shell Bell"],
+  ["Banette", "pivot", "Melee", ["Thunder Wave", "Poltergeist", "Phantom Force", "Foul Play"], "Shell Bell"],
+  ["Sableye", "pivot", "Melee", ["Parting Shot", "Poltergeist", "Foul Play", "Phantom Force"], "Shell Bell"],
+  ["Gengar", "ace", "Ranged", ["Sludge Wave", "Shadow Ball", "Sludge Bomb", "Dream Eater"], "Sitrus Berry"]]},
+ "Chuck":{tactic:"boost",brief:"Chuck alternates fast melee attackers and slower bruisers before Poliwrath arrives.",tip:"Use pillars to break pursuit and preserve a ranged answer to Poliwrath.",pillarY:[129, 224, 358],team:[
+  ["Primeape", "lead", "Mid-Range", ["Bulk Up", "Close Combat", "Outrage", "Thrash"], "Sitrus Berry"],
+  ["Hitmonchan", "support", "Melee", ["Swords Dance", "Close Combat", "Double Edge", "Brick Break"], "Leftovers"],
+  ["Hitmonlee", "pivot", "Melee", ["Taunt", "Close Combat", "High Jump Kick", "Axe Kick"], "Shell Bell"],
+  ["Machoke", "pivot", "Melee", ["Close Combat", "Double Edge", "Brick Break", "Drain Punch"], "Shell Bell"],
+  ["Heracross", "pivot", "Melee", ["Close Combat", "Megahorn", "Skull Bash", "Outrage"], "Shell Bell"],
+  ["Poliwrath", "ace", "Melee", ["Bulk Up", "Close Combat", "Liquidation", "Double Edge"], "Muscle Band"]]},
+ "Jasmine":{tactic:"sand",aceHealth:0.42,brief:"Steel reserves absorb different attack types while Steelix waits for a safe entry.",tip:"Prepare separate answers for flying Steel and grounded Steel targets.",pillarY:[161, 251, 340],team:[
+  ["Skarmory", "lead", "Mid-Range", ["Sandstorm", "Sky Attack", "Brave Bird", "Iron Head"], "Sitrus Berry"],
+  ["Forretress", "support", "Melee", ["Sandstorm", "Iron Head", "Lunge", "Double Edge"], "Leftovers"],
+  ["Magneton", "pivot", "Ranged", ["Volt Switch", "Steel Beam", "Thunderbolt", "Flash Cannon"], "Shell Bell"],
+  ["Scizor", "pivot", "Melee", ["U Turn", "Iron Head", "Close Combat", "Double Edge"], "Shell Bell"],
+  ["Mawile", "pivot", "Melee", ["Taunt", "Iron Head", "Play Rough", "Double Edge"], "Shell Bell"],
+  ["Steelix", "ace", "Mid-Range", ["High Horsepower", "Iron Head", "Double Edge", "Head Smash"], "Muscle Band"]]},
+ "Pryce":{tactic:"snow",brief:"Snow reinforces the Ice roster while Jynx threatens from range and Piloswine covers Electric.",tip:"Change the weather and bring special coverage for Piloswine.",pillarY:[123, 253, 372],team:[
+  ["Dewgong", "lead", "Ranged", ["Snowscape", "Ice Beam", "Surf", "Double Edge"], "Sitrus Berry"],
+  ["Sneasel", "support", "Melee", ["Snowscape", "Foul Play", "Ice Punch", "Close Combat"], "Leftovers"],
+  ["Jynx", "pivot", "Ranged", ["Taunt", "Dream Eater", "Ice Beam", "Psychic"], "Shell Bell"],
+  ["Cloyster", "pivot", "Mid-Range", ["Liquidation", "Ice Spinner", "Waterfall", "Ice Beam"], "Shell Bell"],
+  ["Lapras", "pivot", "Mid-Range", ["Ice Beam", "Sparkling Aria", "Outrage", "Double Edge"], "Shell Bell"],
+  ["Piloswine", "ace", "Mid-Range", ["High Horsepower", "Thrash", "Ice Fang", "Earthquake"], "Wise Glasses"]]},
+ "Clair":{tactic:"rain",aceHealth:0.38,brief:"Dragonair establishes rain and the reserves draw out Kingdra’s best answer.",tip:"Keep your Kingdra answer healthy and change the weather before committing it.",pillarY:[106, 280, 369],team:[
+  ["Dragonair", "lead", "Mid-Range", ["Rain Dance", "Outrage", "Draco Meteor", "Extreme Speed"], "Sitrus Berry"],
+  ["Seadra", "support", "Ranged", ["Rain Dance", "Surf", "Hydro Pump", "Ice Beam"], "Leftovers"],
+  ["Gyarados", "pivot", "Melee", ["Thunder Wave", "Waterfall", "Skull Bash", "Outrage"], "Shell Bell"],
+  ["Ampharos", "pivot", "Ranged", ["Volt Switch", "Thunderbolt", "Meteor Beam", "Discharge"], "Shell Bell"],
+  ["Flygon", "pivot", "Mid-Range", ["U Turn", "Outrage", "Earthquake", "Superpower"], "Shell Bell"],
+  ["Kingdra", "ace", "Mid-Range", ["Surf", "Dragon Pulse", "Ice Beam", "Flash Cannon"], "Mystic Water"]]},
+ "Roxanne":{tactic:"hazards",brief:"A hazard lead opens for a fossil pair with different defensive matchups.",tip:"Bring separate answers for Lileep and Anorith, and avoid unnecessary recalls.",pillarY:[138, 232, 326],team:[
+  ["Geodude", "lead", "Mid-Range", ["Stealth Rock", "High Horsepower", "Stone Edge", "Double Edge"], "Sitrus Berry"],
+  ["Aron", "support", "Mid-Range", ["Stealth Rock", "Head Smash", "Iron Head", "Superpower"], "Leftovers"],
+  ["Lileep", "pivot", "Ranged", ["Energy Ball", "Ancient Power", "Giga Drain", "Sludge Bomb"], "Shell Bell"],
+  ["Anorith", "pivot", "Mid-Range", ["X Scissor", "Rock Slide", "Dig", "Brick Break"], "Shell Bell"],
+  ["Rhyhorn", "pivot", "Mid-Range", ["High Horsepower", "Stone Edge", "Double Edge", "Earthquake"], "Shell Bell"],
+  ["Nosepass", "ace", "Mid-Range", ["Meteor Beam", "Head Smash", "Steel Beam", "Double Edge"], "Muscle Band"]]},
+ "Brawly":{tactic:"boost",brief:"Setup and sleep create windows for Brawly’s close-range fighters.",tip:"Keep a sleep answer and force the melee fighters to approach around pillars.",pillarY:[100, 234, 368],team:[
+  ["Meditite", "lead", "Ranged", ["Bulk Up", "Close Combat", "Psychic", "High Jump Kick"], "Sitrus Berry"],
+  ["Machop", "support", "Melee", ["Bulk Up", "Close Combat", "Double Edge", "Brick Break"], "Leftovers"],
+  ["Breloom", "pivot", "Melee", ["Toxic", "Close Combat", "Seed Bomb", "Brick Break"], "Shell Bell"],
+  ["Combusken", "pivot", "Mid-Range", ["Close Combat", "Flare Blitz", "Overheat", "Double Edge"], "Shell Bell"],
+  ["Hariyama", "pivot", "Mid-Range", ["Taunt", "Close Combat", "Headlong Rush", "Double Edge"], "Shell Bell"],
+  ["Makuhita", "ace", "Melee", ["Bulk Up", "Close Combat", "Double Edge", "Body Press"], "Muscle Band"]]},
+ "Wattson":{tactic:"screens",brief:"Screens buy time for small Electric attackers, with Lanturn covering Fire and Ground pressure.",tip:"Break screens and keep Grass coverage for Lanturn.",pillarY:[97, 236, 375],team:[
+  ["Voltorb", "lead", "Ranged", ["Reflect", "Light Screen", "Thunderbolt", "Leaf Storm"], "Sitrus Berry"],
+  ["Electrike", "support", "Ranged", ["Light Screen", "Thunderbolt", "Discharge", "Flamethrower"], "Leftovers"],
+  ["Plusle", "pivot", "Ranged", ["Volt Switch", "Thunderbolt", "Discharge", "Uproar"], "Shell Bell"],
+  ["Minun", "pivot", "Ranged", ["Volt Switch", "Thunderbolt", "Discharge", "Uproar"], "Shell Bell"],
+  ["Lanturn", "pivot", "Ranged", ["Volt Switch", "Surf", "Thunderbolt", "Hydro Pump"], "Shell Bell"],
+  ["Magneton", "ace", "Ranged", ["Steel Beam", "Thunderbolt", "Flash Cannon", "Discharge"], "Wise Glasses"]]},
+ "Flannery":{tactic:"sun",brief:"Sun and bulky Fire reserves slow down Water pressure before Torkoal enters.",tip:"Bring a weather change and preserve a strong answer to Fire and Ground.",pillarY:[94, 238, 362],team:[
+  ["Numel", "lead", "Mid-Range", ["Sunny Day", "Overheat", "Earth Power", "Flare Blitz"], "Sitrus Berry"],
+  ["Slugma", "support", "Ranged", ["Sunny Day", "Overheat", "Flamethrower", "Fire Blast"], "Leftovers"],
+  ["Magcargo", "pivot", "Ranged", ["Yawn", "Overheat", "Power Gem", "Flamethrower"], "Shell Bell"],
+  ["Houndoom", "pivot", "Ranged", ["Toxic", "Overheat", "Dark Pulse", "Flamethrower"], "Shell Bell"],
+  ["Camerupt", "pivot", "Ranged", ["Yawn", "Eruption", "Earth Power", "Overheat"], "Shell Bell"],
+  ["Torkoal", "ace", "Mid-Range", ["Eruption", "Flare Blitz", "Overheat", "Double Edge"], "Charcoal"]]},
+ "Norman":{tactic:"boost",aceHealth:0.35,brief:"The early team looks for a setup opening before Slaking takes a short damage window.",tip:"Interrupt setup and preserve a healthy Pokémon to absorb Slaking’s first exchange.",pillarY:[106, 240, 374],team:[
+  ["Spinda", "lead", "Mid-Range", ["Calm Mind", "Thrash", "Double Edge", "Uproar"], "Sitrus Berry"],
+  ["Vigoroth", "support", "Melee", ["Bulk Up", "Double Edge", "Outrage", "Body Slam"], "Leftovers"],
+  ["Linoone", "pivot", "Melee", ["Thunder Wave", "Double Edge", "Extreme Speed", "Strength"], "Shell Bell"],
+  ["Zangoose", "pivot", "Melee", ["Thunder Wave", "Skull Bash", "Double Edge", "Close Combat"], "Shell Bell"],
+  ["Kecleon", "pivot", "Melee", ["Thunder Wave", "Body Slam", "Strength", "First Impression"], "Shell Bell"],
+  ["Slaking", "ace", "Mid-Range", ["Giga Impact", "Earthquake", "Slack Off", "Shadow Claw"], "Muscle Band"]]},
+ "Winona":{tactic:"pivot",brief:"Flying pivots cycle through different resistances before Altaria enters.",tip:"Prepare coverage for both Pelipper and Skarmory and avoid chasing one pivot into another.",pillarY:[103, 282, 391],team:[
+  ["Swellow", "lead", "Mid-Range", ["U Turn", "Sky Attack", "Boomburst", "Brave Bird"], "Sitrus Berry"],
+  ["Pelipper", "support", "Ranged", ["U Turn", "Surf", "Air Slash", "Hydro Pump"], "Leftovers"],
+  ["Tropius", "pivot", "Ranged", ["U Turn", "Solar Blade", "Leaf Storm", "Fly"], "Shell Bell"],
+  ["Skarmory", "pivot", "Mid-Range", ["Taunt", "Sky Attack", "Brave Bird", "Iron Head"], "Shell Bell"],
+  ["Dodrio", "pivot", "Mid-Range", ["Taunt", "Thrash", "Brave Bird", "Double Edge"], "Shell Bell"],
+  ["Altaria", "ace", "Mid-Range", ["Sky Attack", "Outrage", "Brave Bird", "Draco Meteor"], "Sitrus Berry"]]},
+ "Tate & Liza":{tactic:"screens",brief:"Screens protect Solrock and Lunatone, whose coverage punishes a single shared counter.",tip:"Bring mixed offense and keep separate answers to the two aces.",pillarY:[105, 244, 383],team:[
+  ["Claydol", "lead", "Ranged", ["Reflect", "Light Screen", "Dream Eater", "Earth Power"], "Sitrus Berry"],
+  ["Xatu", "support", "Ranged", ["Reflect", "Future Sight", "Dream Eater", "Air Slash"], "Leftovers"],
+  ["Grumpig", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Dream Eater", "Psychic"], "Shell Bell"],
+  ["Chimecho", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Boomburst", "Psychic"], "Shell Bell"],
+  ["Solrock", "ace", "Mid-Range", ["Stone Edge", "Zen Headbutt", "Flare Blitz", "Earthquake"], "Wise Glasses"],
+  ["Lunatone", "ace", "Ranged", ["Future Sight", "Dream Eater", "Psychic", "Psyshock"], "Wise Glasses"]]},
+ "Wallace":{tactic:"rain",aceHealth:0.58,brief:"Rain and varied Water typing exhaust a single counter before Milotic begins recovering.",tip:"Bring more than Electric coverage and save healing denial for Milotic.",pillarY:[122, 296, 385],team:[
+  ["Luvdisc", "lead", "Ranged", ["Rain Dance", "Surf", "Hydro Pump", "Ice Beam"], "Sitrus Berry"],
+  ["Whiscash", "support", "Mid-Range", ["Rain Dance", "High Horsepower", "Liquidation", "Thrash"], "Leftovers"],
+  ["Sealeo", "pivot", "Ranged", ["Ice Beam", "Liquidation", "Blizzard", "Aqua Tail"], "Shell Bell"],
+  ["Ludicolo", "pivot", "Ranged", ["Leaf Storm", "Surf", "Energy Ball", "Hydro Pump"], "Shell Bell"],
+  ["Tentacruel", "pivot", "Ranged", ["Flip Turn", "Sludge Wave", "Surf", "Sludge Bomb"], "Shell Bell"],
+  ["Milotic", "ace", "Ranged", ["Recover", "Surf", "Ice Beam", "Dragon Pulse"], "Leftovers"]]},
+ "Roark":{tactic:"hazards",brief:"A defensive lead buys time for two fossil bruisers with short attack windows.",tip:"Pressure the hazard setter and stay outside the fossil attackers’ preferred range.",pillarY:[154, 248, 342],team:[
+  ["Geodude", "lead", "Mid-Range", ["Stealth Rock", "High Horsepower", "Stone Edge", "Double Edge"], "Sitrus Berry"],
+  ["Onix", "support", "Mid-Range", ["Stealth Rock", "Head Smash", "High Horsepower", "Double Edge"], "Leftovers"],
+  ["Shieldon", "pivot", "Mid-Range", ["Taunt", "Steel Beam", "Power Gem", "Double Edge"], "Shell Bell"],
+  ["Rampardos", "pivot", "Mid-Range", ["Head Smash", "Outrage", "Double Edge", "Supercell Slam"], "Shell Bell"],
+  ["Rhyhorn", "pivot", "Mid-Range", ["High Horsepower", "Stone Edge", "Double Edge", "Earthquake"], "Shell Bell"],
+  ["Cranidos", "ace", "Mid-Range", ["Head Smash", "Thrash", "Stone Edge", "Hammer Arm"], "Muscle Band"]]},
+ "Gardenia":{tactic:"disruption",brief:"Status and recovery turn slow openings into opportunities for Roserade.",tip:"Bring a sleep answer and make the Grass reserves spend turns recovering.",pillarY:[136, 255, 369],team:[
+  ["Cherubi", "lead", "Mid-Range", ["Sleep Powder", "Petal Dance", "Energy Ball", "Dazzling Gleam"], "Sitrus Berry"],
+  ["Turtwig", "support", "Melee", ["Reflect", "Seed Bomb", "Superpower", "Thrash"], "Leftovers"],
+  ["Cherrim", "pivot", "Ranged", ["Petal Dance", "Energy Ball", "Dazzling Gleam", "Magical Leaf"], "Shell Bell"],
+  ["Carnivine", "pivot", "Mid-Range", ["Energy Ball", "Crunch", "Leech Life", "Sludge Bomb"], "Shell Bell"],
+  ["Tangrowth", "pivot", "Ranged", ["Energy Ball", "Sludge Bomb", "Ancient Power", "Hyper Beam"], "Shell Bell"],
+  ["Roserade", "ace", "Ranged", ["Petal Dance", "Sludge Bomb", "Leaf Storm", "Energy Ball"], "Sitrus Berry"]]},
+ "Maylene":{tactic:"boost",brief:"Different Fighting reserves draw out ranged counters before Lucario sets up.",tip:"Spread coverage across Fighting and Steel matchups and interrupt Lucario early.",pillarY:[118, 252, 347],team:[
+  ["Meditite", "lead", "Ranged", ["Bulk Up", "Close Combat", "Psychic", "High Jump Kick"], "Sitrus Berry"],
+  ["Machoke", "support", "Melee", ["Bulk Up", "Close Combat", "Double Edge", "Brick Break"], "Leftovers"],
+  ["Gallade", "pivot", "Melee", ["Thunder Wave", "Close Combat", "Solar Blade", "Zen Headbutt"], "Shell Bell"],
+  ["Toxicroak", "pivot", "Mid-Range", ["Toxic", "Close Combat", "Gunk Shot", "Belch"], "Shell Bell"],
+  ["Hitmontop", "pivot", "Melee", ["Close Combat", "Double Edge", "Brick Break", "Upper Hand"], "Shell Bell"],
+  ["Lucario", "ace", "Melee", ["Swords Dance", "Close Combat", "Bullet Punch", "Crunch"], "Muscle Band"]]},
+ "Crasher Wake":{tactic:"rain",brief:"Rain supports fast pressure while two Ground reserves punish Electric moves.",tip:"Use Grass coverage to clear the Ground reserves and keep a speed answer for Floatzel.",pillarY:[130, 304, 354],team:[
+  ["Quagsire", "lead", "Mid-Range", ["Rain Dance", "High Horsepower", "Liquidation", "Double Edge"], "Sitrus Berry"],
+  ["Gyarados", "support", "Melee", ["Rain Dance", "Waterfall", "Skull Bash", "Outrage"], "Leftovers"],
+  ["Gastrodon", "pivot", "Ranged", ["Yawn", "Earth Power", "Surf", "Hydro Pump"], "Shell Bell"],
+  ["Pelipper", "pivot", "Ranged", ["U Turn", "Surf", "Air Slash", "Hydro Pump"], "Shell Bell"],
+  ["Golduck", "pivot", "Ranged", ["Flip Turn", "Future Sight", "Surf", "Hydro Pump"], "Shell Bell"],
+  ["Floatzel", "ace", "Melee", ["Wave Crash", "Double Edge", "Liquidation", "Waterfall"], "Mystic Water"]]},
+ "Fantina":{tactic:"disruption",brief:"Ghosts spread status while Froslass and Rotom threaten different approach lanes.",tip:"Avoid bringing only slow melee attackers and preserve a clean reserve for Mismagius.",pillarY:[142, 261, 336],team:[
+  ["Drifloon", "lead", "Ranged", ["Thunder Wave", "Shadow Ball", "Fly", "Psychic"], "Sitrus Berry"],
+  ["Dusclops", "support", "Mid-Range", ["Taunt", "Poltergeist", "Phantom Force", "Future Sight"], "Leftovers"],
+  ["Froslass", "pivot", "Mid-Range", ["Thunder Wave", "Poltergeist", "Ice Beam", "Petal Dance"], "Shell Bell"],
+  ["Rotom", "pivot", "Ranged", ["Volt Switch", "Shadow Ball", "Overheat", "Leaf Storm"], "Shell Bell"],
+  ["Haunter", "pivot", "Ranged", ["Toxic", "Sludge Wave", "Shadow Ball", "Sludge Bomb"], "Shell Bell"],
+  ["Mismagius", "ace", "Ranged", ["Shadow Ball", "Future Sight", "Thunderbolt", "Hyper Voice"], "Sitrus Berry"]]},
+ "Byron":{tactic:"hazards",brief:"Hazards and alternating Steel resistances draw the fight toward the pillars.",tip:"Prepare coverage for grounded and airborne Steel types, and limit switching.",pillarY:[164, 258, 313],team:[
+  ["Bronzor", "lead", "Ranged", ["Stealth Rock", "Future Sight", "Steel Beam", "Psychic"], "Sitrus Berry"],
+  ["Steelix", "support", "Mid-Range", ["Stealth Rock", "High Horsepower", "Iron Head", "Double Edge"], "Leftovers"],
+  ["Magneton", "pivot", "Ranged", ["Volt Switch", "Steel Beam", "Thunderbolt", "Flash Cannon"], "Shell Bell"],
+  ["Aggron", "pivot", "Mid-Range", ["Thunder Wave", "Head Smash", "Iron Head", "Outrage"], "Shell Bell"],
+  ["Skarmory", "pivot", "Mid-Range", ["Taunt", "Sky Attack", "Brave Bird", "Iron Head"], "Shell Bell"],
+  ["Bastiodon", "ace", "Mid-Range", ["Steel Beam", "Meteor Beam", "Outrage", "Double Edge"], "Muscle Band"]]},
+ "Candice":{tactic:"snow",brief:"Snow supports the Ice roster while Medicham threatens players who rely on Steel.",tip:"Keep a Medicham answer and change the weather before Abomasnow enters.",pillarY:[116, 246, 365],team:[
+  ["Snover", "lead", "Mid-Range", ["Snowscape", "Wood Hammer", "Ice Beam", "Leaf Storm"], "Sitrus Berry"],
+  ["Sneasel", "support", "Melee", ["Snowscape", "Foul Play", "Ice Punch", "Close Combat"], "Leftovers"],
+  ["Medicham", "pivot", "Mid-Range", ["Taunt", "Close Combat", "Psychic", "High Jump Kick"], "Shell Bell"],
+  ["Froslass", "pivot", "Mid-Range", ["Thunder Wave", "Poltergeist", "Ice Beam", "Petal Dance"], "Shell Bell"],
+  ["Glaceon", "pivot", "Ranged", ["Yawn", "Ice Beam", "Freeze Dry", "Hyper Voice"], "Shell Bell"],
+  ["Abomasnow", "ace", "Mid-Range", ["Wood Hammer", "Ice Beam", "Leaf Storm", "Outrage"], "Wise Glasses"]]},
+ "Volkner":{tactic:"pivot",brief:"Electric pivots hand off to non-Electric coverage when a Ground counter appears.",tip:"Scout Octillery and keep a physical answer healthy for Luxray.",pillarY:[123, 263, 372],team:[
+  ["Jolteon", "lead", "Mid-Range", ["Volt Switch", "Thunderbolt", "Discharge", "Thunder"], "Sitrus Berry"],
+  ["Raichu", "support", "Mid-Range", ["Volt Switch", "Volt Tackle", "Skull Bash", "Thunderbolt"], "Leftovers"],
+  ["Octillery", "pivot", "Mid-Range", ["Hydro Pump", "Ice Beam", "Flamethrower", "Psychic"], "Shell Bell"],
+  ["Ambipom", "pivot", "Melee", ["U Turn", "Double Edge", "Foul Play", "Gunk Shot"], "Shell Bell"],
+  ["Electivire", "pivot", "Mid-Range", ["Volt Switch", "Supercell Slam", "Double Edge", "Wild Charge"], "Shell Bell"],
+  ["Luxray", "ace", "Melee", ["Wild Charge", "Ice Fang", "Crunch", "Quick Attack"], "Magnet"]]},
+ "Cilan, Chili & Cress":{tactic:"pivot",brief:"Three elemental aces trade favorable matchups as the battle develops.",tip:"Bring a lead that can face more than one element and keep a reserve for the third ace.",pillarY:[125, 265, 374],team:[
+  ["Wartortle", "lead", "Mid-Range", ["Flip Turn", "Wave Crash", "Skull Bash", "Surf"], "Sitrus Berry"],
+  ["Ivysaur", "support", "Ranged", ["Light Screen", "Petal Dance", "Sludge Wave", "Leaf Storm"], "Leftovers"],
+  ["Combusken", "pivot", "Mid-Range", ["Close Combat", "Flare Blitz", "Overheat", "Double Edge"], "Shell Bell"],
+  ["Pansage", "ace", "Mid-Range", ["Leaf Storm", "Energy Ball", "Grass Pledge", "Seed Bomb"], "Sitrus Berry"],
+  ["Pansear", "ace", "Mid-Range", ["Overheat", "Flare Blitz", "Flamethrower", "Fire Blast"], "Sitrus Berry"],
+  ["Panpour", "ace", "Mid-Range", ["Surf", "Hydro Pump", "Waterfall", "Scald"], "Sitrus Berry"]]},
+ "Lenora":{tactic:"disruption",brief:"Bulky Normal reserves chip and disrupt before Watchog takes a finishing matchup.",tip:"Bring more than one Fighting answer and preserve a status-resistant reserve.",pillarY:[152, 232, 346],team:[
+  ["Herdier", "lead", "Ranged", ["Thunder Wave", "Take Down", "Retaliate", "Facade"], "Sitrus Berry"],
+  ["Stoutland", "support", "Melee", ["Thunder Wave", "Superpower", "Take Down", "Wild Charge"], "Leftovers"],
+  ["Bibarel", "pivot", "Melee", ["Double Edge", "Aqua Tail", "Crunch", "Iron Tail"], "Shell Bell"],
+  ["Cinccino", "pivot", "Melee", ["U Turn", "Double Edge", "Gunk Shot", "Take Down"], "Shell Bell"],
+  ["Audino", "pivot", "Mid-Range", ["Thunder Wave", "Double Edge", "Uproar", "Hyper Voice"], "Shell Bell"],
+  ["Watchog", "ace", "Melee", ["Hypnosis", "Crunch", "Super Fang", "Last Resort"], "Sitrus Berry"]]},
+ "Roxie":{tactic:"hazards",brief:"Poison hazards and faster bugs make each switch harder to afford.",tip:"Use a grounded Poison type to absorb Toxic Spikes or pressure the setter immediately.",pillarY:[174, 229, 323],team:[
+  ["Koffing", "lead", "Ranged", ["Toxic Spikes", "Belch", "Gunk Shot", "Sludge Wave"], "Sitrus Berry"],
+  ["Grimer", "support", "Melee", ["Protect", "Gunk Shot", "Poison Jab", "Body Slam"], "Leftovers"],
+  ["Trubbish", "pivot", "Mid-Range", ["Toxic", "Gunk Shot", "Poison Jab", "Belch"], "Shell Bell"],
+  ["Garbodor", "pivot", "Melee", ["Toxic", "Gunk Shot", "Poison Jab", "Cross Poison"], "Shell Bell"],
+  ["Scolipede", "pivot", "Melee", ["U Turn", "Gunk Shot", "Skull Bash", "Steel Roller"], "Shell Bell"],
+  ["Whirlipede", "ace", "Melee", ["Poison Jab", "Steel Roller", "Double Edge", "Skitter Smack"], "Muscle Band"]]},
+ "Burgh":{tactic:"hazards",brief:"Dwebble sets hazards and two armored bugs create room for the faster attackers.",tip:"Bring coverage for both Rock and Steel and save a clean lane for Leavanny.",pillarY:[137, 231, 325],team:[
+  ["Dwebble", "lead", "Mid-Range", ["Stealth Rock", "Rock Wrecker", "X Scissor", "Stone Edge"], "Sitrus Berry"],
+  ["Scyther", "support", "Melee", ["Light Screen", "X Scissor", "Close Combat", "Double Edge"], "Leftovers"],
+  ["Accelgor", "pivot", "Ranged", ["U Turn", "Bug Buzz", "Sludge Bomb", "Energy Ball"], "Shell Bell"],
+  ["Escavalier", "pivot", "Melee", ["Taunt", "Megahorn", "Iron Head", "Close Combat"], "Shell Bell"],
+  ["Swadloon", "pivot", "Mid-Range", ["Lunge", "Seed Bomb", "Bug Buzz", "Energy Ball"], "Shell Bell"],
+  ["Leavanny", "ace", "Melee", ["Leaf Blade", "X Scissor", "Lunge", "Seed Bomb"], "Muscle Band"]]},
+ "Elesa":{tactic:"pivot",brief:"Electric pivots pull out Ground types before Emolga threatens from the air.",tip:"Bring a separate answer to Emolga and avoid repeated switches into the same bait.",pillarY:[94, 273, 382],team:[
+  ["Flaaffy", "lead", "Mid-Range", ["Volt Switch", "Thunderbolt", "Discharge", "Thunder"], "Sitrus Berry"],
+  ["Joltik", "support", "Ranged", ["Volt Switch", "Bug Buzz", "Thunderbolt", "Discharge"], "Leftovers"],
+  ["Galvantula", "pivot", "Ranged", ["Volt Switch", "Bug Buzz", "Thunderbolt", "Discharge"], "Shell Bell"],
+  ["Stunfisk", "pivot", "Ranged", ["Thunder Wave", "Earth Power", "Thunderbolt", "Steel Beam"], "Shell Bell"],
+  ["Rotom", "pivot", "Ranged", ["Volt Switch", "Shadow Ball", "Overheat", "Leaf Storm"], "Shell Bell"],
+  ["Emolga", "ace", "Mid-Range", ["Thunderbolt", "Air Slash", "Wild Charge", "Discharge"], "Magnet"]]},
+ "Clay":{tactic:"sand",brief:"Sand covers varied Ground attackers before Excadrill takes the field.",tip:"Bring answers for Water and Dark coverage and deny Excadrill a clean sand entry.",pillarY:[131, 260, 349],team:[
+  ["Krokorok", "lead", "Mid-Range", ["Sandstorm", "Foul Play", "Earthquake", "Thrash"], "Sitrus Berry"],
+  ["Palpitoad", "support", "Mid-Range", ["Protect", "Earth Power", "Surf", "Hydro Pump"], "Leftovers"],
+  ["Baltoy", "pivot", "Mid-Range", ["Dream Eater", "Earth Power", "Psychic", "Earthquake"], "Shell Bell"],
+  ["Sandslash", "pivot", "Mid-Range", ["High Horsepower", "Double Edge", "Earthquake", "Dig"], "Shell Bell"],
+  ["Krookodile", "pivot", "Mid-Range", ["Taunt", "Foul Play", "High Horsepower", "Outrage"], "Shell Bell"],
+  ["Excadrill", "ace", "Mid-Range", ["Earthquake", "Iron Head", "Rock Slide", "Swords Dance"], "Muscle Band"]]},
+ "Skyla":{tactic:"boost",brief:"Flying reserves use speed setup and different defensive profiles before Swanna enters.",tip:"Bring both a fast anti-air attacker and an answer that can beat Skarmory.",pillarY:[103, 237, 371],team:[
+  ["Swoobat", "lead", "Mid-Range", ["Calm Mind", "Future Sight", "Air Slash", "Psychic"], "Sitrus Berry"],
+  ["Unfezant", "support", "Mid-Range", ["Tailwind", "Sky Attack", "Brave Bird", "Facade"], "Leftovers"],
+  ["Skarmory", "pivot", "Mid-Range", ["Taunt", "Sky Attack", "Brave Bird", "Iron Head"], "Shell Bell"],
+  ["Braviary", "pivot", "Mid-Range", ["U Turn", "Sky Attack", "Thrash", "Brave Bird"], "Shell Bell"],
+  ["Mandibuzz", "pivot", "Mid-Range", ["U Turn", "Sky Attack", "Foul Play", "Brave Bird"], "Shell Bell"],
+  ["Swanna", "ace", "Mid-Range", ["Brave Bird", "Surf", "Double Edge", "Liquidation"], "Muscle Band"]]},
+ "Brycen":{tactic:"snow",brief:"Snow protects a ranged Ice core and gives Beartic time to close the gap.",tip:"Bring special damage and save a way to stop Beartic’s approach.",pillarY:[95, 264, 383],team:[
+  ["Vanillish", "lead", "Mid-Range", ["Hail", "Ice Beam", "Uproar", "Blizzard"], "Sitrus Berry"],
+  ["Cryogonal", "support", "Ranged", ["Snowscape", "Ice Beam", "Freeze Dry", "Blizzard"], "Leftovers"],
+  ["Vanilluxe", "pivot", "Ranged", ["Taunt", "Ice Beam", "Uproar", "Freeze Dry"], "Shell Bell"],
+  ["Walrein", "pivot", "Ranged", ["Ice Beam", "Liquidation", "Blizzard", "Aqua Tail"], "Shell Bell"],
+  ["Froslass", "pivot", "Mid-Range", ["Thunder Wave", "Poltergeist", "Ice Beam", "Petal Dance"], "Shell Bell"],
+  ["Beartic", "ace", "Melee", ["Ice Punch", "Thrash", "Superpower", "Icicle Crash"], "Wise Glasses"]]},
+ "Drayden":{tactic:"boost",brief:"Bulky Dragons draw out Ice or Fairy coverage before Haxorus looks for setup.",tip:"Keep your fastest Dragon answer healthy and interrupt the first boost.",pillarY:[107, 241, 375],team:[
+  ["Fraxure", "lead", "Mid-Range", ["Dragon Dance", "Outrage", "Double Edge", "Dragon Claw"], "Sitrus Berry"],
+  ["Druddigon", "support", "Melee", ["Protect", "Outrage", "Superpower", "Dragon Claw"], "Leftovers"],
+  ["Flygon", "pivot", "Mid-Range", ["U Turn", "Outrage", "Earthquake", "Superpower"], "Shell Bell"],
+  ["Altaria", "pivot", "Mid-Range", ["Sky Attack", "Outrage", "Brave Bird", "Draco Meteor"], "Shell Bell"],
+  ["Hydreigon", "pivot", "Ranged", ["U Turn", "Draco Meteor", "Dark Pulse", "Outrage"], "Shell Bell"],
+  ["Haxorus", "ace", "Mid-Range", ["Dragon Dance", "Dragon Claw", "Earthquake", "Poison Jab"], "Muscle Band"]]},
+ "Marlon":{tactic:"rain",brief:"Rain alternates fast pressure and bulky reserves before Jellicent can stall.",tip:"Bring a physical and a special answer and save healing denial for Jellicent.",pillarY:[119, 293, 382],team:[
+  ["Relicanth", "lead", "Mid-Range", ["Rain Dance", "Head Smash", "Dive", "Skull Bash"], "Sitrus Berry"],
+  ["Wailord", "support", "Mid-Range", ["Rain Dance", "Water Spout", "Thrash", "Surf"], "Leftovers"],
+  ["Mantine", "pivot", "Ranged", ["Hydro Pump", "Air Slash", "Ice Beam", "Water Pulse"], "Shell Bell"],
+  ["Lanturn", "pivot", "Ranged", ["Volt Switch", "Surf", "Thunderbolt", "Hydro Pump"], "Shell Bell"],
+  ["Basculin", "pivot", "Melee", ["Flip Turn", "Wave Crash", "Thrash", "Liquidation"], "Shell Bell"],
+  ["Jellicent", "ace", "Ranged", ["Recover", "Surf", "Shadow Ball", "Hyper Beam"], "Leftovers"]]},
+ "Viola":{tactic:"hazards",brief:"Webs slow the team and help Vivillon find time to set up.",tip:"Use an airborne reserve or remove the setter, then pressure Vivillon early.",pillarY:[151, 245, 339],team:[
+  ["Surskit", "lead", "Mid-Range", ["Sticky Web", "Bug Buzz", "Surf", "Hydro Pump"], "Sitrus Berry"],
+  ["Masquerain", "support", "Ranged", ["Tailwind", "Bug Buzz", "Air Slash", "Ice Beam"], "Leftovers"],
+  ["Scatterbug", "pivot", "Mid-Range", ["Bug Bite", "Facade", "Pounce", "Struggle Bug"], "Shell Bell"],
+  ["Spewpa", "pivot", "Ranged", ["Struggle Bug", "Tera Blast", "Bug Bite", "Pounce"], "Shell Bell"],
+  ["Butterfree", "pivot", "Ranged", ["U Turn", "Air Slash", "Bug Buzz", "Dream Eater"], "Shell Bell"],
+  ["Vivillon", "ace", "Ranged", ["Sleep Powder", "Quiver Dance", "Hurricane", "Bug Buzz"], "Muscle Band"]]},
+ "Grant":{tactic:"hazards",brief:"Rock hazards support fossil coverage that reaches beyond the obvious Rock matchup.",tip:"Keep a special answer to Tyrunt and plan for Aurorus’s ranged attacks.",pillarY:[153, 247, 341],team:[
+  ["Amaura", "lead", "Mid-Range", ["Stealth Rock", "Meteor Beam", "Ice Beam", "Outrage"], "Sitrus Berry"],
+  ["Binacle", "support", "Mid-Range", ["Stealth Rock", "Liquidation", "Stone Edge", "Waterfall"], "Leftovers"],
+  ["Boldore", "pivot", "Mid-Range", ["Stone Edge", "Earthquake", "Body Press", "Rock Slide"], "Shell Bell"],
+  ["Barbaracle", "pivot", "Mid-Range", ["Taunt", "Liquidation", "Skull Bash", "Stone Edge"], "Shell Bell"],
+  ["Aurorus", "pivot", "Ranged", ["Thunder Wave", "Meteor Beam", "Ice Beam", "Earth Power"], "Shell Bell"],
+  ["Tyrunt", "ace", "Mid-Range", ["Outrage", "Stone Edge", "Close Combat", "Thrash"], "Muscle Band"]]},
+ "Korrina":{tactic:"boost",brief:"Fast and heavy Fighting attackers alternate before Hawlucha seeks a setup window.",tip:"Preserve a fast ranged answer and stop Hawlucha’s first boost.",pillarY:[115, 249, 383],team:[
+  ["Mienfoo", "lead", "Mid-Range", ["Swords Dance", "Close Combat", "High Jump Kick", "Brick Break"], "Sitrus Berry"],
+  ["Pancham", "support", "Melee", ["Swords Dance", "Superpower", "Foul Play", "Brick Break"], "Leftovers"],
+  ["Machoke", "pivot", "Melee", ["Close Combat", "Double Edge", "Brick Break", "Drain Punch"], "Shell Bell"],
+  ["Mienshao", "pivot", "Melee", ["U Turn", "Close Combat", "High Jump Kick", "Double Edge"], "Shell Bell"],
+  ["Pangoro", "pivot", "Melee", ["Parting Shot", "Close Combat", "Foul Play", "Superpower"], "Shell Bell"],
+  ["Hawlucha", "ace", "Mid-Range", ["Swords Dance", "Flying Press", "Acrobatics", "Drain Punch"], "Muscle Band"]]},
+ "Ramos":{tactic:"disruption",brief:"Sleep and awkward secondary types make the opening matchup unstable before Gogoat enters.",tip:"Bring a sleep answer and coverage for Grass and Ghost.",pillarY:[137, 256, 331],team:[
+  ["Jumpluff", "lead", "Mid-Range", ["Sleep Powder", "Leaf Storm", "Bounce", "Double Edge"], "Sitrus Berry"],
+  ["Weepinbell", "support", "Mid-Range", ["Toxic", "Leaf Storm", "Sludge Wave", "Power Whip"], "Leftovers"],
+  ["Skiploom", "pivot", "Mid-Range", ["U Turn", "Leaf Storm", "Bounce", "Double Edge"], "Shell Bell"],
+  ["Trevenant", "pivot", "Melee", ["Toxic", "Wood Hammer", "Poltergeist", "Phantom Force"], "Shell Bell"],
+  ["Gourgeist", "pivot", "Melee", ["Power Whip", "Poltergeist", "Phantom Force", "Foul Play"], "Shell Bell"],
+  ["Gogoat", "ace", "Mid-Range", ["Solar Blade", "Leaf Storm", "Skull Bash", "Leaf Blade"], "Sitrus Berry"]]},
+ "Clemont":{tactic:"screens",brief:"Screens give a mixed Electric team time to switch between airborne and grounded threats.",tip:"Break screens and prepare a Ground alternative for Emolga.",pillarY:[114, 253, 353],team:[
+  ["Emolga", "lead", "Ranged", ["Light Screen", "Thunderbolt", "Air Slash", "Wild Charge"], "Sitrus Berry"],
+  ["Dedenne", "support", "Ranged", ["Light Screen", "Thunderbolt", "Dazzling Gleam", "Discharge"], "Leftovers"],
+  ["Magneton", "pivot", "Ranged", ["Volt Switch", "Steel Beam", "Thunderbolt", "Flash Cannon"], "Shell Bell"],
+  ["Electrode", "pivot", "Ranged", ["Volt Switch", "Chloroblast", "Thunderbolt", "Discharge"], "Shell Bell"],
+  ["Ampharos", "pivot", "Ranged", ["Volt Switch", "Thunderbolt", "Meteor Beam", "Discharge"], "Shell Bell"],
+  ["Heliolisk", "ace", "Ranged", ["Thunderbolt", "Hyper Voice", "Discharge", "Razor Wind"], "Wise Glasses"]]},
+ "Valerie":{tactic:"screens",brief:"Screens protect Fairy reserves with Steel and Rock coverage before Sylveon fires from range.",tip:"Clear screens and save a special defense answer for Sylveon.",pillarY:[116, 255, 355],team:[
+  ["Mr. Mime", "lead", "Ranged", ["Reflect", "Light Screen", "Future Sight", "Dazzling Gleam"], "Sitrus Berry"],
+  ["Mawile", "support", "Melee", ["Protect", "Iron Head", "Play Rough", "Double Edge"], "Leftovers"],
+  ["Aromatisse", "pivot", "Ranged", ["Moonblast", "Dream Eater", "Dazzling Gleam", "Thunderbolt"], "Shell Bell"],
+  ["Slurpuff", "pivot", "Ranged", ["Yawn", "Dazzling Gleam", "Dream Eater", "Play Rough"], "Shell Bell"],
+  ["Carbink", "pivot", "Mid-Range", ["Meteor Beam", "Moonblast", "Double Edge", "Power Gem"], "Shell Bell"],
+  ["Sylveon", "ace", "Ranged", ["Moonblast", "Alluring Voice", "Dazzling Gleam", "Psychic"], "Wise Glasses"]]},
+ "Olympia":{tactic:"screens",brief:"Screens and varied Psychic defenses draw out the player’s strongest attack category.",tip:"Bring mixed damage and preserve a clean approach to Meowstic.",pillarY:[118, 257, 357],team:[
+  ["Sigilyph", "lead", "Ranged", ["Reflect", "Light Screen", "Future Sight", "Air Slash"], "Sitrus Berry"],
+  ["Slowking", "support", "Ranged", ["Reflect", "Future Sight", "Surf", "Dream Eater"], "Leftovers"],
+  ["Gothitelle", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Psychic", "Psyshock"], "Shell Bell"],
+  ["Reuniclus", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Psychic", "Psyshock"], "Shell Bell"],
+  ["Musharna", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Dream Eater", "Psychic"], "Shell Bell"],
+  ["Meowstic", "ace", "Ranged", ["Future Sight", "Psychic", "Psyshock", "Extrasensory"], "Wise Glasses"]]},
+ "Wulfric":{tactic:"snow",brief:"Snow supports layered Ice defenses before Avalugg controls close range.",tip:"Use special offense against Avalugg and prepare a way around the Ice coverage.",pillarY:[115, 284, 364],team:[
+  ["Bergmite", "lead", "Mid-Range", ["Snowscape", "Ice Spinner", "Double Edge", "Crunch"], "Sitrus Berry"],
+  ["Cryogonal", "support", "Ranged", ["Snowscape", "Ice Beam", "Freeze Dry", "Blizzard"], "Leftovers"],
+  ["Abomasnow", "pivot", "Mid-Range", ["Wood Hammer", "Ice Beam", "Leaf Storm", "Outrage"], "Shell Bell"],
+  ["Aurorus", "pivot", "Ranged", ["Thunder Wave", "Meteor Beam", "Ice Beam", "Earth Power"], "Shell Bell"],
+  ["Beartic", "pivot", "Melee", ["Yawn", "Ice Punch", "Thrash", "Superpower"], "Shell Bell"],
+  ["Avalugg", "ace", "Melee", ["Recover", "Avalanche", "Body Press", "Crunch"], "Leftovers"]]},
+ "Milo":{tactic:"disruption",brief:"Status and durable Grass reserves slow the lead before Eldegoss takes over.",tip:"Pressure recovery and bring coverage for the Grass and Dragon pair.",pillarY:[147, 227, 341],team:[
+  ["Gossifleur", "lead", "Mid-Range", ["Sleep Powder", "Leaf Storm", "Energy Ball", "Giga Drain"], "Sitrus Berry"],
+  ["Applin", "support", "Mid-Range", ["Tera Blast", "Sucker Punch", "Pounce", "Astonish"], "Leftovers"],
+  ["Flapple", "pivot", "Mid-Range", ["U Turn", "Outrage", "Leaf Storm", "Draco Meteor"], "Shell Bell"],
+  ["Appletun", "pivot", "Ranged", ["Leaf Storm", "Draco Meteor", "Outrage", "Energy Ball"], "Shell Bell"],
+  ["Tsareena", "pivot", "Melee", ["U Turn", "Solar Blade", "Power Whip", "High Jump Kick"], "Shell Bell"],
+  ["Eldegoss", "ace", "Ranged", ["Leaf Storm", "Energy Ball", "Giga Drain", "Hyper Voice"], "Sitrus Berry"]]},
+ "Nessa":{tactic:"rain",brief:"Rain gives fast Water attackers initiative while Quagsire covers Electric.",tip:"Keep Grass coverage and save a weather change for Drednaw’s entry.",pillarY:[139, 274, 363],team:[
+  ["Goldeen", "lead", "Ranged", ["Rain Dance", "Waterfall", "Skull Bash", "Aqua Tail"], "Sitrus Berry"],
+  ["Arrokuda", "support", "Melee", ["Rain Dance", "Liquidation", "Thrash", "Close Combat"], "Leftovers"],
+  ["Barraskewda", "pivot", "Melee", ["Flip Turn", "Thrash", "Close Combat", "Liquidation"], "Shell Bell"],
+  ["Pelipper", "pivot", "Ranged", ["U Turn", "Surf", "Air Slash", "Hydro Pump"], "Shell Bell"],
+  ["Quagsire", "pivot", "Mid-Range", ["Yawn", "High Horsepower", "Liquidation", "Double Edge"], "Shell Bell"],
+  ["Drednaw", "ace", "Mid-Range", ["Head Smash", "Liquidation", "Double Edge", "Waterfall"], "Mystic Water"]]},
+ "Kabu":{tactic:"sun",brief:"Sun and burns punish early physical pressure before Centiskorch closes in.",tip:"Bring special offense and a Fire-resistant reserve that can fight through sun.",pillarY:[121, 226, 350],team:[
+  ["Ninetales", "lead", "Mid-Range", ["Sunny Day", "Overheat", "Flare Blitz", "Flamethrower"], "Sitrus Berry"],
+  ["Growlithe", "support", "Mid-Range", ["Sunny Day", "Raging Fury", "Flare Blitz", "Overheat"], "Leftovers"],
+  ["Arcanine", "pivot", "Mid-Range", ["Raging Fury", "Flare Blitz", "Overheat", "Thrash"], "Shell Bell"],
+  ["Houndoom", "pivot", "Ranged", ["Toxic", "Overheat", "Dark Pulse", "Flamethrower"], "Shell Bell"],
+  ["Torkoal", "pivot", "Mid-Range", ["Yawn", "Eruption", "Flare Blitz", "Overheat"], "Shell Bell"],
+  ["Centiskorch", "ace", "Mid-Range", ["Flare Blitz", "Lunge", "Burn Up", "Overheat"], "Charcoal"]]},
+ "Bea":{tactic:"boost",brief:"Setup, traps, and close-range pressure try to isolate your best fighter answer.",tip:"Keep a second answer healthy and deny a free turn to set up.",pillarY:[133, 228, 362],team:[
+  ["Hitmontop", "lead", "Mid-Range", ["Bulk Up", "Close Combat", "Double Edge", "Brick Break"], "Sitrus Berry"],
+  ["Sirfetch’d", "support", "Melee", ["Swords Dance", "Meteor Assault", "Close Combat", "Superpower"], "Leftovers"],
+  ["Hawlucha", "pivot", "Mid-Range", ["U Turn", "Sky Attack", "Close Combat", "Brave Bird"], "Shell Bell"],
+  ["Grapploct", "pivot", "Melee", ["Taunt", "Close Combat", "Superpower", "Brick Break"], "Shell Bell"],
+  ["Pangoro", "pivot", "Melee", ["Parting Shot", "Close Combat", "Foul Play", "Superpower"], "Shell Bell"],
+  ["Machamp", "ace", "Melee", ["Bulk Up", "Close Combat", "Double Edge", "Brick Break"], "Muscle Band"]]},
+ "Allister":{tactic:"disruption",brief:"Slow Ghosts disrupt the opener and Polteageist punishes passive play before Gengar enters.",tip:"Avoid giving a setup opening and preserve a fast answer to Gengar.",pillarY:[116, 235, 349],team:[
+  ["Yamask", "lead", "Ranged", ["Thunder Wave", "Shadow Ball", "Dream Eater", "Earth Power"], "Sitrus Berry"],
+  ["Runerigus", "support", "Mid-Range", ["Thunder Wave", "Poltergeist", "Earthquake", "Phantom Force"], "Leftovers"],
+  ["Cursola", "pivot", "Ranged", ["Shadow Ball", "Meteor Beam", "Ice Beam", "Psychic"], "Shell Bell"],
+  ["Polteageist", "pivot", "Ranged", ["Shadow Ball", "Psychic", "Dark Pulse", "Hex"], "Shell Bell"],
+  ["Dusknoir", "pivot", "Melee", ["Taunt", "Poltergeist", "Phantom Force", "Body Slam"], "Shell Bell"],
+  ["Gengar", "ace", "Ranged", ["Hypnosis", "Sludge Wave", "Shadow Ball", "Sludge Bomb"], "Sitrus Berry"]]},
+ "Opal":{tactic:"screens",brief:"Screens shelter Fairy reserves with different coverage before Alcremie starts building momentum.",tip:"Break screens and keep a strong answer to Alcremie’s sustained setup.",pillarY:[93, 232, 371],team:[
+  ["Hatterene", "lead", "Ranged", ["Reflect", "Light Screen", "Future Sight", "Dazzling Gleam"], "Sitrus Berry"],
+  ["Weezing", "support", "Mid-Range", ["Protect", "Belch", "Double Edge", "Gunk Shot"], "Leftovers"],
+  ["Mawile", "pivot", "Melee", ["Taunt", "Iron Head", "Play Rough", "Double Edge"], "Shell Bell"],
+  ["Togekiss", "pivot", "Ranged", ["Moonblast", "Air Slash", "Dazzling Gleam", "Flamethrower"], "Shell Bell"],
+  ["Grimmsnarl", "pivot", "Melee", ["Parting Shot", "Foul Play", "Play Rough", "False Surrender"], "Shell Bell"],
+  ["Alcremie", "ace", "Ranged", ["Calm Mind", "Dazzling Gleam", "Recover", "Giga Impact"], "Leftovers"]]},
+ "Gordie":{tactic:"hazards",brief:"Hazards and Rock reserves with different secondary types open for Gigalith.",tip:"Bring mixed coverage and limit repeated entries through hazards.",pillarY:[140, 234, 328],team:[
+  ["Barbaracle", "lead", "Mid-Range", ["Stealth Rock", "Liquidation", "Skull Bash", "Stone Edge"], "Sitrus Berry"],
+  ["Shuckle", "support", "Mid-Range", ["Stealth Rock", "Stone Edge", "Bug Bite", "Sludge Bomb"], "Leftovers"],
+  ["Stonjourner", "pivot", "Mid-Range", ["Stone Edge", "High Horsepower", "Body Slam", "Body Press"], "Shell Bell"],
+  ["Tyranitar", "pivot", "Mid-Range", ["Thunder Wave", "Foul Play", "Stone Edge", "Outrage"], "Shell Bell"],
+  ["Aurorus", "pivot", "Ranged", ["Thunder Wave", "Meteor Beam", "Ice Beam", "Earth Power"], "Shell Bell"],
+  ["Gigalith", "ace", "Mid-Range", ["Stone Edge", "Superpower", "Earthquake", "Iron Head"], "Muscle Band"]]},
+ "Melony":{tactic:"snow",brief:"Snow covers fast and bulky Ice reserves before Lapras takes a ranged matchup.",tip:"Change the weather and keep a Water-resistant answer for Lapras.",pillarY:[92, 261, 380],team:[
+  ["Frosmoth", "lead", "Mid-Range", ["Snowscape", "Bug Buzz", "Ice Beam", "Blizzard"], "Sitrus Berry"],
+  ["Eiscue", "support", "Mid-Range", ["Snowscape", "Ice Spinner", "Double Edge", "Head Smash"], "Leftovers"],
+  ["Darmanitan", "pivot", "Melee", ["U Turn", "Flare Blitz", "Thrash", "Superpower"], "Shell Bell"],
+  ["Mr. Mime", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Dazzling Gleam", "Dream Eater"], "Shell Bell"],
+  ["Froslass", "pivot", "Mid-Range", ["Thunder Wave", "Poltergeist", "Ice Beam", "Petal Dance"], "Shell Bell"],
+  ["Lapras", "ace", "Mid-Range", ["Ice Beam", "Sparkling Aria", "Outrage", "Double Edge"], "Wise Glasses"]]},
+ "Piers":{tactic:"pivot",brief:"Dark pivots and secondary types draw out Fairy and Fighting answers before Obstagoon.",tip:"Prepare for Poison coverage and save a clean physical matchup for the ace.",pillarY:[99, 278, 387],team:[
+  ["Scrafty", "lead", "Mid-Range", ["Parting Shot", "Close Combat", "Foul Play", "High Jump Kick"], "Sitrus Berry"],
+  ["Malamar", "support", "Mid-Range", ["Reflect", "Foul Play", "Future Sight", "Close Combat"], "Leftovers"],
+  ["Skuntank", "pivot", "Melee", ["Toxic", "Foul Play", "Gunk Shot", "Double Edge"], "Shell Bell"],
+  ["Liepard", "pivot", "Mid-Range", ["U Turn", "Foul Play", "Crunch", "Dark Pulse"], "Shell Bell"],
+  ["Drapion", "pivot", "Melee", ["Crunch", "Poison Jab", "Cross Poison", "X Scissor"], "Shell Bell"],
+  ["Obstagoon", "ace", "Melee", ["Double Edge", "Throat Chop", "Close Combat", "Body Slam"], "Sitrus Berry"]]},
+ "Raihan":{tactic:"sand",brief:"Sand opens for mixed Dragon coverage and Duraludon pressures from range.",tip:"Change the weather and keep coverage for both grounded and airborne threats.",pillarY:[136, 265, 354],team:[
+  ["Hippowdon", "lead", "Mid-Range", ["Sandstorm", "High Horsepower", "Double Edge", "Earthquake"], "Sitrus Berry"],
+  ["Sandaconda", "support", "Mid-Range", ["Sandstorm", "High Horsepower", "Outrage", "Earthquake"], "Leftovers"],
+  ["Flygon", "pivot", "Mid-Range", ["U Turn", "Outrage", "Earthquake", "Superpower"], "Shell Bell"],
+  ["Turtonator", "pivot", "Ranged", ["Taunt", "Shell Trap", "Outrage", "Overheat"], "Shell Bell"],
+  ["Goodra", "pivot", "Ranged", ["Toxic", "Draco Meteor", "Outrage", "Steel Beam"], "Shell Bell"],
+  ["Duraludon", "ace", "Ranged", ["Steel Beam", "Draco Meteor", "Outrage", "Dragon Pulse"], "Muscle Band"]]},
+ "Katy":{tactic:"hazards",brief:"Webs and quick Bug attackers protect Teddiursa’s approach.",tip:"Keep a fast reserve that can enter safely and pressure Teddiursa before it closes.",pillarY:[148, 242, 336],team:[
+  ["Tarountula", "lead", "Mid-Range", ["Spikes", "First Impression", "Lunge", "X Scissor"], "Sitrus Berry"],
+  ["Nymble", "support", "Melee", ["Protect", "First Impression", "X Scissor", "Leech Life"], "Leftovers"],
+  ["Spidops", "pivot", "Melee", ["U Turn", "First Impression", "Lunge", "X Scissor"], "Shell Bell"],
+  ["Heracross", "pivot", "Melee", ["Close Combat", "Megahorn", "Skull Bash", "Outrage"], "Shell Bell"],
+  ["Lokix", "pivot", "Melee", ["U Turn", "Throat Chop", "First Impression", "Double Edge"], "Shell Bell"],
+  ["Teddiursa", "ace", "Melee", ["Thrash", "Double Edge", "Close Combat", "Body Slam"], "Muscle Band"]]},
+ "Brassius":{tactic:"disruption",brief:"Grass status and recovery draw out Fire or Flying before Sudowoodo answers with Rock coverage.",tip:"Keep a separate Rock answer and avoid committing one counter to the whole fight.",pillarY:[130, 249, 363],team:[
+  ["Petilil", "lead", "Mid-Range", ["Sleep Powder", "Leaf Storm", "Energy Ball", "Giga Drain"], "Sitrus Berry"],
+  ["Smoliv", "support", "Ranged", ["Protect", "Leaf Storm", "Tera Blast", "Energy Ball"], "Leftovers"],
+  ["Dolliv", "pivot", "Ranged", ["Leaf Storm", "Tera Blast", "Energy Ball", "Solar Blade"], "Shell Bell"],
+  ["Arboliva", "pivot", "Ranged", ["Petal Dance", "Hyper Voice", "Leaf Storm", "Energy Ball"], "Shell Bell"],
+  ["Breloom", "pivot", "Melee", ["Toxic", "Close Combat", "Seed Bomb", "Brick Break"], "Shell Bell"],
+  ["Sudowoodo", "ace", "Mid-Range", ["Head Smash", "Wood Hammer", "Double Edge", "Foul Play"], "Sitrus Berry"]]},
+ "Iono":{tactic:"pivot",brief:"Electric pivots expose Ground answers before Mismagius enters.",tip:"Bring coverage that still works against Levitate and preserve a fast reserve.",pillarY:[107, 286, 395],team:[
+  ["Wattrel", "lead", "Mid-Range", ["U Turn", "Thunderbolt", "Brave Bird", "Discharge"], "Sitrus Berry"],
+  ["Bellibolt", "support", "Ranged", ["Volt Switch", "Thunderbolt", "Discharge", "Thunder"], "Leftovers"],
+  ["Luxio", "pivot", "Mid-Range", ["Volt Switch", "Double Edge", "Wild Charge", "Psychic Fangs"], "Shell Bell"],
+  ["Electrode", "pivot", "Ranged", ["Volt Switch", "Chloroblast", "Thunderbolt", "Discharge"], "Shell Bell"],
+  ["Kilowattrel", "pivot", "Ranged", ["U Turn", "Thunderbolt", "Air Slash", "Discharge"], "Shell Bell"],
+  ["Mismagius", "ace", "Ranged", ["Shadow Ball", "Future Sight", "Thunderbolt", "Hyper Voice"], "Magnet"]]},
+ "Kofu":{tactic:"rain",brief:"Rain pushes a fast Water opening before Crabominable changes the matchup with Ice and Fighting.",tip:"Keep a separate Crabominable answer and disrupt rain early.",pillarY:[124, 298, 387],team:[
+  ["Veluza", "lead", "Ranged", ["Rain Dance", "Liquidation", "Psychic Fangs", "Thrash"], "Sitrus Berry"],
+  ["Wugtrio", "support", "Mid-Range", ["Rain Dance", "Liquidation", "Foul Play", "Dig"], "Leftovers"],
+  ["Pelipper", "pivot", "Ranged", ["U Turn", "Surf", "Air Slash", "Hydro Pump"], "Shell Bell"],
+  ["Clawitzer", "pivot", "Ranged", ["U Turn", "Surf", "Hydro Pump", "Scald"], "Shell Bell"],
+  ["Palafin", "pivot", "Melee", ["Flip Turn", "Wave Crash", "Outrage", "Close Combat"], "Shell Bell"],
+  ["Crabominable", "ace", "Melee", ["Close Combat", "Superpower", "Ice Hammer", "Body Press"], "Sitrus Berry"]]},
+ "Larry":{tactic:"pivot",brief:"Normal reserves draw out Fighting attacks before flying pivots change the angle.",tip:"Bring coverage for both grounded Normal and flying targets.",pillarY:[111, 290, 395],team:[
+  ["Komala", "lead", "Mid-Range", ["U Turn", "Thrash", "Double Edge", "Superpower"], "Sitrus Berry"],
+  ["Dunsparce", "support", "Melee", ["Yawn", "Double Edge", "Hyper Drill", "Body Slam"], "Leftovers"],
+  ["Oinkologne", "pivot", "Mid-Range", ["Yawn", "Double Edge", "Body Slam", "High Horsepower"], "Shell Bell"],
+  ["Braviary", "pivot", "Mid-Range", ["U Turn", "Sky Attack", "Thrash", "Brave Bird"], "Shell Bell"],
+  ["Pidgeot", "pivot", "Mid-Range", ["U Turn", "Sky Attack", "Brave Bird", "Uproar"], "Shell Bell"],
+  ["Staraptor", "ace", "Mid-Range", ["Skull Bash", "Sky Attack", "Brave Bird", "Double Edge"], "Sitrus Berry"]]},
+ "Ryme":{tactic:"disruption",brief:"Ghost status pressure and Mimikyu buy time for Toxtricity’s ranged finish.",tip:"Save a healthy Ground attacker for Toxtricity and keep a separate Ghost answer.",pillarY:[138, 257, 332],team:[
+  ["Banette", "lead", "Ranged", ["Thunder Wave", "Poltergeist", "Phantom Force", "Foul Play"], "Sitrus Berry"],
+  ["Houndstone", "support", "Melee", ["Yawn", "Phantom Force", "Double Edge", "Shadow Claw"], "Leftovers"],
+  ["Mimikyu", "pivot", "Melee", ["Thunder Wave", "Phantom Force", "Play Rough", "Wood Hammer"], "Shell Bell"],
+  ["Greavard", "pivot", "Mid-Range", ["Phantom Force", "Double Edge", "Psychic Fangs", "Dig"], "Shell Bell"],
+  ["Spiritomb", "pivot", "Melee", ["Toxic", "Poltergeist", "Foul Play", "Phantom Force"], "Shell Bell"],
+  ["Toxtricity", "ace", "Ranged", ["Overdrive", "Sludge Bomb", "Boomburst", "Snarl"], "Sitrus Berry"]]},
+ "Tulip":{tactic:"screens",brief:"Screens shelter varied Psychic attackers before Florges shifts the fight to Fairy.",tip:"Bring mixed damage and save Poison or Steel pressure for Florges.",pillarY:[115, 254, 354],team:[
+  ["Girafarig", "lead", "Ranged", ["Reflect", "Light Screen", "Future Sight", "Double Edge"], "Sitrus Berry"],
+  ["Delphox", "support", "Ranged", ["Reflect", "Future Sight", "Overheat", "Dream Eater"], "Leftovers"],
+  ["Gardevoir", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Moonblast", "Dream Eater"], "Shell Bell"],
+  ["Gothitelle", "pivot", "Ranged", ["Thunder Wave", "Future Sight", "Psychic", "Psyshock"], "Shell Bell"],
+  ["Indeedee", "pivot", "Ranged", ["Future Sight", "Hyper Voice", "Dream Eater", "Psychic"], "Shell Bell"],
+  ["Florges", "ace", "Ranged", ["Moonblast", "Psychic", "Synthesis", "Calm Mind"], "Wise Glasses"]]},
+ "Grusha":{tactic:"snow",brief:"Snow powers a mixed Ice roster before Altaria changes the expected matchup.",tip:"Change the weather and keep a dedicated answer to Altaria.",pillarY:[112, 281, 361],team:[
+  ["Frosmoth", "lead", "Mid-Range", ["Snowscape", "Bug Buzz", "Ice Beam", "Blizzard"], "Sitrus Berry"],
+  ["Beartic", "support", "Melee", ["Snowscape", "Ice Punch", "Thrash", "Superpower"], "Leftovers"],
+  ["Cetitan", "pivot", "Melee", ["Yawn", "Ice Spinner", "Superpower", "Double Edge"], "Shell Bell"],
+  ["Abomasnow", "pivot", "Mid-Range", ["Wood Hammer", "Ice Beam", "Leaf Storm", "Outrage"], "Shell Bell"],
+  ["Weavile", "pivot", "Melee", ["Taunt", "Foul Play", "Ice Spinner", "Throat Chop"], "Shell Bell"],
+  ["Altaria", "ace", "Mid-Range", ["Dragon Pulse", "Moonblast", "Ice Beam", "Roost"], "Wise Glasses"]]},
+};
+const gymTactics={
+  hazards:['Stealth Rock','Spikes','Toxic Spikes','Sticky Web'],
+  screens:['Reflect','Light Screen'],
+  pivot:['U Turn','Volt Switch','Flip Turn','Parting Shot'],
+  rain:['Rain Dance'],
+  sun:['Sunny Day'],
+  sand:['Sandstorm'],
+  snow:['Snowscape','Hail'],
+  disruption:['Will-O-Wisp','Thunder Wave','Glare','Yawn','Toxic','Hypnosis','Sleep Powder','Taunt'],
+  boost:['Tailwind','Dragon Dance','Swords Dance','Bulk Up','Calm Mind','Nasty Plot','Quiver Dance','Agility'],
+};
+const gymTeams=gymRegions.flatMap(([region,generation,gyms])=>gyms.map(([leader,city,types,badge])=>{
  const specialties=types.split(',');
- const type=specialties[0];
- const aces=signature.split(',').filter(isAvailablePokemon);
- const candidates=dexNames.filter(name=>{
-  const [id,primary,secondary]=dex[name];
-  return id<=generationLastId[generation-1] && !aces.includes(name) &&
-   (specialties.includes(primary)||specialties.includes(secondary));
- });
- const pool=[...candidates,...aces];
- const roster=[...aces,...Array.from({length:6-aces.length},(_,i)=>pool[i%pool.length])];
- return {id:region+'/'+badge,region,generation,name:leader,city,type,types,specialties,badge:badge+' Badge',roster,aceCount:aces.length};
+ const plan=gymPlans[leader];
+ return {plan,id:region+'/'+badge,region,generation,name:leader,city,type:specialties[0],
+  types,specialties,badge:badge+' Badge',roster:plan.team.map(([name])=>name)};
 }));
 const gymSaveKey='pokemon-arena-gym-badges';
 let clearedGyms=[];
@@ -2608,48 +3092,14 @@ function gymProfile(name) {
  const nature=tank?(physical?'Adamant':'Modest'):(physical?'Jolly':'Timid');
  return {ivs:Array(6).fill(31),evs,pid:natureNames.indexOf(nature)};
 }
-function gymMoves(name,gym,slot=gym?.roster.indexOf(name) ?? 0) {
- const {physical,tank}=gymRole(name);
- const types=dex[name].slice(1,3).filter(Boolean);
- const legal=legalMoves(name).filter(isVisibleArenaMove);
- const attacks=legal.filter(move=>moveCatalog[move][1]>0 && !sacrificeProfiles.has(move));
- const attackValue=move=>{
-  const [type,power,accuracy,priority,,,recoil]=moveCatalog[move];
-  const rules=moveRules(move);
-  return power*(accuracy ?? 100)/100*(types.includes(type)?1.45:1)*
-   ((rules.category===2)===physical?1:0.72)/(1+rules.cooldown*0.10)+priority*8-recoil*25;
- };
- const selected=[];
- const best=pool=>pool.filter(move=>!selected.includes(move)).sort((a,b)=>attackValue(b)-attackValue(a))[0];
- const add=move=>{if(move)selected.push(move);};
- add(best(attacks));
- const firstType=moveCatalog[selected[0]]?.[0];
- add(best(attacks.filter(move=>moveCatalog[move][0]!==firstType && types.includes(moveCatalog[move][0]))) ??
-  best(attacks.filter(move=>moveCatalog[move][0]!==firstType)));
- const support=(tank?['Recover','Roost','Slack Off','Synthesis','Morning Sun','Moonlight','Strength Sap','Will-O-Wisp','Thunder Wave','Protect']:
-  physical?['Dragon Dance','Swords Dance','Bulk Up','Hone Claws','Agility','Protect']:
-  ['Quiver Dance','Nasty Plot','Calm Mind','Agility','Protect']).find(move=>legal.includes(move));
- const hazards=['Stealth Rock','Sticky Web','Toxic Spikes','Spikes'];
- const teamSupport=['Tailwind','Aurora Veil','Reflect','Light Screen','Safeguard','Mist','Lucky Chant'];
- const disruption=['Will-O-Wisp','Thunder Wave','Glare','Toxic','Yawn','Taunt','Parting Shot',
-  'Charm','Screech','Metal Sound','Fake Tears','Snarl','Icy Wind','Breaking Swipe'];
- const role=slot===0?'lead':slot%3===1?'disruptor':slot%3===2?'support':'ace';
- const tools={
-  lead:[...hazards,...teamSupport,...disruption],
-  disruptor:[...disruption,...hazards,...teamSupport],
-  support:[...teamSupport,...disruption,...hazards],
-  ace:[support,...disruption,...teamSupport],
- };
- const tactical=tools[role].find(move=>legal.includes(move) && !selected.includes(move));
- if(selected.length)add(tactical ?? support);
- if(selected.length<4 && role==='support' && legal.includes('Baton Pass') && support &&
-    moveRules(support).changes.some(([,amount])=>amount>0)) {
-  if(selected.length<3 && !selected.includes(support))add(support);
-  if(selected.includes(support))add('Baton Pass');
- }
- const usedTypes=new Set(selected.map(move=>moveCatalog[move][0]));
- add(best(attacks.filter(move=>!usedTypes.has(moveCatalog[move][0]))));
- return legalLoadout(name,[...selected,...attacks.sort((a,b)=>attackValue(b)-attackValue(a))]);
+function gymMoves(name,gym,slot) {
+ return legalLoadout(name,gym.plan.team[slot][3]);
+}
+function gymAceSlot(gym,slot) {
+ return gym.plan.team[slot][1]==='ace';
+}
+function gymBrief(gym) {
+ return gym.plan.brief+' First badge requires a full clear.';
 }
 function gymHeldItem(name) {
  const {physical,tank}=gymRole(name);
@@ -3215,8 +3665,8 @@ function renderCampaign(collection) {
     roster.append(...gym.roster.map(name=>pokemonPortrait(name)));
     card.append(element('strong',String(index+1)+'. '+gym.name),
      element('small',gym.city+' · '+gym.types.replaceAll(',',' / ')),
-     element('small',gym.badge+' · '+(earned?'Rematch':'Unlocked')),
-     element('small','Lv. '+gymDifficulty(gym).level+'–'+gymDifficulty(gym).aceLevel),roster);
+     element('small',gym.badge+' · '+(earned?(gymRematchRecord(gym)?'Clean rematch complete':'Rematch'):'Unlocked')),
+     element('small','Lv. '+gymDifficulty(gym).level+'–'+gymDifficulty(gym).aceLevel),roster,element('small',gymBrief(gym)));
     card.disabled=!earned && !available;
     card.onclick=()=>openBattle(gym);
     grid.append(card);
@@ -3718,7 +4168,7 @@ function startSwitch(outgoing,incoming) {
  incoming.direction=incoming.friendly ? 2 : 6;
  incoming.motionTicks=0;
  incoming.fieldTime=0;
- incoming.hazardsApplied=false;incoming.crowdedFor=0;incoming.escapeUntil=0;incoming.escapeGoal=null;incoming.committedTarget=null;
+ incoming.hazardsApplied=false;incoming.crowdedFor=0;incoming.escapeUntil=0;incoming.escapeGoal=null;incoming.committedTarget=null;incoming.detourUntil=0;
  incoming.actedSinceEntry=false;
  for(const motion of ['idle','walk','run']) {
   for(const frame of pmdMotion(incoming,motion)?.frames ?? []) pmdImage(frame.page);
@@ -3733,7 +4183,7 @@ function stepSwitch(transition,dt,realDt=dt) {
   const ability=activeAbility(transition.outgoing);
   if(ability==='Regenerator') healActor(transition.outgoing,transition.outgoing.max/3);
   if(ability==='Natural Cure') {transition.outgoing.ailment=null;transition.outgoing.ailmentSource=null;}
-  if(!transition.forced && transition.outgoing.friendly && !selectedWild) restoreOpponentTeam();
+  if(!transition.forced && transition.outgoing.friendly && !selectedWild && !selectedGym) restoreOpponentTeam();
   if(transition.passSubstitute)transition.incoming.substituteHP=transition.passSubstitute;
   if(transition.passStages)transition.incoming.stages=[...transition.passStages];
   transition.stage='send';
@@ -3773,14 +4223,20 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  }
  const hp=stats[0];
  const speedFactor=clamp(0.65+stats[3]/200,0.65,1.7);
- return {name,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
-  !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness'}):null,
-  heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?gymHeldItem(name):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
+ return {name,gymRole:!friendly?selectedGym?.plan?.team[gymSlot]?.[1]:null,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
+  !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness',position:selectedGym.plan?.team[gymSlot]?.[2]}):null,
+  heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
   moveCooldowns:moves.map(skill=>moveRules(skill).cooldown),moveTimers:moves.map(()=>0),
   stages:[0,0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
 }
 let nextGymSwitchCheck=0;
+let gymSwitchNote='';
+const gymRematchRecords={};
+function gymRematchRecord(gym) {
+ try {return Boolean(gymRematchRecords[gym.id]) || playerStorage.getItem(gymSaveKey+'/clean/'+gym.id)==='true';}
+ catch {return Boolean(gymRematchRecords[gym.id]);}
+}
 const arenaBiomes=[
  {name:'Volcanic Basin',type:'Fire',floor:'#35252b',tile:'#402a31',zone:'#a43b25'},
  {name:'Flooded Wasteland',type:'Water',floor:'#233845',tile:'#29414b',zone:'#245e82'},
@@ -3876,7 +4332,7 @@ function tickPillars(dt) {
   const source=(fall.sourceSide?allies:enemies)[fall.sourceSlot];
   for(const victim of fieldActors()) {
    if(!victim || victim.hp<=0 || !inSkill(victim,null,0,fall))continue;
-   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12))*gymDamageMultiplier(source,victim));
+   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12)));
    victim.hp-=dealt;
    recordOpponentDamage(source,victim,dealt);
   }
@@ -3914,6 +4370,7 @@ function terrainMovement(actor,dx,dy,step,navigationTarget,escape=false) {
  if(step<=0)return {dx,dy,step};
  const angle=Math.atan2(dy,dx);
  const probe=56;
+ const detourLocked=actor.detourUntil>clock;
  const hostiles=combatSides()[actor.friendly?1:0];
  // Leave room to approach the intended target while avoiding other opponents.
  const others=hostiles.filter(other=>other!==navigationTarget);
@@ -3934,12 +4391,15 @@ function terrainMovement(actor,dx,dy,step,navigationTarget,escape=false) {
   const openShot=!navigationTarget || rockIntersection(endX,endY,navigationTarget.x,navigationTarget.y)===1;
   const tactical=actor.ai?.style==='Defensive' && cover?14:0;
   const score=tactical+(openShot?8:0)+clear*distance+Math.cos(turn*Math.PI/6)*22+Math.min(64,wallSpace)*0.55-crowd+
-   (turn && Math.sign(turn)===actor.detourSide?5:0);
+   (turn && Math.sign(turn)===actor.detourSide?(detourLocked?19:5):0);
   if(!best || score>best.score)best={dx:(x-actor.x)/distance,dy:(y-actor.y)/distance,
    step:Math.max(0,Math.min(step,clear*distance-0.05)),score,turn};
  }
  if(!best)return {dx,dy,step:0};
- actor.detourSide=Math.sign(best.turn);
+ if(best.turn && (!detourLocked || Math.sign(best.turn)!==actor.detourSide)) {
+  actor.detourSide=Math.sign(best.turn);
+  actor.detourUntil=clock+0.45;
+ }
  return best;
 }
 let happyHourBonus=false;
@@ -3948,6 +4408,13 @@ function prepare() {
  entryHazards=[{},{}];
  fieldMoveExpiry={};
  arenaMap=randomArenaMap();
+ if(selectedGym?.plan) {
+  const biome=arenaBiomes.find(entry=>entry.type===selectedGym.type) ?? arenaBiomes[0];
+  arenaMap={...biome,zones:[],rocks:selectedGym.plan.pillarY.map((y,i)=>({
+   x:[375,480,585][i],y,r:29,hp:24,maxHp:24
+  }))};
+ }
+ gymSwitchNote='';
  damageBuckets=[];lastDpsRender=-1;
  nextGymSwitchCheck=4;
  battleWeather=null;weatherTime=0;battleTerrain=null;terrainTime=0;
@@ -3957,7 +4424,7 @@ function prepare() {
  const difficulty=selectedGym ? gymDifficulty(selectedGym) : null;
  const roster=rogueRun ? rogueRun.enemyRoster.map(member=>member.name) : selectedWild ? [selectedWild.name] : selectedTrainer?.roster.map(member=>member.name) ?? selectedGym?.roster ?? lineup;
  enemies=roster.map((name,index)=>unit(name,sendOut.enemy.x,sendOut.enemy.y,false,
-  difficulty ? (index<selectedGym.aceCount ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,null,index));
+  difficulty ? (gymAceSlot(selectedGym,index) ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,null,index));
  effects = [];
  pendingCasts=[];
  clock = 0;
@@ -3998,7 +4465,7 @@ function renderControls() {
  updateScore();
  updateBattleRosters();
  byId('status').textContent = {
-  setup:selectedWild ? selectedWild.region+' · Choose one Pokémon to battle.' : selectedTrainer ? selectedTrainer.region+' Trainer · Difficulty '+selectedTrainer.tier.label+' · '+selectedTrainer.format+'v'+selectedTrainer.format+(selectedTrainer.format===1?' · Ready to battle.':' · Choose your lead Pokémon.') : selectedGym ? selectedGym.name+' · Choose your lead Pokémon.' : 'Choose your lead Pokémon.',
+  setup:selectedWild ? selectedWild.region+' · Choose one Pokémon to battle.' : selectedTrainer ? selectedTrainer.region+' Trainer · Difficulty '+selectedTrainer.tier.label+' · '+selectedTrainer.format+'v'+selectedTrainer.format+(selectedTrainer.format===1?' · Ready to battle.':' · Choose your lead Pokémon.') : selectedGym ? selectedGym.name+' · Choose your lead Pokémon. '+gymBrief(selectedGym)+' '+arenaMap.name+' · '+arenaMap.rocks.length+' pillars.'+(clearedGyms.includes(selectedGym.id)?' Rematch challenge: win without losing a Pokémon.':'') : 'Choose your lead Pokémon.',
   battle:rogueRun?'Roguelit · Battle '+rogueRun.round:'Tap a healthy teammate on the left to switch Pokémon.',
   draw:'Draw. Neither side won the battle.',
   win:selectedTrainer ? 'Victory! You earned '+selectedTrainer.coins+' coins.' : selectedWild ? 'Wild Pokémon defeated!' : newBadge ? 'Victory! You earned the '+selectedGym.badge+'.'+speedUnlockMessage() : 'Victory! Your team defeated all six opponents.',
@@ -4127,7 +4594,7 @@ function entryAbility(actor,opponent) {
   applyChanges(actor,[[ability==='Intrepid Sword'?2:3,1]]);
   actor.entryUsed=true;
  }
- if(ability==='Screen Cleaner') {actor.guard=0;opponent.guard=0;}
+ if(ability==='Screen Cleaner') {actor.guard=0;opponent.guard=0;clearScreens(actor);clearScreens(opponent);}
 }
 function tryAilment(victim,condition,source) {
  if(source!==victim && victim.safeguardUntil>clock)return false;
@@ -4199,7 +4666,7 @@ function tickStatus(actor,dt) {
   if(!actor[key] || clock<actor[key])continue;
   actor[key]+=1;
   if(activeAbility(actor)==='Magic Guard')continue;
-  const damage=Math.min(actor.hp,Math.max(1,Math.floor(actor.max*fraction))*gymDamageMultiplier(key==='nightmareAt'?actor.ailmentSource:fieldActors().find(member=>member?.friendly!==actor.friendly && member?.hp>0),actor));
+  const damage=Math.min(actor.hp,Math.max(1,Math.floor(actor.max*fraction)));
   actor.hp-=damage;
   if(key==='seedAt') {
    const recipient=fieldActors().find(member=>member?.hp>0 && member.friendly!==actor.friendly);
@@ -4225,7 +4692,7 @@ function tickStatus(actor,dt) {
    const amount=actor.ailment===5?actor.max*0.01:(actor.burnPower ?? 0)*(ability==='Heatproof'?0.5:1);
    if(actor.ailment===5 && ability==='Poison Heal')healActor(actor,actor.max/8);
    else if(ability!=='Magic Guard') {
-    const dealt=Math.min(actor.hp,Math.max(1,Math.round(amount))*gymDamageMultiplier(actor.ailmentSource,actor));
+    const dealt=Math.min(actor.hp,Math.max(1,Math.round(amount)));
     actor.hp-=dealt;
     recordOpponentDamage(actor.ailmentSource,actor,dealt);
    }
@@ -4276,17 +4743,14 @@ function movePower(move,power,actor,victim) {
  }
  return power || 55;
 }
-function gymDamageMultiplier(source,target) {
- return selectedGym && source?.friendly===false && target?.friendly===true ? 2 : 1;
-}
 function scaledBattleDamage(damage) {
  return damage>0 ? Math.max(1,Math.round(damage/8)) : 0;
 }
 function battleDamage(actor,victim,power,multiplier,physical,element,move,critical=false) {
  if(multiplier===0) return 0;
- if(move==='Seismic Toss' || move==='Night Shade') return scaledBattleDamage(actor.level)*gymDamageMultiplier(actor,victim);
- if(move==='Dragon Rage') return scaledBattleDamage(40)*gymDamageMultiplier(actor,victim);
- if(move==='Sonic Boom') return scaledBattleDamage(20)*gymDamageMultiplier(actor,victim);
+ if(move==='Seismic Toss' || move==='Night Shade') return scaledBattleDamage(actor.level);
+ if(move==='Dragon Rage') return scaledBattleDamage(40);
+ if(move==='Sonic Boom') return scaledBattleDamage(20);
  const superEffective=multiplier>1;
  const ability=activeAbility(actor);
  const defender=targetAbility(actor,victim);
@@ -4339,9 +4803,11 @@ function battleDamage(actor,victim,power,multiplier,physical,element,move,critic
  if(weather==='Sun' && ['Water','Fire'].includes(element)) multiplier*=element==='Fire'?1.5:0.5;
  if(arenaBonus(actor,element))multiplier*=1.2;
  if(element==='Fire' && fieldMoveActive('Water Sport') || element==='Electric' && fieldMoveActive('Mud Sport'))multiplier/=3;
+ if(!critical && ability!=='Infiltrator' && !screenBreakers.has(move) &&
+    screenTime(victim,physical?'Reflect':'Light Screen')>0)multiplier*=0.5;
  if(critical) multiplier*=ability==='Sniper'?2.25:1.5;
  const raw=Math.floor((Math.floor(2*actor.level/5)+2)*movePower(move,power,actor,victim)*attack/defense/50)+2;
- return scaledBattleDamage(Math.max(1,Math.round(raw*multiplier*(victim.guard>0 && !critical ? 0.5 : 1))))*gymDamageMultiplier(actor,victim);
+ return scaledBattleDamage(Math.max(1,Math.round(raw*multiplier*(victim.guard>0 && !critical ? 0.5 : 1))));
 }
 function respondToHit(actor,victim,move,element,physical,dealt) {
  const ability=activeAbility(actor);
@@ -4355,7 +4821,7 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
     case 'burn':tryAilment(actor,4,victim);break;
     case 'spikes':
      if(ability!=='Magic Guard') {
-      const damage=Math.min(actor.hp,scaledBattleDamage(Math.floor(actor.max/8))*gymDamageMultiplier(victim,actor));
+      const damage=Math.min(actor.hp,scaledBattleDamage(Math.floor(actor.max/8)));
       actor.hp-=damage;recordOpponentDamage(victim,actor,damage);
      }
      break;
@@ -4364,9 +4830,9 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
    }
   }
   if(['Rough Skin','Iron Barbs'].includes(defender) && ability!=='Magic Guard')
-   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8)))*gymDamageMultiplier(victim,actor));
+   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8))));
   if(defender==='Aftermath' && victim.hp<=0 && ability!=='Damp' && ability!=='Magic Guard')
-   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/4)))*gymDamageMultiplier(victim,actor));
+   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/4))));
   if(Math.random()<0.30) {
    if(contactAilments[defender]) tryAilment(actor,contactAilments[defender],victim);
    if(defender==='Effect Spore' && ![actor.type,extraTypes[actor.name]].includes('Grass'))
@@ -4403,6 +4869,17 @@ const sacrificeProfiles=new Map([
  ['Self-Destruct',{charge:3,radius:1,damage:5}],
 ]);
 
+const screenMoves=new Set(['Reflect','Light Screen']);
+const screenBreakers=new Set(['Brick Break','Psychic Fangs','Raging Bull']);
+function screenKey(actor,move) {
+ return (actor.friendly?'ally:':'enemy:')+move;
+}
+function screenTime(actor,move) {
+ return Math.max(0,(fieldMoveExpiry[screenKey(actor,move)] ?? 0)-clock);
+}
+function clearScreens(actor) {
+ for(const move of screenMoves)delete fieldMoveExpiry[screenKey(actor,move)];
+}
 const pivotMoves=new Set(['U Turn','Volt Switch','Flip Turn','Parting Shot']);
 const selfRecallMoves=new Set([...pivotMoves,'Teleport','Chilly Reception','Baton Pass','Shed Tail']);
 const recallMoveEntryDelay=1;
@@ -4415,6 +4892,8 @@ function recallWithMove(actor,passStages=false,passSubstitute=0) {
 const forcedSwitchMoves=new Set(['Whirlwind','Roar','Dragon Tail','Circle Throw']);
 function reserveMatchup(actor) {
  const foes=combatSides()[actor.friendly?1:0];
+ const entryCost=entryDamageFraction(actor,entryHazards[actor.friendly?0:1]);
+ if(entryCost>0 && actor.hp<=Math.max(1,Math.round(actor.max*entryCost)))return -100;
  const matchup=foes.map(foe=>{
   const offense=Math.max(.25,...actor.moves.filter(move=>!moveCatalog[move][4])
    .map(move=>effectiveness(moveCatalog[move][0],foe)));
@@ -4422,7 +4901,9 @@ function reserveMatchup(actor) {
    .map(move=>effectiveness(moveCatalog[move][0],actor)));
   return Math.log2(offense/threat);
  });
- return 2*actor.hp/actor.max+matchup.reduce((sum,value)=>sum+value,0)/Math.max(1,foes.length);
+ const ready=actor.moves.some((move,slot)=>!moveCatalog[move][4] && actor.moveTimers[slot]<=1 &&
+  foes.some(foe=>effectiveness(moveCatalog[move][0],foe)>1));
+ return 2*actor.hp/actor.max-entryCost*4+(ready?0.35:0)+matchup.reduce((sum,value)=>sum+value,0)/Math.max(1,foes.length);
 }
 function forcedSwitchOptions(victim,defender) {
  if(victim.hp<=0 || defender==='Suction Cups' || victim.ingrainAt)return [];
@@ -4448,7 +4929,10 @@ function forceSwitch(victim,defender,passStages=false,passSubstitute=0,chooseRes
   if(passSubstitute)transition.passSubstitute=passSubstitute;
   if(passStages)transition.passStages=[...victim.stages];
   if(victim.friendly){playerSwitch=transition;selected=allies.indexOf(incoming);}
-  else enemySwitch=transition;
+  else {
+   enemySwitch=transition;
+   if(selectedGym && chooseReserve)noteGymSwitch(incoming,'after a pivot move');
+  }
  }
  return true;
 }
@@ -4532,11 +5016,29 @@ function hazardMove(name,description) {
  const side=actor=>entryHazards[actor.friendly?1:0];
  return {description,score:actor=>{
   const reserves=(actor.friendly?enemies:allies).filter(member=>member.hp>0 && !fieldActors().includes(member));
-  return reserves.length && (side(actor)[name] ?? 0)<hazardCaps[name]?40:0;
+  const hazards=side(actor);
+  if(!reserves.length || (hazards[name] ?? 0)>=hazardCaps[name])return 0;
+  if(name==='Spikes' || name==='Stealth Rock') {
+   const projected={...hazards,[name]:1};
+   return reserves.reduce((score,member)=>{
+    const fraction=entryDamageFraction(member,projected)-entryDamageFraction(member,hazards);
+    return score+fraction*75+(fraction>0 && member.hp<=Math.round(member.max*fraction)?14:0);
+   },0);
+  }
+  return 10+reserves.filter(member=>isGrounded(member)).length*7;
  },apply:actor=>{
   const hazards=side(actor);
   hazards[name]=Math.min(hazardCaps[name],(hazards[name] ?? 0)+1);
  }};
+}
+function entryDamageFraction(actor,hazards) {
+ if(activeAbility(actor)==='Magic Guard')return 0;
+ const fraction=type=>{
+  const matchup=effectiveness(type,actor);
+  return matchup===0?0:matchup<1?0.05:matchup>1?0.15:0.10;
+ };
+ return (isGrounded(actor) && hazards.Spikes?fraction('Ground'):0)+
+  (hazards['Stealth Rock']?fraction('Rock'):0);
 }
 function applyEntryHazards(actor,opponent) {
  const hazards=entryHazards[actor.friendly?0:1];
@@ -4546,15 +5048,9 @@ function applyEntryHazards(actor,opponent) {
   else tryAilment(actor,5,opponent);
  }
  if(grounded && hazards['Sticky Web'])applyChanges(actor,[[6,-1]],opponent);
- if(activeAbility(actor)==='Magic Guard')return;
- const hazardFraction=type=>{
-  const matchup=effectiveness(type,actor);
-  return matchup===0?0:matchup<1?0.05:matchup>1?0.15:0.10;
- };
- const spikes=grounded && hazards.Spikes?hazardFraction('Ground'):0;
- const rock=hazards['Stealth Rock']?hazardFraction('Rock'):0;
- if(spikes+rock>0) {
-  const damage=Math.min(actor.hp,Math.max(1,Math.round(actor.max*(spikes+rock))));
+ const fraction=entryDamageFraction(actor,hazards);
+ if(fraction>0) {
+  const damage=Math.min(actor.hp,Math.max(1,Math.round(actor.max*fraction)));
   actor.hp-=damage;
   recordOpponentDamage(opponent,actor,damage);
  }
@@ -4979,13 +5475,21 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
   if(move==='Tailwind')return recipients.reduce((score,member)=>
    score+14*Math.min(2,Math.max(0,battleStageCap-member.stages[6])),0);
-  if(move==='Reflect' || move==='Light Screen') {
+  if(screenMoves.has(move)) {
+   if(screenTime(actor,move)>0)return 0;
    const category=move==='Reflect'?2:3;
    const foes=combatSides()[actor.friendly?1:0];
    return recipients.reduce((score,member)=>score+(member.guard>0?0:foes.reduce((risk,foe)=>{
     const distance=Math.hypot(foe.x-member.x,foe.y-member.y);
-    const threats=foe.moves.map(moveRules).filter(rule=>rule.category===category && distance<rule.range+65);
-    return risk+(threats.length?Math.min(25,12+threats.length*4):0);
+    const threats=foe.moves.flatMap((attack,slot)=>{
+     const rule=moveRules(attack);
+     if(rule.category!==category || foe.moveTimers[slot]>2 ||
+        distance>arenaMoveGeometry(attack,rule).range+150)return [];
+     return [battleDamage(foe,member,moveCatalog[attack][1],effectiveness(moveCatalog[attack][0],member),
+      category===2,moveCatalog[attack][0],attack)];
+    });
+    const damage=Math.max(0,...threats);
+    return risk+Math.min(45,damage/member.hp*65)+(damage>=member.hp && damage/2<member.hp?30:0);
    },0)),0);
   }
   const guard=guardMoves.has(move) && recipients.some(member=>!member.guard) && target.charge<0.35 && gap<90;
@@ -5114,13 +5618,14 @@ function dodgeSkill(actor,dt) {
   (!cast.flight || (actor.x-cast.line.x)*cast.line.dx+(actor.y-cast.line.y)*cast.line.dy>=cast.travel-cast.line.radius))
   .map(projectedHazard);
  const hits=(point,cast)=>inSkill(point,cast.center,cast.radius,cast.line,cast.roaming);
- const hazard=hazards.find(cast=>hits(actor,cast));
+ const impact=cast=>cast.flight?Math.max(0,((actor.x-cast.line.x)*cast.line.dx+
+  (actor.y-cast.line.y)*cast.line.dy-cast.travel)/460):cast.roaming?0.25:cast.remaining;
+ const hazard=hazards.filter(cast=>hits(actor,cast)).sort((a,b)=>impact(a)-impact(b))[0];
  if(!hazard)return false;
  const center=hazard.line?nearestLinePoint(actor,hazard.line):hazard.center;
  const heading=Math.atan2(actor.y-center.y,actor.x-center.x);
  const pace=actor.pace*stageFactor(actor,6)*1.22;
- const time=hazard.flight?Math.max(0,((actor.x-hazard.line.x)*hazard.line.dx+
-  (actor.y-hazard.line.y)*hazard.line.dy-hazard.travel)/460):hazard.roaming ? .25 : hazard.remaining;
+ const time=impact(hazard);
  let best=null;
  for(const turn of [0,1,-1,2,-2,3,-3,4]) {
   const angle=heading+turn*Math.PI/4;
@@ -5134,7 +5639,6 @@ function dodgeSkill(actor,dt) {
    break;
   }
  }
- if(best && best.distance/pace<time-.22 && !hazard.roaming)return false;
  if((!best || best.distance/pace>time) && tryDashDodge(actor,hazard.original ?? hazard,heading))return true;
  if(!best) {
   const route=retreatRoute(actor,center,combatSides()[actor.friendly?1:0]);
@@ -5209,7 +5713,7 @@ function escapeCrowding(actor,opponents,dt) {
  const clear=point=>movementClearance(actor,actor.x,actor.y,point.x,point.y)===1;
  if(!actor.escapeGoal || !clear(actor.escapeGoal)) {
   const points=[];
-  for(const distance of [55,105,165])for(let direction=0;direction<16;direction++) {
+  for(const distance of [28,55,105,165])for(let direction=0;direction<16;direction++) {
    const angle=direction*Math.PI/8;
    const x=clamp(actor.x+Math.cos(angle)*distance,28,canvas.width-28);
    const y=clamp(actor.y+Math.sin(angle)*distance,28,canvas.height-28);
@@ -5220,7 +5724,13 @@ function escapeCrowding(actor,opponents,dt) {
   }
   actor.escapeGoal=points.sort((a,b)=>b.score-a.score)[0] ?? null;
  }
- if(!actor.escapeGoal)return false;
+ if(!actor.escapeGoal) {
+  const nearest=nearby.sort((a,b)=>Math.hypot(a.x-actor.x,a.y-actor.y)-Math.hypot(b.x-actor.x,b.y-actor.y))[0];
+  const route=nearest?retreatRoute(actor,nearest,opponents):null;
+  if(!route)return false;
+  moveActor(actor,route.dx,route.dy,42,dt,true);
+  return true;
+ }
  const dx=actor.escapeGoal.x-actor.x,dy=actor.escapeGoal.y-actor.y;
  const distance=Math.hypot(dx,dy);
  if(distance<20){actor.escapeUntil=0;actor.crowdedFor=0;actor.escapeGoal=null;return false;}
@@ -5260,8 +5770,14 @@ function act(actor, opponents, dt) {
   const separation = centerDistance-bodyRadius(actor)-bodyRadius(opponent);
   const preference=targetPreference(actor,opponent,separation);
   const covered=rockIntersection(actor.x,actor.y,opponent.x,opponent.y)<1;
+  const previous=battleActorId(opponent)===actor.committedTarget;
+  const committed=previous?12:0;
+  const pressure=opponent.attack>0?8:0;
+  const usable=actor.moves.some(move=>!moveCatalog[move][4] &&
+   !moveRestricted(actor,move) && tacticalMoveScore(actor,opponent,move,moveRules(move),separation)>0);
+  const preferenceWeight=['Type weakness','Lowest HP','Highest HP'].includes(actor.ai?.target)?40:1;
   const rank=preference<=-1e6?preference:!covered && readyKnockout(actor,opponent,separation)?-1e5:
-   !covered && battleActorId(opponent)===actor.committedTarget?-1e4:preference+(covered?80:0);
+   preference*preferenceWeight+(covered?65:0)+(usable?0:160)-committed-pressure;
   if(rank<targetRank || (rank===targetRank && separation<gap)) {
    target=opponent;gap=separation;distance=centerDistance;targetRank=rank;
   }
@@ -5286,7 +5802,7 @@ function act(actor, opponents, dt) {
   const move=actor.moves[slot];
   if(moveRestricted(actor,move))continue;
   const rules=moveRules(move);
-  const {shape,selfCentered,range}=arenaMoveGeometry(move,rules);
+  const {shape,selfCentered,range,warning}=arenaMoveGeometry(move,rules);
   const remaining=rules.scope==='ally' ? 0 : Math.max(0,gap-range);
   const score=tacticalMoveScore(actor,target,move,rules,gap);
   if(score>0 && !moveCatalog[move][4]) {
@@ -5303,7 +5819,17 @@ function act(actor, opponents, dt) {
   const rangedBias=actor.ai?.target==='Ranged attacks' && range>=90 && rules.scope!=='ally'?1.65:1;
   const positionBias=preferredGap===null || rules.scope==='ally'?1:
    close?(range<=30?1.35:1):1/(1+Math.max(0,preferredGap-range)/100);
-  const value=score*bias*rangedBias*positionBias*[0.4,1,2.5][preference]/(1+remaining/48);
+  const obstruction=rules.scope==='ally' || selfCentered?null:firstPillar(actor.x,actor.y,target.x,target.y);
+  const coverCost=obstruction && !(obstruction.rock.hp>0 && obstruction.rock.hp<=8)?65:0;
+  const windup=shape || rules.radius?warning:0;
+  const targetPace=target.pace*stageFactor(target,6);
+  const escapeRisk=rules.scope==='ally' || shape==='dash'?0:windup*targetPace/(range+75);
+  const gymSetup=selectedGym && ['lead','support','ace'].includes(actor.gymRole) &&
+   gymTactics[selectedGym.plan.tactic].includes(move);
+  const gymPriority=gymSetup?1.65:
+   actor.gymRole==='ace' && move==='Roar'?1.35:1;
+  const value=score*bias*rangedBias*positionBias*gymPriority*[0.4,1,2.5][preference]/
+   ((1+(remaining+coverCost)/48)*(1+escapeRisk));
   if(!choice || value>choice.value) choice={slot,move,rules,shape,range,selfCentered,remaining,value};
  }
  if(!choice && !usableAttack) {
@@ -5358,12 +5884,19 @@ function act(actor, opponents, dt) {
   return;
  }
  if(!choice || actor.charge>0 || remaining>0.01) return;
- const cover=choice.rules.scope!=='ally' && firstPillar(actor.x,actor.y,target.x,target.y);
+ const cover=choice.rules.scope!=='ally' && !choice.selfCentered && firstPillar(actor.x,actor.y,target.x,target.y);
  const strikeCover=cover && cover.rock.hp>0 && !moveCatalog[choice.move][4] && !sacrificeProfiles.has(choice.move) &&
   (cover.rock.hp<=8 || inSkill(target,null,0,pillarPath(cover.rock,actor)));
  if(cover && !strikeCover && distance>1) {
   const dx=(target.x-actor.x)/distance,dy=(target.y-actor.y)/distance;
-  moveActor(actor,dx,dy,Math.max(24,distance),dt,true,target);
+  const lane=[1,-1].map(side=>{
+   const x=clamp(actor.x-dy*side*65,28,canvas.width-28);
+   const y=clamp(actor.y+dx*side*65,28,canvas.height-28);
+   return {x,y,distance:Math.hypot(x-actor.x,y-actor.y)};
+  }).find(point=>point.distance>8 && movementClearance(actor,actor.x,actor.y,point.x,point.y)===1 &&
+   !firstPillar(point.x,point.y,target.x,target.y));
+  if(lane)moveActor(actor,(lane.x-actor.x)/lane.distance,(lane.y-actor.y)/lane.distance,lane.distance,dt,true,target);
+  else moveActor(actor,dx,dy,Math.max(24,distance),dt,true,target);
   return;
  }
  const {slot,move,rules,shape,range,selfCentered}=choice;
@@ -5429,6 +5962,11 @@ function act(actor, opponents, dt) {
   playSkillSound(move,'release');
   if(weatherMoves[move]) setWeather(weatherMoves[move]);
   if(terrainMoves[move]) setTerrain(terrainMoves[move]);
+  if(screenMoves.has(move)) {
+   fieldMoveExpiry[screenKey(actor,move)]=clock+14;
+   effect(actor,move,1,{status:true});
+   return;
+  }
   const recipients=supportRecipients(actor,move,rules);
   const thief=fieldActors().find(member=>member?.hp>0 && member.friendly!==actor.friendly && member.snatchUntil>clock);
   const canSteal=move==='Tailwind' || rules.changes.some(([,change])=>change>0) || skillHealingPercent(move,rules)>0;
@@ -5596,6 +6134,11 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
    else if(defender==='Flash Fire') victim.flashFire=true;
    effect(victim,0,0,{impactOnly:Boolean(cast)});
    continue;
+  }
+  if(screenBreakers.has(move) && actor.friendly!==victim.friendly &&
+     [...screenMoves].some(screen=>screenTime(victim,screen)>0)) {
+   clearScreens(victim);
+   effect(victim,'Screens cleared',1,{impactOnly:true});
   }
   if(victim.substituteHP>0 && actor.friendly!==victim.friendly && !flags.includes(9) && attacker!=='Infiltrator') {
    if(!status)victim.substituteHP=Math.max(0,victim.substituteHP-battleDamage(actor,victim,power,multiplier,rules.category!==3,element,move));
@@ -5853,14 +6396,42 @@ function gymMatchup(actor,opponent) {
  return (gymOffense(actor,opponent)-gymOffense(opponent,actor)*0.9)/100+
   actor.hp/actor.max*0.75-(actor.ailment?0.35:0);
 }
+function gymSetupReason(reserve,opponent) {
+ const {tactic,aceHealth}=selectedGym.plan;
+ if(aceHealth && opponent.hp/opponent.max>aceHealth)return '';
+ if(tactic==='hazards' && Object.keys(entryHazards[0]).length)return 'with entry hazards in place';
+ if(tactic==='screens' && [...screenMoves].some(move=>screenTime(reserve,move)>4))return 'while the screen is active';
+ const weather={rain:'Rain',sun:'Sun',sand:'Sand',snow:'Snow'}[tactic];
+ if(weather && abilityWeather()===weather && weatherTime>4)return 'while '+weather.toLowerCase()+' is active';
+ if(tactic==='boost' && opponent.hp/opponent.max<0.5)return 'to set up against a weakened opponent';
+ if(tactic==='disruption' && opponent.ailment)return 'to pressure a Pokémon with a status condition';
+ if(tactic==='pivot' && gymOffense(opponent,reserve)<85)return 'to take a favorable matchup';
+ return '';
+}
 function gymReserve(opponent,outgoing) {
  let best=null,bestScore=-Infinity;
  for(const reserve of enemies) {
   if(reserve===outgoing || reserve.hp<=0)continue;
-  const score=gymMatchup(reserve,opponent);
+  const entryCost=entryDamageFraction(reserve,entryHazards[1]);
+  if(entryCost>0 && reserve.hp<=Math.max(1,Math.round(reserve.max*entryCost)))continue;
+  const ready=reserve.moves.some((move,slot)=>!moveCatalog[move][4] && reserve.moveTimers[slot]<=0 &&
+   effectiveness(moveCatalog[move][0],opponent)>1);
+  const setup=gymSetupReason(reserve,opponent);
+  const ace=reserve.gymRole==='ace';
+  const exposed=opponent.hp/opponent.max<(selectedGym.plan.aceHealth ?? 0.45) || gymMatchup(reserve,opponent)>1.4;
+  const aceTiming=ace?(setup?1.35:!exposed?-0.85:0):0;
+  const score=gymMatchup(reserve,opponent)+aceTiming+(ready?0.35:0)-entryCost*3;
   if(score>bestScore){best=reserve;bestScore=score;}
  }
  return best;
+}
+function noteGymSwitch(reserve,reason) {
+ gymSwitchNote=selectedGym.name+' sends '+reserve.name+' '+reason+'.';
+ byId('status').textContent=gymSwitchNote;
+}
+function sendGymReserve(outgoing,reserve,reason) {
+ enemySwitch=startSwitch(outgoing,reserve);
+ noteGymSwitch(reserve,reason);
 }
 function considerGymSwitch() {
  if(!selectedGym || fieldMoveActive('Fairy Lock') || activeEnemy?.ingrainAt || activeEnemy?.trappedUntil>clock || activeEnemy?.octolockUntil>clock || enemySwitch || playerSwitch || !(activePlayer?.hp>0) || !(activeEnemy?.hp>0) ||
@@ -5872,11 +6443,15 @@ function considerGymSwitch() {
  const current=gymMatchup(activeEnemy,activePlayer);
  const advantage=gymMatchup(reserve,activePlayer)-current;
  const underPressure=current<0.65 || activeEnemy.hp/activeEnemy.max<=0.3 || activeEnemy.ailment;
- if(advantage<0.7 || !underPressure)return;
- enemySwitch=startSwitch(activeEnemy,reserve);
+ const setup=reserve.gymRole==='ace' && gymSetupReason(reserve,activePlayer);
+ const plannedAce=setup && advantage>0.1 &&
+  (['screens','rain','sun','sand','snow'].includes(selectedGym.plan.tactic) || underPressure);
+ if(!plannedAce && (advantage<0.7 || !underPressure))return;
+ sendGymReserve(activeEnemy,reserve,plannedAce?setup:'to answer '+activePlayer.name);
  nextGymSwitchCheck=clock+10;
 }
 const battleTimeLimit=300;
+const firstBadgeTimeLimit=420;
 function compareTeamHP(first,second) {
  const total=(team,key)=>team.reduce((sum,actor)=>sum+Math.max(0,actor[key]),0);
  return Math.sign(total(first,'hp')*total(second,'max')-total(second,'hp')*total(first,'max'));
@@ -5890,20 +6465,24 @@ function advance(dt,realDt=dt) {
  for(const actor of sides[0])actor.enteredBattle=true;
  if(sides.some(side=>!side.length)) lastDamageClock+=dt;
  advanceCombat(dt,realDt,sides);
+ if(selectedGym)for(const actor of allies)if(actor.hp<=0)actor.faintedThisBattle=true;
  awardKnockoutEVs();
  refreshBerriesAfterKnockout();
  const playerReserve=allies.find(actor=>actor.hp>0);
  const enemyReserve=enemies.find(actor=>actor.hp>0);
- const timedOut=clock>=battleTimeLimit-1e-8 && playerReserve && enemyReserve;
+ const firstBadge=selectedGym && !clearedGyms.includes(selectedGym.id);
+ const limit=firstBadge?firstBadgeTimeLimit:battleTimeLimit;
+ const timedOut=clock>=limit-1e-8 && playerReserve && enemyReserve;
  if(!playerReserve || !enemyReserve || timedOut) {
-  const result=timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
+  const result=timedOut && firstBadge?-1:timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
   phase=result>0?'win':result<0?'loss':'draw';
   if(rogueRun) {finishRogueRound(phase==='win');return;}
   if(phase==='loss') {
    const detail=applyDefeatRewards();
+   const gymAdvice=selectedGym ? [gymSwitchNote,selectedGym.plan?.tip].filter(Boolean).join(' ') : '';
    openMenu();
    const notice=byId('knockout-notice');
-   notice.textContent=[timedOut?'Time expired. Your opponent had more team HP remaining.':'All your pokemons have been knocked out!',detail].filter(Boolean).join(' ');
+   notice.textContent=[timedOut?(firstBadge?'Time expired. Defeat the entire gym team to earn the badge.':'Time expired. Your opponent had more team HP remaining.'):'Your team was knocked out.',gymAdvice,detail].filter(Boolean).join(' ');
    void notice.offsetWidth;
    notice.hidden=false;
    playEvolutionScenes();
@@ -5918,6 +6497,11 @@ function advance(dt,realDt=dt) {
   }
   const stones=phase==='win' && (selectedGym || selectedTrainer)?evolveStoneHolders():[];
   renderControls();
+  if(phase==='win' && selectedGym && !firstBadge && !timedOut && allies.every(actor=>actor.hp>0 && !actor.faintedThisBattle)) {
+   gymRematchRecords[selectedGym.id]=true;
+   try {playerStorage.setItem(gymSaveKey+'/clean/'+selectedGym.id,'true');} catch {}
+   byId('status').textContent+=' Rematch challenge complete: no Pokémon fainted.';
+  }
   if(timedOut)byId('status').textContent=phase==='draw'?'Time expired. Team HP percentages are tied.':'Time expired. You won on remaining team HP. '+byId('status').textContent;
   if(stones.length) {
    cancelWildRepeat();
@@ -5942,8 +6526,10 @@ function advance(dt,realDt=dt) {
   if(!enemySwitch && activeEnemy?.hp<=0) {
    const opponent=playerSwitch?.incoming ?? activePlayer;
    const replacement=selectedGym && opponent?.hp>0?gymReserve(opponent,activeEnemy) ?? enemyReserve:enemyReserve;
-   enemySwitch=startSwitch(activeEnemy,replacement);
-   if(selectedGym)nextGymSwitchCheck=clock+6;
+   if(selectedGym) {
+    sendGymReserve(activeEnemy,replacement,(replacement.gymRole==='ace' && opponent?.hp>0 && gymSetupReason(replacement,opponent)) || 'after the knockout');
+    nextGymSwitchCheck=clock+6;
+   } else enemySwitch=startSwitch(activeEnemy,replacement);
   } else considerGymSwitch();
  }
  updateScore();
@@ -6226,15 +6812,20 @@ function renderBattleDps(time,buckets,mirror=false) {
 let onlineMatchDuration=0;
 function paintArenaWeather() {
  const elapsed=phase==='online-battle'?onlineMatchDuration:phase==='setup'?0:clock ?? 0;
- const seconds=Math.min(battleTimeLimit,Math.floor(elapsed+1e-8));
+ const seconds=Math.min(phase!=='online-battle' && selectedGym && !clearedGyms.includes(selectedGym.id)?firstBadgeTimeLimit:battleTimeLimit,Math.floor(elapsed+1e-8));
  const duration='Match Duration: '+Math.floor(seconds/3600)+'h, '+Math.floor(seconds%3600/60)+'m, '+seconds%60+'s';
  const timer=byId('arena-duration');
  if(timer.textContent!==duration)timer.textContent=duration;
  const weather=battleWeather;
  const effective=abilityWeather();
  const conditions=byId('arena-conditions');
- const label=(arenaMap?arenaMap.name+' · '+arenaMap.type+' zones: +20% move damage and matching Pokémon speed':'')+
-  '';
+ const arenaLabel=arenaMap?arenaMap.name+(arenaMap.zones.length?
+  ' · '+arenaMap.type+' zones: +20% move damage and matching Pokémon speed':' · Fixed pillar layout'):'';
+ const screenLabels=phase==='online-battle'?[]:[true,false].flatMap(friendly=>[...screenMoves].flatMap(move=>{
+  const time=screenTime({friendly},move);
+  return time>0?[(friendly?'Your ':'Enemy ')+move+' '+Math.ceil(time)+'s']:[];
+ }));
+ const label=[arenaLabel,...screenLabels].filter(Boolean).join(' · ');
  const weatherLabel=weather?weather+': '+Math.ceil(weatherTime)+'s'+(effective?'':' (suppressed)'):'';
  const display=byId('arena-weather');
  if(display.textContent!==weatherLabel)display.textContent=weatherLabel;
