@@ -1714,7 +1714,7 @@ function evolveOwnedPokemon(name,evolved,stone=null) {
  return name+' evolved into '+evolved+'!';
 }
 function evolveStoneHolders() {
- const eligible=allies.filter(actor=>actor.enteredBattle).map(actor=>actor.name);
+ const eligible=allies.filter(actor=>actor.enteredBattle).map(actor=>actor.originalName ?? actor.name);
  const pending=eligible.map(name=>[name,wildProgress.held[name]]).filter(([name,item])=>stoneTarget(name,item));
  return pending.flatMap(([name,item])=>wildProgress.held[name]===item && wildProgress.items[item]>0?
   [evolveOwnedPokemon(name,stoneTarget(name,item),item)]:[]);
@@ -1736,7 +1736,7 @@ function playEvolutionScenes(done=()=>{}) {
  setTimeout(()=>{
   title.textContent=oldName+' evolved into '+newName+'!';
   finish.disabled=false;finish.focus();
- },typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches?0:2600);
+ },typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches?0:5400);
 }
 function gainWildExperience(name,xp) {
  const entry=ownedPokemon(name);
@@ -1909,7 +1909,7 @@ function wildVictoryExperience(level) {return Math.floor((25+level*6)/2+level*le
 function applyDefeatRewards() {
  if(selectedWild) {
   const xp=Math.floor(wildVictoryExperience(selectedWild.level)/10);
-  const growth=allies.flatMap(actor=>gainWildExperience(actor.name,xp));
+  const growth=allies.flatMap(actor=>gainWildExperience(actor.originalName ?? actor.name,xp));
   return ['Your team gained '+xp+' XP per Pokémon.',...growth].join(' ');
  }
  if(selectedTrainer) {
@@ -1922,6 +1922,7 @@ function applyDefeatRewards() {
 }
 function finishWildBattle(timedOut=false) {
  const enemy=activeEnemy ?? enemies[0];
+ const wildName=enemy.originalName ?? enemy.name;
  const gained=wildVictoryExperience(enemy.level);
  wildProgress.wins++;
  const rewards=[];
@@ -1939,11 +1940,11 @@ function finishWildBattle(timedOut=false) {
  const finisher=enemy.lastDamageBy?.friendly ? enemy.lastDamageBy : activePlayer;
  const awards=allies.map(actor=>{
   const share=actor===finisher ? 100 : actor.damagedOpponent ? 50 : 25;
-  return {name:actor.name,share,xp:Math.floor(gained*share/100)};
+  return {name:actor.originalName ?? actor.name,share,xp:Math.floor(gained*share/100)};
  });
  const growth=awards.flatMap(award=>gainWildExperience(award.name,award.xp));
  growth.push(...evolveStoneHolders());
- wildResult={name:enemy.name,level:enemy.level,duration:clock,region:selectedWild.region,tier:selectedWild.tier,
+ wildResult={name:wildName,level:enemy.level,duration:clock,region:selectedWild.region,tier:selectedWild.tier,
   message:[finisher.name+' earned '+gained+' XP.',rewardMessage,...allies.flatMap(actor=>actor.evRewards ?? []),...growth].filter(Boolean).join(' '),awards,timedOut,resolved:timedOut};
  captureMenu=false;
  difficultyMenu=false;
@@ -2845,7 +2846,23 @@ function combatSides() {
   [[playerSwitch?null:activePlayer],[enemySwitch?null:activeEnemy]];
  return sides.map(side=>side.filter(actor=>actor?.hp>0));
 }
+function transformDitto(actor,target) {
+ if(actor.name!=='Ditto' || actor.originalName || !target || target.name==='Ditto')return;
+ const ratio=actor.hp/actor.max;
+ actor.originalName='Ditto';
+ for(const key of ['name','type','ability','pace','cooldown'])actor[key]=target[key];
+ actor.profile=structuredClone(target.profile);
+ for(const key of ['stats','moves','moveCooldowns'])actor[key]=[...target[key]];
+ actor.moveTimers=actor.moves.map(()=>0);
+ actor.max=actor.stats[0];
+ actor.hp=Math.max(1,Math.ceil(actor.max*ratio));
+}
 function actBattleFields(sides,dt) {
+ for(const [side,team] of sides.entries())for(const actor of team) {
+  const firstOpponent=sides[1-side].filter(foe=>foe.hp>0).reduce((nearest,foe)=>
+   !nearest || Math.hypot(foe.x-actor.x,foe.y-actor.y)<Math.hypot(nearest.x-actor.x,nearest.y-actor.y)?foe:nearest,null);
+  transformDitto(actor,firstOpponent);
+ }
  const first=Math.floor(clock*60)%2;
  for(const side of [first,1-first]) {
   const foes=sides[1-side];
@@ -3025,8 +3042,8 @@ function updateActivePanels(onlineFields) {
   const actor=shown[index];
   const node=panel.node ?? byId(panel.id);
   if(!actor) {if(onlineFields){node.replaceChildren();panel.actor=null;}return;}
-  if(panel.actor!==actor) {
-   panel.actor=actor;
+  if(panel.actor!==actor || panel.form!==actor.name) {
+   panel.actor=actor;panel.form=actor.name;
    const header=element('div',null,'active-header');
    const heading=element('div',null,'active-heading');
    panel.activity=element('small',panel.label);
@@ -3133,7 +3150,7 @@ function updateBattleRosters() {
   if(friendly && slots) card.setAttribute('aria-pressed',String(actor.hp>0 && slots[recallSlot]?.actor===actor));
   let experience='';
   if(xp) {
-   const progress=ownedPokemon(actor.name);
+   const progress=ownedPokemon(actor.originalName ?? actor.name);
    const max=actor.level>=100 ? 1 : experienceNeeded(actor.level);
    const value=actor.level>=100 ? 1 : Math.min(max,progress?.xp ?? 0);
    experience=actor.level>=100 ? 'Max level' : value+'/'+max+' XP to next level';
@@ -3360,7 +3377,10 @@ function terrainMovement(actor,dx,dy,step,navigationTarget) {
   const wallSpace=Math.min(endX-28,canvas.width-28-endX,endY-28,canvas.height-28-endY);
   const crowd=others.reduce((penalty,other)=>penalty+
    Math.max(0,90-Math.hypot(endX-other.x,endY-other.y))*0.45,0);
-  const score=clear*distance+Math.cos(turn*Math.PI/6)*22+Math.min(64,wallSpace)*0.55-crowd+
+  const cover=others.some(other=>firstPillar(other.x,other.y,endX,endY)?.rock.cover);
+  const openShot=!navigationTarget || rockIntersection(endX,endY,navigationTarget.x,navigationTarget.y)===1;
+  const tactical=actor.ai?.style==='Defensive' && cover?14:0;
+  const score=tactical+(openShot?8:0)+clear*distance+Math.cos(turn*Math.PI/6)*22+Math.min(64,wallSpace)*0.55-crowd+
    (turn && Math.sign(turn)===actor.detourSide?5:0);
   if(!best || score>best.score)best={dx:(x-actor.x)/distance,dy:(y-actor.y)/distance,
    step:Math.max(0,Math.min(step,clear*distance-0.05)),score,turn};
@@ -4399,9 +4419,9 @@ function awardKnockoutEVs() {
   if(foe.hp>0 || foe.evAwarded)continue;
   foe.evAwarded=true;
   const winner=foe.lastDamageBy;
-  const yieldByStat=pokemonEVYields[dex[foe.name][0]];
-  if(!winner?.friendly || !ownedPokemon(winner.name) || !yieldByStat)continue;
-  const gains=addEVs(profileFor(winner.name),yieldByStat);
+  const yieldByStat=pokemonEVYields[dex[foe.originalName ?? foe.name][0]];
+  if(!winner?.friendly || !ownedPokemon(winner.originalName ?? winner.name) || !yieldByStat)continue;
+  const gains=addEVs(profileFor(winner.originalName ?? winner.name),yieldByStat);
   if(gains.some(Boolean)) {
    changed=true;
    (winner.evRewards ??=[]).push(foe.name+' awarded '+gains.map((gain,i)=>gain?'+'+gain+' '+statLabels[i]+' EV':'').filter(Boolean).join(', ')+' to '+winner.name+'.');
