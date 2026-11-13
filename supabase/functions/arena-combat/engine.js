@@ -2287,6 +2287,11 @@ function stopBattleMusic() {
  }
  musicTrack=null;
 }
+function savedVolume(kind) {
+ const value=playerStorage.getItem('pokemon-arena-'+kind+'-volume');
+ return value!==null && Number.isFinite(Number(value))?Math.max(0,Math.min(1,Number(value))):1;
+}
+let bgmVolume=savedVolume('bgm'),sfxVolume=savedVolume('sfx');
 function musicNote(output,voice,midi,time,duration,volume) {
  const oscillator=musicContext.createOscillator();
  const envelope=musicContext.createGain();
@@ -2306,7 +2311,7 @@ function playVictoryMusic(kind) {
  stopBattleMusic();
  if(!battleMusicEnabled || !window.Audio) return;
  const audio=new window.Audio(victoryRecordings[kind]);
- audio.volume=0.35;
+ audio.volume=0.35*bgmVolume;
  musicTrack={audio};
  audio.play().catch(()=>{});
 }
@@ -2319,7 +2324,7 @@ function startBattleMusic() {
  if(recording) {
   const audio=new window.Audio(recording);
   audio.loop=true;
-  audio.volume=0.35;
+  audio.volume=0.35*bgmVolume;
   musicTrack={audio};
   audio.play().catch(()=>{});
   return;
@@ -2330,7 +2335,7 @@ function startBattleMusic() {
   musicContext ??=new Audio();
   musicContext.resume().catch(()=>{});
   const output=musicContext.createGain();
-  output.gain.value=0.22;
+  output.gain.value=0.22*bgmVolume;
   output.connect(musicContext.destination);
   const stepTime=30/theme.bpm;
   let next=musicContext.currentTime+0.04;
@@ -2390,14 +2395,14 @@ const moveSoundSignatures=new Map(Object.keys(moveCatalog).map((move,index,all)=
 }));
 function playSkillSound(move,event,shape) {onlineSounds.push({move,event,shape,clock});}
 function browserSkillSound(move,event,shape) {
- if(!skillSoundEnabled || musicContext?.state!=='running') return;
+ if(!skillSoundEnabled || !sfxVolume || musicContext?.state!=='running') return;
  const signature=moveSoundSignatures.get(move);
  if(!signature) return;
  const {high,low,voice,tail,accent,length}=signature;
  const duration=(event==='warning'?0.075:event==='impact'?0.095:shape==='beam'?0.28:0.17)*length;
  const start=event==='impact'?low*0.9:event==='warning'?high*0.64:high;
  const end=event==='warning'?high:event==='impact'?Math.max(32,low*0.52):low;
- const volume=event==='warning'?0.018:event==='impact'?0.065:0.052;
+ const volume=(event==='warning'?0.018:event==='impact'?0.065:0.052)*sfxVolume;
  const time=musicContext.currentTime;
  skillSoundVoice(event==='impact'?'triangle':voice,start,end,duration,volume,time);
  if(event!=='warning') {
@@ -3252,12 +3257,22 @@ function arenaBonus(actor,type) {
   return zone.shape==='rectangle'?Math.max(x,y)<=1:zone.shape==='diamond'?x+y<=1:x*x+y*y<=1;
  });
 }
+function pillarCollisionBodies() {
+ return (arenaMap?.rocks ?? []).flatMap(rock=>{
+  if(rock.hp>0 || rock.hp===undefined)return [rock];
+  if(!rock.fall?.resolved)return [];
+  const {x,y,dx,dy,length,radius}=rock.fall;
+  const segments=Math.ceil(length/(radius*0.5));
+  return Array.from({length:segments+1},(_,index)=>({
+   x:x+dx*length*index/segments,y:y+dy*length*index/segments,r:radius,cover:true,
+  }));
+ });
+}
 function firstPillar(x,y,tx,ty,padding=0) {
  const dx=tx-x,dy=ty-y,length=dx*dx+dy*dy;
  if(!length)return null;
  let hit=1,obstacle=null;
- for(const rock of arenaMap?.rocks ?? []) {
-  if(rock.hp<=0)continue;
+ for(const rock of pillarCollisionBodies()) {
   const ox=x-rock.x,oy=y-rock.y,r=rock.r+padding;
   const b=ox*dx+oy*dy,c=ox*ox+oy*oy-r*r;
   if(c<=0 && b>=0)continue;
@@ -3288,7 +3303,6 @@ function tickPillars(dt) {
   if(!fall)continue;
   fall.elapsed+=dt;
   if(fall.resolved || fall.elapsed<0.65)continue;
-  fall.resolved=true;
   const source=(fall.sourceSide?allies:enemies)[fall.sourceSlot];
   for(const victim of fieldActors()) {
    if(!victim || victim.hp<=0 || !inSkill(victim,null,0,fall))continue;
@@ -3296,6 +3310,7 @@ function tickPillars(dt) {
    victim.hp-=dealt;
    recordOpponentDamage(source,victim,dealt);
   }
+  fall.resolved=true;
  }
 }
 function bodyRadius(actor) {
@@ -4027,7 +4042,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  if(!choice || actor.charge>0 || remaining>0.01) return;
  const cover=choice.rules.scope!=='ally' && firstPillar(actor.x,actor.y,target.x,target.y);
- const strikeCover=cover && !moveCatalog[choice.move][4] && !sacrificeProfiles.has(choice.move) &&
+ const strikeCover=cover && cover.rock.hp>0 && !moveCatalog[choice.move][4] && !sacrificeProfiles.has(choice.move) &&
   (cover.rock.hp<=8 || inSkill(target,null,0,pillarPath(cover.rock,actor)));
  if(cover && !strikeCover && distance>1) {
   const dx=(target.x-actor.x)/distance,dy=(target.y-actor.y)/distance;
@@ -4042,6 +4057,17 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  if(slot>=0) actor.moveTimers[slot]=actor.moveCooldowns[slot];
  actor.charge=actor.cooldown*(priority>0 ? 0.82 : power>=100 ? 1.18 : 1);
+ if(actor.ailment===6 && !status && onlineRandom()<1/3) {
+  const damage=Math.min(actor.hp,battleDamage(actor,actor,40,1,true,null,null));
+  actor.hp-=damage;
+  actor.moveLabel='Confusion';
+  actor.labelTime=0.95;
+  actor.hit=actor.hitSpan;
+  recordOpponentDamage(actor,actor,damage);
+  effects.push({x:actor.x,y:actor.y,tx:actor.x,ty:actor.y,damage,multiplier:1,
+   move,color:'#ffb7d4',life:0.58,impactOnly:true});
+  return;
+ }
  actor.attackStyle=rules.scope!=='ally' && rules.range<=25 ? 'lunge' : 'attack';
  actor.attackSpan=(pmdMotion(actor,actor.attackStyle)?.duration ?? 21.6)/60;
  actor.attack=actor.attackSpan;
@@ -4859,8 +4885,7 @@ function traceSector(line) {
 }
 function clipPillarShadows(origin) {
  if(!origin)return;
- for(const rock of arenaMap?.rocks ?? []) {
-  if(rock.hp<=0)continue;
+ for(const rock of pillarCollisionBodies()) {
   const dx=rock.x-origin.x,dy=rock.y-origin.y;
   const distance=Math.hypot(dx,dy);
   if(distance<=rock.r)continue;
@@ -5441,7 +5466,28 @@ byId('toolbar-settings').onclick=()=>{
  const sfx=element('button',sfxButton.textContent);
  music.onclick=()=>{musicButton.onclick();music.textContent=musicButton.textContent;updateHomeSound();};
  sfx.onclick=()=>{sfxButton.onclick();sfx.textContent=sfxButton.textContent;updateHomeSound();};
- openHomeDialog('Settings',music,sfx);
+ const volumeSlider=(label,kind,value,apply)=>{
+  const row=element('label',null,'audio-volume');
+  const readout=element('span',label+' · '+Math.round(value*100)+'%');
+  const slider=element('input');
+  slider.type='range';slider.min=0;slider.max=100;slider.value=Math.round(value*100);
+  slider.setAttribute('aria-label',label);
+  slider.oninput=()=>{
+   const level=Number(slider.value)/100;
+   readout.textContent=label+' · '+slider.value+'%';
+   apply(level);
+   playerStorage.setItem('pokemon-arena-'+kind+'-volume',String(level));
+  };
+  row.append(readout,slider);
+  return row;
+ };
+ openHomeDialog('Settings',music,sfx,
+  volumeSlider('BGM volume','bgm',bgmVolume,level=>{
+   bgmVolume=level;
+   if(musicTrack?.audio)musicTrack.audio.volume=0.35*level;
+   if(musicTrack?.output)musicTrack.output.gain.value=0.22*level;
+  }),
+  volumeSlider('SFX volume','sfx',sfxVolume,level=>{sfxVolume=level;}));
 };
 byId('toolbar-logout').onclick=openLogin;
 phase='login';
