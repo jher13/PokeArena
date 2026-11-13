@@ -17,6 +17,7 @@ main{max-width:1190px}h1{font-size:clamp(26px,5vw,48px);color:#eff8ff}
 
 .arena-stage{display:grid;grid-template-columns:106px minmax(0,1fr) 106px;gap:8px;align-items:start}
 .arena-roster{display:grid;gap:5px;min-width:0}.arena-roster h2{font-size:12px;margin:0;color:#e4edff;text-align:center}
+.battle-stage-icons{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 4px}.battle-stage-icons:empty{display:none}.battle-stage-icon{position:relative;min-width:24px;padding:2px 4px;border-radius:4px;background:#164b40;color:#b7ffe5;font-size:9px;font-weight:750;white-space:nowrap}.battle-stage-icon.is-debuff{background:#592a40;color:#ffd0e1}.battle-stage-icon b{position:absolute;right:-3px;bottom:-4px;border-radius:6px;background:#121623;color:white;padding:0 2px;font-size:8px}
 .battle-slot{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:2px 4px;min-width:0;width:100%;padding:3px;background:#283b56;border:1px solid #657f9e;border-radius:6px;color:#fff;text-align:left}
 .battle-slot:disabled{opacity:1;cursor:default}.battle-slot.is-active{border-color:#d6f397;background:#405742}.battle-slot.is-out{opacity:.45}.battle-slot canvas{border:0;border-radius:0;background:transparent;width:32px;height:28px;image-rendering:pixelated}.battle-slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.battle-slot progress{grid-column:1/-1;width:100%;height:6px;appearance:none;border:0;border-radius:4px;overflow:hidden;background:#111b2b}.battle-slot progress::-webkit-progress-bar{background:#111b2b}.battle-slot progress::-webkit-progress-value{background:#9ee884}.battle-slot progress::-moz-progress-bar{background:#9ee884}
 @media(max-width:640px){.arena-stage{grid-template-columns:42px minmax(0,1fr) 42px;gap:4px}.battle-slot{grid-template-columns:1fr;justify-items:center;gap:1px;padding:2px}.battle-slot span{display:none}.arena-roster h2{font-size:9px}}
@@ -1638,8 +1639,12 @@ for(const side of ['Enemy','Ally']) {
 const gambitStatuses=['None','Paralysis','Sleep','Freeze','Burn','Poison','Confusion'];
 const gambitComparisons=['Equal','Not Equal','Less Than','Greater Than','At Most','At Least'];
 const gambitStats={ATK:[1,2],DEF:[2,3],SATK:[5,4],SDEF:[4,5],SPD:[3,6],ACC:[null,7],EVA:[null,8]};
+const gambitStageFields=Object.fromEntries(Object.entries(gambitStats).map(([stat,[,index]])=>[stat+' stage',index]));
 const gambitConditions={
  Always:{operators:['Equal'],values:['True']},
+ ...Object.fromEntries(Object.keys(gambitStageFields).map(stat=>[stat,{
+  operators:gambitComparisons,values:['-3','-2','-1','0','1','2','3'],
+ }])),
  Status:{operators:gambitComparisons.slice(0,2),values:gambitStatuses},
  'HP %':{operators:gambitComparisons,values:Array.from({length:11},(_,i)=>i*10+'%')},
  ...Object.fromEntries(Object.keys(gambitStats).map(stat=>[stat,{
@@ -3248,7 +3253,16 @@ try {
   }
  }
 } catch {}
-function gymDifficulty(gym) {
+let masterGymMode=false;
+let selectedMasterGym=false;
+const masterGymClears=new Set();
+try {
+ const saved=JSON.parse(playerStorage.getItem(gymSaveKey+'/master'));
+ if(Array.isArray(saved))for(const id of saved)if(gymTeams.some(gym=>gym.id===id))masterGymClears.add(id);
+} catch {}
+function masterGymsUnlocked() {return clearedGyms.length===gymTeams.length;}
+function gymDifficulty(gym,master=false) {
+ if(master)return {level:100,aceLevel:100};
  const progress=gymTeams.indexOf(gym)/(gymTeams.length-1);
  const level=12+Math.floor(84*progress);
  return {level,aceLevel:level+4};
@@ -3267,6 +3281,68 @@ function gymProfile(name) {
  evs[tank?3:0]=6;
  const nature=tank?(physical?'Adamant':'Modest'):(physical?'Jolly':'Timid');
  return {ivs:Array(6).fill(31),evs,pid:natureNames.indexOf(nature)};
+}
+const masterWeatherAbilities={
+ rain:['Drizzle','Swift Swim'],sun:['Drought','Chlorophyll'],sand:['Sand Stream','Sand Rush'],snow:['Snow Warning','Slush Rush'],
+};
+const masterHealingMoves=['Recover','Roost','Slack Off','Milk Drink','Soft-Boiled','Synthesis','Moonlight','Morning Sun','Shore Up','Strength Sap'];
+function masterGymKit(name,gym,slot) {
+ const [,role,position,listed,item]=gym.plan.team[slot];
+ const {physical,tank}=gymRole(name);
+ const offense=physical?1:5;
+ const profile=gymProfile(name);
+ const bulky=tank || role==='support';
+ const nature=bulky?(physical?'Adamant':'Modest'):(physical?'Jolly':'Timid');
+ const traitOrder=[0,1,2,3,5,4];
+ const trait=traitOrder.indexOf(bulky?0:offense);
+ let pid=natureNames.indexOf(nature);
+ while(pid%6!==trait)pid+=natureNames.length;
+ profile.pid=pid;
+ profile.evs=Array(6).fill(0);
+ profile.evs[offense]=252;
+ profile.evs[bulky?0:3]=252;
+ profile.evs[bulky?4:0]=6;
+ const tactic=gym.plan.tactic;
+ const weather=masterWeatherAbilities[tactic];
+ const moves=gymMoves(name,gym,slot);
+ const healing=masterHealingMoves.find(move=>legalMoves(name).includes(move) && isVisibleArenaMove(move));
+ if(healing && bulky && !moves.includes(healing)) {
+  const replace=moves.findLastIndex(move=>moveCatalog[move][1]>0 && !listed.slice(0,2).includes(move));
+  if(replace>=0 && moves.filter(move=>moveCatalog[move][1]>0).length>1)moves[replace]=healing;
+ }
+ const attacks=moves.filter(move=>moveCatalog[move][1]>0);
+ const attackTypes=new Set(attacks.map(move=>moveCatalog[move][0]));
+ const stabs=dex[name].slice(1,3);
+ const weatherAbility=weather && (role==='lead'?weather[0]:
+  tactic==='sun' && !stabs.includes('Grass')?(attackTypes.has('Fire')?'Solar Power':null):weather[1]);
+ const signature={Haunter:'Levitate',Gengar:'Cursed Body',Alakazam:'Magic Guard',Slaking:'Truant',Shedinja:'Wonder Guard'};
+ profile.abilityOverride=signature[name] ?? weatherAbility ?? (bulky?'Regenerator':
+  attacks.some(move=>(moveExtras[move]?.[1] ?? 0)>=20)?'Serene Grace':
+  physical && attacks.some(move=>(moveFlags[move] ?? []).includes(1))?'Tough Claws':'Adaptability');
+ const booster=Object.entries(heldItems).find(([,entry])=>entry.element && stabs.includes(entry.element) &&
+  attacks.filter(move=>moveCatalog[move][0]===entry.element).length>=2)?.[0];
+ const heldItem=bulky?(canEvolveIds.has(dex[name][0])?'Eviolite':'Leftovers'):
+  booster ?? (item==='Sitrus Berry'?item:physical?'Muscle Band':'Wise Glasses');
+ const gambits=[];
+ const add=(target,condition,operator,value,move)=>gambits.push({target,condition,operator,value,move});
+ for(const move of moves.filter(move=>masterHealingMoves.includes(move)))
+  add('Self','HP %','At Most','50%',move);
+ const pivot=attacks.find(move=>['U Turn','Volt Switch','Flip Turn'].includes(move));
+ if(pivot)add('Self','HP %','At Most','40%',pivot);
+ add('Enemy Lowest HP','HP %','At Most','30%','Attack');
+ for(const move of attacks)add('Any','Move effectiveness','At Least','2',move);
+ for(const move of moves.filter(move=>gymTactics[tactic].includes(move) && moveCatalog[move][4]))
+  add('Any','Always','Equal','True',move);
+ for(const move of moves.filter(move=>moveCatalog[move][4] && moveRules(move).ailment))
+  add('Any','Status','Equal','None',move);
+ for(const move of moves.filter(move=>moveCatalog[move][4] && moveRules(move).scope==='ally')) {
+  const boost=moveRules(move).changes.find(([stat,value])=>value>0 && Object.values(gambitStageFields).includes(stat));
+  const condition=Object.keys(gambitStageFields).find(key=>gambitStageFields[key]===boost?.[0]);
+  if(condition)add('Self',condition,'Less Than','2',move);
+ }
+ add('Any','Always','Equal','True','Attack');
+ return {moves,profile,heldItem,ai:normalizeBattleAI({mode:'Advanced',style:bulky?'Defensive':'Balanced',
+  target:'Type weakness',position,gambits})};
 }
 function gymMoves(name,gym,slot) {
  return legalLoadout(name,gym.plan.team[slot][3]);
@@ -3294,7 +3370,7 @@ function maximumBattleSpeed() {
  return kantoGymIds.every(id=>clearedGyms.includes(id))?3:2;
 }
 function speedUnlockMessage() {
- if(clearedGyms.length===gymTeams.length) return ' 4× battle speed unlocked!';
+ if(clearedGyms.length===gymTeams.length) return ' Master Gym Battles and 4× battle speed unlocked!';
  if(clearedGyms.length===kantoGymIds.length && maximumBattleSpeed()===3) return ' 3× battle speed unlocked!';
  return '';
 }
@@ -3793,7 +3869,9 @@ function openTeamBuilder() {
  showScreen('menu');
  renderMenu();
 }
-function openBattle(gym=null,wild=null,trainer=null,run=null) {
+function openBattle(gym=null,wild=null,trainer=null,run=null,master=false) {
+ if(master && (!gym || !masterGymsUnlocked()))return;
+ selectedMasterGym=master;
  rogueRun=run;
  cancelWildRepeat();
  if(gym && (gymTeams.indexOf(gym)<0 || gymTeams.indexOf(gym)>clearedGyms.length)) return;
@@ -3819,6 +3897,14 @@ function renderCampaign(collection) {
  const list=byId(collection?'badge-grid':'gym-grid');
  byId(collection?'collection-progress':'gym-progress').textContent=progressText();
  list.replaceChildren();
+ if(!collection) {
+  if(!masterGymsUnlocked())masterGymMode=false;
+  const mode=element('button',masterGymMode?'Mode: Master':'Mode: Standard');
+  mode.type='button';mode.disabled=!masterGymsUnlocked();
+  mode.onclick=()=>{masterGymMode=!masterGymMode;renderCampaign(false);};
+  list.append(mode);
+  if(!masterGymsUnlocked())list.append(element('p','Clear all '+gymTeams.length+' gyms to unlock Master mode.'));
+ }
  for(const [region,generation] of gymRegions) {
   if(!collection && !gymTeams.slice(0,clearedGyms.length+1).some(gym=>gym.region===region)) continue;
   list.append(element('h3',region+' · Generation '+generation,'campaign-region'));
@@ -3842,9 +3928,11 @@ function renderCampaign(collection) {
     card.append(element('strong',String(index+1)+'. '+gym.name),
      element('small',gym.city+' · '+gym.types.replaceAll(',',' / ')),
      element('small',gym.badge+' · '+(earned?(gymRematchRecord(gym)?'Clean rematch complete':'Rematch'):'Unlocked')),
-     element('small','Lv. '+gymDifficulty(gym).level+'–'+gymDifficulty(gym).aceLevel),roster,element('small',gymBrief(gym)));
+     element('small',masterGymMode?'Lv. 100 · '+(masterGymClears.has(gym.id)?'Master cleared':'Master challenge'):
+      'Lv. '+gymDifficulty(gym).level+'–'+gymDifficulty(gym).aceLevel),roster,
+     element('small',masterGymMode?gym.plan.brief+' Defeat all six to clear Master.':gymBrief(gym)));
     card.disabled=!earned && !available;
-    card.onclick=()=>openBattle(gym);
+    card.onclick=()=>openBattle(gym,null,null,null,masterGymMode);
     grid.append(card);
    }
   }
@@ -4256,6 +4344,22 @@ function updateActivePanels(onlineFields) {
   });
  });
 }
+const battleStageIcons={2:'ATK',3:'DEF',4:'SpA',5:'SpD',6:'SPD',7:'ACC',8:'EVA',9:'CRIT'};
+function updateStageIcons(container,actor) {
+ const stages=actor.hp>0?actor.stages ?? []:[];
+ const signature=stages.join(',');
+ if(container.dataset.stages===signature)return;
+ container.dataset.stages=signature;
+ container.replaceChildren(...Object.entries(battleStageIcons).flatMap(([index,label])=>{
+  const stage=stages[index];
+  if(!stage)return [];
+  const icon=element('span',(stage>0?'▲':'▼')+label,'battle-stage-icon'+(stage<0?' is-debuff':''));
+  icon.append(element('b',String(Math.abs(stage))));
+  icon.title=label+' '+(stage>0?'+':'')+stage;
+  icon.setAttribute('aria-label',icon.title);
+  return [icon];
+ }));
+}
 function renderBattleRosters() {
  rosterCards = [];
  for(const [id,title,roster,friendly] of [
@@ -4274,6 +4378,8 @@ function renderBattleRosters() {
    card.append(pokemonPortrait(actor.name),identity,hp);
    const xp=friendly && !rogueRun ? element('progress',null,'battle-xp') : null;
    if(xp) card.append(xp);
+   const stages=element('span',null,'battle-stage-icons');
+   card.append(stages);
    if(friendly) card.onclick=()=>{
     if(phase==='setup') {selected=index;renderControls();return;}
     if(trainerFields && phase==='battle') {
@@ -4295,13 +4401,14 @@ function renderBattleRosters() {
     }
    };
    container.append(card);
-   rosterCards.push({actor,index,card,hp,xp,friendly});
+   rosterCards.push({actor,index,card,hp,xp,stages,friendly});
   });
  }
  updateBattleRosters();
 }
 function updateBattleRosters() {
- for(const {actor,index,card,hp,xp,friendly} of rosterCards) {
+ for(const {actor,index,card,hp,xp,stages,friendly} of rosterCards) {
+  updateStageIcons(stages,actor);
   const slots=trainerFields?.[friendly?0:1];
   const active=phase==='setup' ? selectedTrainer ? trainerLeads(friendly?allies:enemies,friendly).includes(actor) :
    friendly ? index===selected : index===0 : slots ? trainerOnField(actor,slots) : actor===(friendly ? activePlayer : activeEnemy);
@@ -4381,9 +4488,10 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  const defaults=species[name];
  const pace=defaults?.[4] ?? Math.min(105,42+baseSpeed*0.36);
  const cooldown=defaults?.[5] ?? Math.max(0.75,1.36-baseSpeed*0.003);
- const moves=runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name,selectedGym,gymSlot) :
+ const master=!friendly && selectedGym && selectedMasterGym?masterGymKit(name,selectedGym,gymSlot):null;
+ const moves=master?master.moves:runMember ? [...runMember.moves] : friendly ? [...movesFor(name)] : selectedGym ? gymMoves(name,selectedGym,gymSlot) :
   selectedWild || selectedTrainer || rogueRun ? wildMoves(name) : legalLoadout(name,[defaults?.[6],secondaryMoves[name]]);
- const profile=runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name) : rollProfile();
+ const profile=master?master.profile:runMember ? runMember.profile : friendly ? profileFor(name) : selectedGym ? gymProfile(name) : rollProfile();
  if(!friendly && selectedTrainer) {
   const size=selectedTrainer.roster.length;
   profile.ivs.fill(35-4*size);
@@ -4402,9 +4510,9 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  }
  const hp=stats[0];
  const speedFactor=clamp(0.65+stats[3]/200,0.65,1.7);
- return {name,gymRole:!friendly?selectedGym?.plan?.team[gymSlot]?.[1]:null,type:primary,level,hp,max:hp,ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
+ return {name,gymRole:!friendly?selectedGym?.plan?.team[gymSlot]?.[1]:null,type:primary,level,hp,max:hp,ai:master?master.ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
   !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness',position:selectedGym.plan?.team[gymSlot]?.[2]}):null,
-  heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
+  heldItem:master?master.heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor,moves,profile,stats,
   moveCooldowns:moves.map(skill=>moveRules(skill).cooldown),moveTimers:moves.map(()=>0),
   stages:[0,0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
@@ -4600,7 +4708,7 @@ function prepare() {
  lastDamageClock=0;
  allies = rogueRun ? rogueRun.members.map(member=>unit(member.name,sendOut.player.x,sendOut.player.y,true,member.level,member)) :
   team.map(name=>unit(name,sendOut.player.x,sendOut.player.y,true));
- const difficulty=selectedGym ? gymDifficulty(selectedGym) : null;
+ const difficulty=selectedGym ? gymDifficulty(selectedGym,selectedMasterGym) : null;
  const roster=rogueRun ? rogueRun.enemyRoster.map(member=>member.name) : selectedWild ? [selectedWild.name] : selectedTrainer?.roster.map(member=>member.name) ?? selectedGym?.roster ?? lineup;
  enemies=roster.map((name,index)=>unit(name,sendOut.enemy.x,sendOut.enemy.y,false,
   difficulty ? (gymAceSlot(selectedGym,index) ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,null,index));
@@ -4644,7 +4752,7 @@ function renderControls() {
  updateScore();
  updateBattleRosters();
  byId('status').textContent = {
-  setup:selectedWild ? selectedWild.region+' · Choose one Pokémon to battle.' : selectedTrainer ? selectedTrainer.region+' Trainer · Difficulty '+selectedTrainer.tier.label+' · '+selectedTrainer.format+'v'+selectedTrainer.format+(selectedTrainer.format===1?' · Ready to battle.':' · Choose your lead Pokémon.') : selectedGym ? selectedGym.name+' · Choose your lead Pokémon. '+gymBrief(selectedGym)+' '+arenaMap.name+' · '+arenaMap.rocks.length+' pillars.'+(clearedGyms.includes(selectedGym.id)?' Rematch challenge: win without losing a Pokémon.':'') : 'Choose your lead Pokémon.',
+  setup:selectedWild ? selectedWild.region+' · Choose one Pokémon to battle.' : selectedTrainer ? selectedTrainer.region+' Trainer · Difficulty '+selectedTrainer.tier.label+' · '+selectedTrainer.format+'v'+selectedTrainer.format+(selectedTrainer.format===1?' · Ready to battle.':' · Choose your lead Pokémon.') : selectedGym ? selectedGym.name+(selectedMasterGym?' · Master · Choose your lead. Defeat all six. ':' · Choose your lead Pokémon. '+gymBrief(selectedGym))+' '+arenaMap.name+' · '+arenaMap.rocks.length+' pillars.'+(clearedGyms.includes(selectedGym.id)?' Rematch challenge: win without losing a Pokémon.':'') : 'Choose your lead Pokémon.',
   battle:rogueRun?'Roguelit · Battle '+rogueRun.round:'Tap a healthy teammate on the left to switch Pokémon.',
   draw:'Draw. Neither side won the battle.',
   win:selectedTrainer ? 'Victory! You earned '+selectedTrainer.coins+' coins.' : selectedWild ? 'Wild Pokémon defeated!' : newBadge ? 'Victory! You earned the '+selectedGym.badge+'.'+speedUnlockMessage() : 'Victory! Your team defeated all six opponents.',
@@ -5924,7 +6032,8 @@ function escapeCrowding(actor,opponents,dt) {
 function gambitMatches(rule,subject,move,distance) {
  const stat=gambitStats[rule.condition];
  if(rule.condition==='Move effectiveness' && !move)return false;
- const actual=stat?Math.round((stat[0]===null?100:subject.stats[stat[0]])*stageFactor(subject,stat[1])):
+ const stage=gambitStageFields[rule.condition];
+ const actual=stage!==undefined?(subject.stages[stage] ?? 0):stat?Math.round((stat[0]===null?100:subject.stats[stat[0]])*stageFactor(subject,stat[1])):
   rule.condition==='Status'?gambitStatuses[subject.ailment ?? 0]:
   rule.condition==='HP %'?Math.round(100*subject.hp/subject.max):
   rule.condition==='Distance'?Math.round(distance):
@@ -6723,7 +6832,7 @@ function considerGymSwitch() {
   (['screens','rain','sun','sand','snow'].includes(selectedGym.plan.tactic) || underPressure);
  if(!plannedAce && (advantage<0.7 || !underPressure))return;
  sendGymReserve(activeEnemy,reserve,plannedAce?setup:'to answer '+activePlayer.name);
- nextGymSwitchCheck=clock+10;
+ nextGymSwitchCheck=clock+(selectedMasterGym?7:10);
 }
 const battleTimeLimit=300;
 const firstBadgeTimeLimit=420;
@@ -6746,10 +6855,11 @@ function advance(dt,realDt=dt) {
  const playerReserve=allies.find(actor=>actor.hp>0);
  const enemyReserve=enemies.find(actor=>actor.hp>0);
  const firstBadge=selectedGym && !clearedGyms.includes(selectedGym.id);
- const limit=firstBadge?firstBadgeTimeLimit:battleTimeLimit;
+ const requiresClear=firstBadge || Boolean(selectedGym && selectedMasterGym);
+ const limit=requiresClear?firstBadgeTimeLimit:battleTimeLimit;
  const timedOut=clock>=limit-1e-8 && playerReserve && enemyReserve;
  if(!playerReserve || !enemyReserve || timedOut) {
-  const result=timedOut && firstBadge?-1:timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
+  const result=timedOut && requiresClear?-1:timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
   phase=result>0?'win':result<0?'loss':'draw';
   if(rogueRun) {finishRogueRound(phase==='win');return;}
   if(phase==='loss') {
@@ -6757,13 +6867,13 @@ function advance(dt,realDt=dt) {
    const gymAdvice=selectedGym ? [gymSwitchNote,selectedGym.plan?.tip].filter(Boolean).join(' ') : '';
    openMenu();
    const notice=byId('knockout-notice');
-   notice.textContent=[timedOut?(firstBadge?'Time expired. Defeat the entire gym team to earn the badge.':'Time expired. Your opponent had more team HP remaining.'):'Your team was knocked out.',gymAdvice,detail].filter(Boolean).join(' ');
+   notice.textContent=[timedOut?(requiresClear?'Time expired. Defeat the entire gym team to clear the challenge.':'Time expired. Your opponent had more team HP remaining.'):'Your team was knocked out.',gymAdvice,detail].filter(Boolean).join(' ');
    void notice.offsetWidth;
    notice.hidden=false;
    playEvolutionScenes();
    return;
   }
-  if(phase==='win' && selectedGym) newBadge=awardBadge(selectedGym);
+  if(phase==='win' && selectedGym && !selectedMasterGym) newBadge=awardBadge(selectedGym);
   if(phase==='win' && selectedWild) {finishWildBattle(Boolean(timedOut));return;}
   if(phase==='win' && selectedTrainer) {
    if(happyHourBonus)selectedTrainer.coins*=2;
@@ -6772,7 +6882,12 @@ function advance(dt,realDt=dt) {
   }
   const stones=phase==='win' && (selectedGym || selectedTrainer)?evolveStoneHolders():[];
   renderControls();
-  if(phase==='win' && selectedGym && !firstBadge && !timedOut && allies.every(actor=>actor.hp>0 && !actor.faintedThisBattle)) {
+  if(phase==='win' && selectedGym && selectedMasterGym && !timedOut) {
+   masterGymClears.add(selectedGym.id);
+   try {playerStorage.setItem(gymSaveKey+'/master',JSON.stringify([...masterGymClears]));} catch {}
+   byId('status').textContent+=' Master clear · '+masterGymClears.size+' / '+gymTeams.length+'.';
+  }
+  if(phase==='win' && selectedGym && !selectedMasterGym && !firstBadge && !timedOut && allies.every(actor=>actor.hp>0 && !actor.faintedThisBattle)) {
    gymRematchRecords[selectedGym.id]=true;
    try {playerStorage.setItem(gymSaveKey+'/clean/'+selectedGym.id,'true');} catch {}
    byId('status').textContent+=' Rematch challenge complete: no Pokémon fainted.';
@@ -7087,7 +7202,7 @@ function renderBattleDps(time,buckets,mirror=false) {
 let onlineMatchDuration=0;
 function paintArenaWeather() {
  const elapsed=phase==='online-battle'?onlineMatchDuration:phase==='setup'?0:clock ?? 0;
- const seconds=Math.min(phase!=='online-battle' && selectedGym && !clearedGyms.includes(selectedGym.id)?firstBadgeTimeLimit:battleTimeLimit,Math.floor(elapsed+1e-8));
+ const seconds=Math.min(phase!=='online-battle' && selectedGym && (selectedMasterGym || !clearedGyms.includes(selectedGym.id))?firstBadgeTimeLimit:battleTimeLimit,Math.floor(elapsed+1e-8));
  const duration='Match Duration: '+Math.floor(seconds/3600)+'h, '+Math.floor(seconds%3600/60)+'m, '+seconds%60+'s';
  const timer=byId('arena-duration');
  if(timer.textContent!==duration)timer.textContent=duration;
