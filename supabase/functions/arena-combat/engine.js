@@ -4093,7 +4093,7 @@ function skillLane(actor,target,range,shape,halfAngle) {
  let length=range+hitboxRadius(actor,dx,dy)+hitboxRadius(target,dx,dy);
  if(shape==='dash') length=Math.min(length,Math.hypot(target.x-actor.x,target.y-actor.y)+24);
  const obstruction=rockIntersection(actor.x,actor.y,actor.x+dx*length,actor.y+dy*length,shape==='dash'?12:0);
- length*=obstruction;
+ if(shape==='dash' || shape==='projectile')length*=obstruction;
  const end={x:actor.x+dx*length,y:actor.y+dy*length};
  if(shape==='dash') {
   end.x=clamp(end.x,28,canvas.width-28);
@@ -4115,9 +4115,9 @@ function nearestLinePoint(point,line) {
  const along=clamp((point.x-line.x)*line.dx+(point.y-line.y)*line.dy,0,line.length);
  return {x:line.x+line.dx*along,y:line.y+line.dy*along};
 }
-function inSkill(actor,center,radius,line) {
+function inSkill(actor,center,radius,line,ignoreCover=false) {
  const origin=line ?? center;
- if(origin && rockIntersection(origin.x,origin.y,actor.x,actor.y)<1)return false;
+ if(!ignoreCover && origin && rockIntersection(origin.x,origin.y,actor.x,actor.y)<1)return false;
  if(line?.halfWidth) {
   const x=actor.x-line.x,y=actor.y-line.y;
   const along=clamp(x*line.dx+y*line.dy,0,line.length);
@@ -4147,13 +4147,21 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null) {
  if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth});
  else if(radius && !cast?.flight) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
  const pillars=new Set();
- if(!status) {
-  for(const victim of opponents) {
-   const obstruction=firstPillar(actor.x,actor.y,victim.x,victim.y);
-   if(!obstruction)continue;
-   const rock=obstruction.rock;
-   if(!cast || (line?inSkill({...actor,x:rock.x,y:rock.y},center,radius,{...line,length:line.length+rock.r}):
-    Math.hypot(rock.x-center.x,rock.y-center.y)<=radius+rock.r))pillars.add(rock);
+ if(!status && power>0) {
+  if(line || radius) {
+   const origin=line ?? center;
+   for(const rock of arenaMap?.rocks ?? []) {
+    if(!(rock.hp>0) || firstPillar(origin.x,origin.y,rock.x,rock.y)?.rock!==rock)continue;
+    const touches=line?inSkill({name:actor.name,x:rock.x,y:rock.y},center,radius,
+     {...line,length:line.length+rock.r,radius:line.radius+rock.r},true):
+     Math.hypot(rock.x-center.x,rock.y-center.y)<=radius+rock.r;
+    if(touches)pillars.add(rock);
+   }
+  } else {
+   for(const victim of opponents) {
+    const cover=firstPillar(actor.x,actor.y,victim.x,victim.y);
+    if(cover)pillars.add(cover.rock);
+   }
   }
  }
  const victims=cast?.flight ? opponents : line || radius ?
@@ -4263,6 +4271,8 @@ function tickSkillCasts(dt) {
    const target=opponents.filter(actor=>inSkill(actor,null,0,segment)).sort((a,b)=>
     Math.hypot(a.x-segment.x,a.y-segment.y)-Math.hypot(b.x-segment.x,b.y-segment.y))[0];
    if(target) resolveOffensiveMove(area.actor,area.move,area.rules,target,[target],area);
+   if(!target && area.travel>=area.line.length)
+    resolveOffensiveMove(area.actor,area.move,area.rules,area.center,[],area);
    return !target && area.travel<area.line.length;
   }
   if(sacrificeProfiles.has(area.move)) {
@@ -4847,10 +4857,36 @@ function traceSector(line) {
  ctx.arc(line.x,line.y,line.length,line.angle-line.halfAngle,line.angle+line.halfAngle);
  ctx.closePath();
 }
+function clipPillarShadows(origin) {
+ if(!origin)return;
+ for(const rock of arenaMap?.rocks ?? []) {
+  if(rock.hp<=0)continue;
+  const dx=rock.x-origin.x,dy=rock.y-origin.y;
+  const distance=Math.hypot(dx,dy);
+  if(distance<=rock.r)continue;
+  const angle=Math.atan2(dy,dx);
+  const spread=Math.asin(rock.r/distance);
+  const near=Math.sqrt(distance*distance-rock.r*rock.r);
+  const far=Math.hypot(canvas.width,canvas.height)*2;
+  const point=(heading,length)=>[origin.x+Math.cos(heading)*length,origin.y+Math.sin(heading)*length];
+  ctx.beginPath();
+  ctx.rect(0,0,canvas.width,canvas.height);
+  // Follow the pillar's near edge, then extend its tangent rays beyond the arena.
+  const start=angle-spread-Math.PI/2,end=angle+spread+Math.PI/2;
+  const nearA=point(angle-spread,near);
+  ctx.moveTo(...nearA);
+  ctx.arc(rock.x,rock.y,rock.r,start,end,true);
+  ctx.lineTo(...point(angle+spread,far));
+  ctx.lineTo(...point(angle-spread,far));
+  ctx.closePath();
+  ctx.clip('evenodd');
+ }
+}
 function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,travel,move}) {
  const progress=clamp(1-remaining/warning,0,1);
  const color=actor.friendly?'#72d9ff':'#ff947c';
  ctx.save();
+ clipPillarShadows(line ?? center);
  if(flight) {
   const color=moveColors[moveCatalog[move][0]] ?? '#fff2c7';
   for(let i=7;i>=0;i--) {
