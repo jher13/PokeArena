@@ -123,13 +123,13 @@
     const own=actor.side===active.side;
     const index=ownSlots.findIndex(slot=>slot.actor===actor || slot.transition?.incoming===actor);
     let row=rosterRows.get(actor.onlineId);
-    if(!row) {
+    if(!row || row.form!==actor.name) {
      const card=element('button',null,'battle-slot');
      const identity=battleRosterIdentity(actor.name,actor.level);
      const hp=element('progress');hp.max=actor.max;hp.setAttribute('aria-label',actor.name+' HP');
      card.append(pokemonPortrait(actor.name),identity,hp);
-     container.append(card);
-     row={card,hp};rosterRows.set(actor.onlineId,row);
+     if(row)row.card.replaceWith(card);else container.append(card);
+     row={card,hp,form:actor.name};rosterRows.set(actor.onlineId,row);
     }
     row.hp.value=actor.hp;
     row.card.classList.toggle('is-out',actor.hp<=0);
