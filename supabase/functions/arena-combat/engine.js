@@ -281,10 +281,10 @@ function pmdClips(name) {
 function pmdDirection(dx,dy) {
  return (Math.round(Math.atan2(dx,dy)/(Math.PI/4))+8)%8;
 }
-function pmdReference(name) {
+function pmdReference(name,direction=6) {
  const clips=pmdClips(name);
  const rows=clips.Idle ?? clips.Walk ?? Object.values(clips)[0];
- return (rows?.[6] ?? rows?.find(Boolean))?.frames[0];
+ return (rows?.[direction] ?? rows?.find(Boolean))?.frames[0];
 }
 function battleArt(name) {
  return pmdReference(name) ?? getSprite(name);
@@ -461,10 +461,10 @@ function battleRosterIdentity(name,level) {
  identity.append(element('span',name,'battle-name'),element('span','Lv. '+level,'battle-level'),types);
  return identity;
 }
-function pokemonPortrait(name,className,fullSize=false) {
+function pokemonPortrait(name,className,fullSize=false,direction=6) {
  const thumb=element('canvas',null,className);
  const fallback=getSprite(name);
- const authored=pmdReference(name);
+ const authored=pmdReference(name,direction);
  const sprite=authored ?? fallback;
  const factor=fullSize?1:Math.min(1,40/sprite.width,34/sprite.height);
  const width=Math.max(1,Math.round(sprite.width*factor));
@@ -493,13 +493,45 @@ function pokemonPortrait(name,className,fullSize=false) {
  if(primary!==fallback.image && !fallback.image.naturalWidth) fallback.image.addEventListener('load',paintIcon,{once:true});
  return thumb;
 }
+const idlePortraits=new Map();
+let idlePortraitFrame=null;
+function paintIdlePortraits(now) {
+ for(const [canvas,clip] of idlePortraits) {
+  if(!canvas.isConnected){idlePortraits.delete(canvas);continue;}
+  const rect=canvas.getBoundingClientRect();
+  if(!rect.width || !rect.height || rect.bottom<0 || rect.top>innerHeight)continue;
+  const frame=clip.frames.find(entry=>(now*0.06)%clip.duration<entry.end);
+  if(!frame)continue;
+  const image=pmdImage(frame.page);
+  if(!image.naturalWidth)continue;
+  const context=canvas.getContext('2d');
+  const scale=Math.min(canvas.width/frame.width,canvas.height/frame.height);
+  const width=Math.max(1,Math.round(frame.width*scale));
+  const height=Math.max(1,Math.round(frame.height*scale));
+  context.clearRect(0,0,canvas.width,canvas.height);
+  context.imageSmoothingEnabled=false;
+  context.drawImage(image,frame.sx,frame.sy,frame.width,frame.height,
+   Math.round((canvas.width-width)/2),canvas.height-height,width,height);
+ }
+ idlePortraitFrame=idlePortraits.size?requestAnimationFrame(paintIdlePortraits):null;
+}
+function idlePokemonPortrait(name,className) {
+ const canvas=pokemonPortrait(name,className,false,0);
+ const reduced=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const clip=pmdMotion({name,direction:0},'idle');
+ if(clip?.duration && !reduced) {
+  idlePortraits.set(canvas,clip);
+  idlePortraitFrame ??= requestAnimationFrame(paintIdlePortraits);
+ }
+ return canvas;
+}
 function pokemonTile(name,label,pressed,select,owned=false) {
  const tile = element('button',null,'tile');
  tile.type='button';
  tile.title=name;
  tile.setAttribute('aria-label',label+' '+name);
  tile.setAttribute('aria-pressed',String(pressed));
- tile.append(pokemonPortrait(name),element('small',dexNumber(name)));
+ tile.append(idlePokemonPortrait(name),element('small',dexNumber(name)));
  if(owned) tile.append(element('span','✓','owned'));
  tile.onclick=select;
  return tile;
@@ -1020,7 +1052,7 @@ function renderDetail() {
  const [,primary,secondary]=dex[name];
  const panel=byId('pokemon-detail');
  const title=element('h3',null,'detail-title');
- title.append(pokemonPortrait(name,'portrait'),element('span',name),element('small',dexNumber(name)));
+ title.append(idlePokemonPortrait(name,'portrait'),element('span',name),element('small',dexNumber(name)));
  const body=element('div',null,'detail-body');
  const summary=element('div',null,'detail-summary');
  const info=element('div');
@@ -1958,7 +1990,7 @@ function playEvolutionScenes(done=()=>{}) {
  const [oldName,newName]=scene;
  const dialog=element('dialog',null,'evolution-dialog');
  const stage=element('div',null,'evolution-stage');
- stage.append(pokemonPortrait(oldName,'evolution-old',true),pokemonPortrait(newName,'evolution-new',true));
+ stage.append(pokemonPortrait(oldName,'evolution-old',true,0),pokemonPortrait(newName,'evolution-new',true,0));
  const title=element('h2',oldName+' is evolving!');
  const finish=element('button','Continue');
  finish.disabled=true;
@@ -2998,7 +3030,7 @@ function renderCatalogDetail(name) {
  const [,primary,secondary]=dex[name];
  const title=element('h3',caught ? dexNumber(name)+' '+name : dexNumber(name));
  const art=element('div',null,'dex-art'+(caught?'':' is-uncaught'));
- art.append(pokemonPortrait(name));
+ art.append(idlePokemonPortrait(name));
  if(!caught) {
   art.append(dexLock());
   panel.append(title,art);
@@ -3417,12 +3449,61 @@ function finishRogueRound(won) {
 byId('home-roguelit').onclick=openRogueLobby;
 byId('rogue-back').onclick=openMenu;
 function showScreen(screen) {
+ if(screen!=='home')stopHomeSprite();
  stopBattleMusic();
  for(const id of ['home','login','roguelit','starter-setup','wild-regions','wild-result','trainer-regions','gyms','gym-collection','pokedex','shop','skill-shop','skillset','abilities','menu','battle']) byId(id).hidden=id!==screen;
  byId('arena-header').hidden=screen==='home' || screen==='login' || screen==='starter-setup';
  byId('score').hidden=screen!=='battle';
 }
 byId('knockout-notice').onanimationend=event=>{event.currentTarget.hidden=true;};
+let homeSpriteFrame=0;
+function stopHomeSprite() {
+ if(homeSpriteFrame)cancelAnimationFrame(homeSpriteFrame);
+ homeSpriteFrame=0;
+}
+function animateHomeSprite(name) {
+ stopHomeSprite();
+ const container=byId('feature-sprite');
+ const art=pokemonPortrait(name,'feature-lead',true,0);
+ container.replaceChildren(art);
+ const facing={name,direction:0};
+ const idle=pmdMotion(facing,'idle');
+ const attack=pmdMotion(facing,'attack') ?? pmdMotion(facing,'lunge');
+ const clips=[idle,attack].filter(Boolean);
+ if(!clips.length || (typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches))return;
+ const frames=clips.flatMap(clip=>clip.frames);
+ const width=Math.max(...frames.map(frame=>frame.width));
+ const height=Math.max(...frames.map(frame=>frame.height));
+ const animated=element('canvas',null,'feature-lead');
+ animated.setAttribute('aria-hidden','true');
+ animated.width=width;animated.height=height;
+ const context=animated.getContext('2d');
+ context.imageSmoothingEnabled=false;
+ const idleTicks=Math.max(150,idle?.duration ?? 0);
+ const cycle=idleTicks+(attack?.duration ?? 0);
+ let start=null;
+ let previous=null;
+ const draw=now=>{
+  if(byId('home').hidden){homeSpriteFrame=0;return;}
+  start ??=now;
+  const tick=((now-start)*0.06)%cycle;
+  const clip=attack && tick>=idleTicks?attack:idle;
+  const time=clip===attack?tick-idleTicks:tick%(idle?.duration ?? 1);
+  const frame=clip?.frames.find(frame=>time<frame.end) ?? pmdReference(name,0);
+  if(frame && frame!==previous) {
+   const image=pmdImage(frame.page);
+   if(image.naturalWidth) {
+    context.clearRect(0,0,width,height);
+    context.drawImage(image,frame.sx,frame.sy,frame.width,frame.height,
+     Math.round((width-frame.width)/2),height-frame.height,frame.width,frame.height);
+    if(!previous)container.replaceChildren(animated);
+    previous=frame;
+   }
+  }
+  homeSpriteFrame=requestAnimationFrame(draw);
+ };
+ homeSpriteFrame=requestAnimationFrame(draw);
+}
 function openMenu() {
  rogueRun=null;
  if(!team.length) {openStarterSetup();return;}
@@ -3440,14 +3521,12 @@ function openMenu() {
  byId('toolbar-coins').textContent=byId('home-coins').textContent;
  byId('toolbar-profile').textContent='Lv. '+trainerProfileLevel()+' · '+(starterSave?.ign ?? currentPlayer.name);
  const lead=team[0];
- if(byId('feature-sprite').dataset.lead!==lead) {
-  byId('feature-sprite').replaceChildren(pokemonPortrait(lead,'feature-lead',true));
-  byId('feature-sprite').dataset.lead=lead;
- }
+
  byId('feature-name').textContent=lead+' · Lv. '+ownedPokemon(lead).level;
  byId('feature-type').textContent=dex[lead].slice(1,3).filter(Boolean).join(' / ');
  updateHomeSound();
  showScreen('home');
+ animateHomeSprite(lead);
 }
 function openTeamBuilder() {
  phase='menu';
