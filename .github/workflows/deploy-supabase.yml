@@ -35,4 +35,4 @@ jobs:
       - name: Apply database migrations
         run: supabase db push --remote --yes
       - name: Deploy arena combat
-        run: supabase functions deploy arena-combat --project-ref "$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+        run: supabase functions deploy arena-combat --remote="$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt --yes
