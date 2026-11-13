@@ -3,7 +3,6 @@
  let generation=0, timer, active;
  let arenaActors=new Map(), rosterRows=new Map(), displayedTurn=-1, recallSlotOnline=null;
  let frameAge=0, soundsPlayed=new Set(), battleSnapshot=null;
- const pvpExitLocked=match=>match?.joined && !match.result && ['ranked','unranked'].includes(match.mode);
  function arenaView(match, picks, togglePick, ready, leave) {
   if(phase!=='online-battle') {
    arenaActors=new Map();rosterRows=new Map();soundsPlayed=new Set();displayedTurn=-1;
@@ -21,8 +20,6 @@
    byId('reset').onclick=leave;
    try {startBattleMusic();} catch {}
   }
-  byId('reset').disabled=pvpExitLocked(match);
-  byId('reset').title=pvpExitLocked(match)?'Available after the PvP match finishes':'';
   if(match.started) {
    if(!battleSnapshot)byId('status').textContent='Both players are ready. Sending out Pokémon…';
    byId('choices').replaceChildren();
@@ -32,7 +29,7 @@
    'Choose '+match.format+' lead Pokémon from your team, then press Ready.'+(match.opponentLocked?' The other player is ready.':'');
   byId('player-roster').replaceChildren(element('h2','Your team'),...team.map(name=>{
    const card=element('button',null,'battle-slot');
-   card.append(pokemonPortrait(name),element('span',name));
+   card.append(pokemonPortrait(name),battleRosterIdentity(name,ownedPokemon(name)?.level ?? 5));
    card.disabled=match.locked;
    card.setAttribute('aria-pressed',String(picks.includes(name)));
    card.onclick=()=>togglePick(name);
@@ -122,7 +119,7 @@
     let row=rosterRows.get(actor.onlineId);
     if(!row) {
      const card=element('button',null,'battle-slot');
-     const identity=element('span',actor.name+' · Lv. '+actor.level,'battle-name');
+     const identity=battleRosterIdentity(actor.name,actor.level);
      const hp=element('progress');hp.max=actor.max;hp.setAttribute('aria-label',actor.name+' HP');
      card.append(pokemonPortrait(actor.name),identity,hp);
      container.append(card);
@@ -174,8 +171,6 @@
   stop();
   byId('start').hidden=false;
   byId('speed').disabled=false;
-  byId('reset').disabled=false;
-  byId('reset').title='';
   byId('reset').onclick=openMenu;
   originalMenu();
  };
@@ -252,8 +247,7 @@
   const token=generation;
   const view=element('div');
   const leave=async()=>{
-   if(pvpExitLocked(active))return;
-   if(!active.result && !confirm('Leave this match?'))return;
+   if(!active.result && !confirm('Leave this match? Leaving a started ranked match counts as a loss.'))return;
    try {
     if(!active.result)await rpc('leave',{id:active.id});
     if(token!==generation)return;
@@ -311,8 +305,6 @@
    if(m.result){
     const result={draw:'Draw',cancelled:'Match cancelled',coop_win:'Co-op victory',coop_loss:'Co-op defeat'}[m.result] ?? (m.result===m.side?'Victory':'Defeat');
     stopBattleMusic();
-    byId('reset').disabled=false;
-    byId('reset').title='';
     if(phase==='online-battle') show(title,element('strong',result),button('Main menu',()=>{openMenu();dialog.close();}));
     else view.append(element('strong',result));return;
    }
@@ -355,34 +347,12 @@
  }
  async function friends() {
   const rows=await rpc('friends'),name=input('Player name');
-  const list=element('div');
-  function renderFriends(rows) {
-   list.replaceChildren(...rows.map(friend=>{
-    const row=element('p');
-    if(friend.accepted) {
-     const dot=element('span','●');
-     dot.style.color=friend.online?'#58df8b':'#8892a3';
-     dot.title=friend.online?'Online':'Offline';
-     dot.setAttribute('role','img');
-     dot.setAttribute('aria-label',dot.title);
-     row.append(dot,' ');
-    }
-    row.append(friend.name+(friend.accepted?'':friend.incoming?' · Incoming request':' · Request sent'));
-    if(friend.incoming&&!friend.accepted)row.append(button('Accept',async()=>{
-     await rpc('friend_request',{name:friend.name});await friends();await refreshNotices();
-    }));
+  show('Friendlist',name,button('Send request',async()=>{await rpc('friend_request',{name:name.value});await friends();}),
+   ...rows.map(friend=>{
+    const row=element('p',friend.name+' · '+(friend.accepted?'Friend':friend.incoming?'Incoming request':'Request sent'));
+    if(friend.incoming&&!friend.accepted)row.append(button('Accept',async()=>{await rpc('friend_request',{name:friend.name});await friends();}));
     return row;
    }));
-  }
-  renderFriends(rows);
-  show('Friendlist',name,button('Send request',async()=>{await rpc('friend_request',{name:name.value});await friends();}),
-   list);
-  async function refreshFriends() {
-   if(!dialog.open || !list.isConnected)return;
-   try {renderFriends(await rpc('friends'));} catch {}
-   if(dialog.open && list.isConnected)setTimeout(refreshFriends,10000);
-  }
-  setTimeout(refreshFriends,10000);
  }
  async function guilds() {
   const data=await rpc('guilds'),name=input('Guild name');
@@ -400,7 +370,7 @@
    ...(rows.length?rows.map((row,i)=>element('p',(i+1)+'. '+row.name+' · '+describe(row))):[element('p','No results yet.')])]));
  }
  async function notifications() {
-  const data=await refreshNotices();
+  const data=await rpc('notifications');
   show('Notifications',...data.friends.map(name=>element('div',name+' sent a friend request.')),
    ...data.friends.map(name=>button('Accept '+name,async()=>{await rpc('friend_request',{name});await notifications();})),
    ...data.invites.map(invite=>button('Join '+invite.name+' · '+invite.mode,async()=>{
@@ -409,19 +379,13 @@
    ...(!data.friends.length&&!data.invites.length?[element('p','No new notifications.')]:[]));
  }
  byId('toolbar-notices').onclick=()=>open('Notifications',notifications);
- async function refreshNotices() {
-  const data=await rpc('notifications');
-  const count=data.friends.length+data.invites.length;
-  const control=byId('toolbar-notices');
-  const badge=element('span',String(count));
-  badge.style.cssText='margin-left:.45em;background:#bd2348;color:white;border-radius:999px;padding:.1em .5em';
-  badge.setAttribute('aria-hidden','true');
-  control.replaceChildren('Notifications',...(count?[badge]:[]));
-  control.setAttribute('aria-label',count?'Notifications, '+count+' pending':'Notifications');
-  return data;
- }
- setInterval(()=>{
-  if(cloudAccount && phase!=='login')refreshNotices().catch(()=>{});
+ setInterval(async()=>{
+  if(phase!=='home' || !cloudAccount)return;
+  try {
+   const data=await rpc('notifications');
+   const count=data.friends.length+data.invites.length;
+   byId('toolbar-notices').textContent=count?'Notifications ('+count+')':'Notifications';
+  } catch {}
  },5000);
  byId('home-coop').onclick=()=>open('Co-op',()=>lobby(true));
  byId('home-pvp').onclick=()=>open('PvP',()=>lobby(false));
