@@ -1666,7 +1666,11 @@ for(const [id,[parent,,level]] of Object.entries(evolutionData)) {
  if(parent && level && isAvailablePokemon(name)) (levelEvolutions[parent] ??=[]).push({name,level});
 }
 function experienceNeeded(level) {
- return (level+1)**3-level**3;
+ // Taper the discount across each band so the next-level cost rises smoothly.
+ const factor=level<40 ? 0.32+(level-1)*0.18/39 :
+  level<80 ? 0.50+(level-40)*0.30/40 :
+  0.80+(level-80)*0.20/19;
+ return Math.ceil(((level+1)**3-level**3)*factor);
 }
 const evolutionScenes=[];
 function stoneTarget(name,item) {
@@ -3230,9 +3234,15 @@ function randomArenaMap() {
   shape:['ellipse','rectangle','diamond'][Math.floor(onlineRandom()*3)],
   w:55+onlineRandom()*35,h:40+onlineRandom()*40,
  }));
- const rocks=[115,240,355].map(y=>({
-  x:360+onlineRandom()*240,y:y+onlineRandom()*30-15,r:24+onlineRandom()*10,hp:24,maxHp:24,
- }));
+ const rocks=[];
+ for(let attempt=0;attempt<80 && rocks.length<3;attempt++){
+  const r=24+onlineRandom()*10;
+  const x=95+onlineRandom()*770,y=65+onlineRandom()*350;
+  // Keep the full send-out columns clear in singles and multi-Pokémon matches.
+  if([240,720].some(spawnX=>Math.abs(x-spawnX)<r+48))continue;
+  if(rocks.some(rock=>Math.hypot(x-rock.x,y-rock.y)<r+rock.r+65))continue;
+  rocks.push({x,y,r,hp:24,maxHp:24});
+ }
  return {...biome,zones,rocks};
 }
 function arenaBonus(actor,type) {
@@ -3315,10 +3325,13 @@ function moveToClearPoint(actor,x,y) {
  actor.x+=(x-actor.x)*fraction;
  actor.y+=(y-actor.y)*fraction;
 }
-function terrainMovement(actor,dx,dy,step) {
+function terrainMovement(actor,dx,dy,step,navigationTarget) {
  if(step<=0)return {dx,dy,step};
  const angle=Math.atan2(dy,dx);
  const probe=56;
+ const hostiles=combatSides()[actor.friendly?1:0];
+ // Leave room to approach the intended target while avoiding other opponents.
+ const others=hostiles.filter(other=>other!==navigationTarget);
  let best=null;
  for(const turn of [0,1,-1,2,-2,3,-3]) {
   const heading=angle+turn*Math.PI/6;
@@ -3327,7 +3340,12 @@ function terrainMovement(actor,dx,dy,step) {
   const distance=Math.hypot(x-actor.x,y-actor.y);
   if(distance<0.01)continue;
   const clear=movementClearance(actor,actor.x,actor.y,x,y);
-  const score=clear*distance+Math.cos(turn*Math.PI/6)*22+
+  if(clear*distance<0.1)continue;
+  const endX=actor.x+(x-actor.x)*clear,endY=actor.y+(y-actor.y)*clear;
+  const wallSpace=Math.min(endX-28,canvas.width-28-endX,endY-28,canvas.height-28-endY);
+  const crowd=others.reduce((penalty,other)=>penalty+
+   Math.max(0,90-Math.hypot(endX-other.x,endY-other.y))*0.45,0);
+  const score=clear*distance+Math.cos(turn*Math.PI/6)*22+Math.min(64,wallSpace)*0.55-crowd+
    (turn && Math.sign(turn)===actor.detourSide?5:0);
   if(!best || score>best.score)best={dx:(x-actor.x)/distance,dy:(y-actor.y)/distance,
    step:Math.max(0,Math.min(step,clear*distance-0.05)),score,turn};
@@ -3788,7 +3806,7 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   (damage>=target.hp?35:0)+Math.min(1-health,drain)*20-recoil*15+
   (!target.ailment && rules.ailment ? rules.ailmentChance*0.12 : 0))*(accuracy ?? 100)/100;
 }
-function moveActor(actor,dx,dy,remaining,dt,run) {
+function moveActor(actor,dx,dy,remaining,dt,run,navigationTarget) {
   actor.gait = run ? 'run' : 'walk';
   const ability=activeAbility(actor);
   const weather=abilityWeather();
@@ -3799,7 +3817,7 @@ function moveActor(actor,dx,dy,remaining,dt,run) {
   const slowed=pendingCasts.some(cast=>cast.actor.hp>0 && cast.actor.friendly!==actor.friendly &&
    sacrificeProfiles.has(cast.move) && inSkill(actor,cast.center,cast.radius,null));
   const terrainBoost=[actor.type,extraTypes[actor.name]].some(type=>arenaBonus(actor,type))?1.2:1;
-  const route=terrainMovement(actor,dx,dy,Math.min(pace*gaitSpeed*dt*terrainBoost*(slowed?0.65:1),remaining));
+  const route=terrainMovement(actor,dx,dy,Math.min(pace*gaitSpeed*dt*terrainBoost*(slowed?0.65:1),remaining),navigationTarget);
   ({dx,dy}=route);
   const {step}=route;
   actor.motionTicks+=step*(actor.gait==='run' ? 1.48 : 1.18);
@@ -3984,7 +4002,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
   const dx=(target.x-actor.x)/distance;
   const dy=(target.y-actor.y)/distance;
   if(gap>goal+10 && (close || !ready)) {
-   moveActor(actor,dx,dy,gap-goal,dt,gap-goal>100);
+   moveActor(actor,dx,dy,gap-goal,dt,gap-goal>100,target);
    return;
   }
   if(!close && !ready && gap<goal-12) {
@@ -4004,7 +4022,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  const remaining=choice?.remaining ?? 0;
  if(remaining>0.01 && distance>1) {
-  moveActor(actor,(target.x-actor.x)/distance,(target.y-actor.y)/distance,remaining,dt,remaining>100);
+  moveActor(actor,(target.x-actor.x)/distance,(target.y-actor.y)/distance,remaining,dt,remaining>100,target);
   return;
  }
  if(!choice || actor.charge>0 || remaining>0.01) return;
@@ -4013,7 +4031,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
   (cover.rock.hp<=8 || inSkill(target,null,0,pillarPath(cover.rock,actor)));
  if(cover && !strikeCover && distance>1) {
   const dx=(target.x-actor.x)/distance,dy=(target.y-actor.y)/distance;
-  moveActor(actor,dx,dy,Math.max(24,distance),dt,true);
+  moveActor(actor,dx,dy,Math.max(24,distance),dt,true,target);
   return;
  }
  const {slot,move,rules,shape,range,selfCentered}=choice;
