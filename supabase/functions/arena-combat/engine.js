@@ -914,9 +914,9 @@ function renderDetail() {
  const ability=abilityFor(name,profile);
  const effect=nature.up===nature.down ? ' · Neutral' :
   ' · +'+statLabels[nature.up]+' / −'+statLabels[nature.down];
- info.append(badges,element('p',height/10+' m · '+weight/10+' kg'),
+ info.append(element('p',owned ? 'Lv. '+owned.level+(owned.level<100?' · '+owned.xp+'/'+experienceNeeded(owned.level)+' XP':' · Max level') : 'Unowned',owned?'team-owned':'team-unowned'),
+badges,element('p',height/10+' m · '+weight/10+' kg'),
   element('p','Nature · '+nature.name+effect),element('p','Personality · '+personalityOf(profile)),
-  element('p',owned ? 'Lv. '+owned.level+(owned.level<100?' · '+owned.xp+'/'+experienceNeeded(owned.level)+' XP':' · Max level') : 'Unowned',owned?'team-owned':'team-unowned'),
   element('p','Base stat chart'));
  if(ability) info.append(element('p',(hiddenAbilityFor(name,profile)?'Hidden Ability':'Ability')+' · '+ability));
  const chart=element('canvas',null,'stat-chart');
@@ -1331,7 +1331,7 @@ function arenaMoveGeometry(move,rules) {
  const shape=skillShape(move);
  const blast=sacrificeProfiles.get(move);
  const selfCentered=move==='Earthquake' || Boolean(blast) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
- const radius=shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
+ const radius=move==='Earthquake'?rules.radius*2:shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
  const range=shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?radius:rules.range;
  const warning=blast?.charge ?? (shape==='dash'?(moveCatalog[move][3]>0?0.35:0.55):
   shape==='arc'?0.45:shape==='projectile'?0.55:castWindup);
@@ -2958,6 +2958,12 @@ function transformDitto(actor,target,explicit=false) {
 }
 function actBattleFields(sides,dt) {
  for(const [side,team] of sides.entries())for(const actor of team) {
+  if(!actor.entryPending || actor.hazardsApplied)continue;
+  actor.hazardsApplied=true;
+  const opponent=sides[1-side].find(foe=>foe.hp>0) ?? (actor.friendly?enemies:allies)[0];
+  if(opponent)applyEntryHazards(actor,opponent);
+ }
+ for(const [side,team] of sides.entries())for(const actor of team) {
   const firstOpponent=sides[1-side].filter(foe=>foe.hp>0).reduce((nearest,foe)=>
    !nearest || Math.hypot(foe.x-actor.x,foe.y-actor.y)<Math.hypot(nearest.x-actor.x,nearest.y-actor.y)?foe:nearest,null);
   transformDitto(actor,firstOpponent);
@@ -3296,6 +3302,7 @@ function startSwitch(outgoing,incoming) {
  incoming.direction=incoming.friendly ? 2 : 6;
  incoming.motionTicks=0;
  incoming.fieldTime=0;
+ incoming.hazardsApplied=false;incoming.crowdedFor=0;incoming.escapeUntil=0;
  incoming.actedSinceEntry=false;
  for(const motion of ['idle','walk','run']) {
   for(const frame of pmdMotion(incoming,motion)?.frames ?? []) pmdImage(frame.page);
@@ -3459,13 +3466,13 @@ function bodyRadius(actor) {
  const box=hitbox(actor);
  return clamp(Math.max(box.x,box.y),8,34);
 }
-function movementClearance(actor,x,y,tx,ty) {
+function movementClearance(actor,x,y,tx,ty,escape=false) {
  const radius=bodyRadius(actor);
  let clear=rockIntersection(x,y,tx,ty,radius);
  const dx=tx-x,dy=ty-y,length=dx*dx+dy*dy;
  if(!length)return clear;
  for(const other of combatSides().flat()) {
-  if(other===actor)continue;
+  if(other===actor || (escape && other.friendly!==actor.friendly))continue;
   const ox=x-other.x,oy=y-other.y;
   const size=radius+bodyRadius(other);
   const b=ox*dx+oy*dy,c=ox*ox+oy*oy-size*size;
@@ -3482,7 +3489,7 @@ function moveToClearPoint(actor,x,y) {
  actor.x+=(x-actor.x)*fraction;
  actor.y+=(y-actor.y)*fraction;
 }
-function terrainMovement(actor,dx,dy,step,navigationTarget) {
+function terrainMovement(actor,dx,dy,step,navigationTarget,escape=false) {
  if(step<=0)return {dx,dy,step};
  const angle=Math.atan2(dy,dx);
  const probe=56;
@@ -3496,7 +3503,7 @@ function terrainMovement(actor,dx,dy,step,navigationTarget) {
   const y=clamp(actor.y+Math.sin(heading)*probe,28,canvas.height-28);
   const distance=Math.hypot(x-actor.x,y-actor.y);
   if(distance<0.01)continue;
-  const clear=movementClearance(actor,actor.x,actor.y,x,y);
+  const clear=movementClearance(actor,actor.x,actor.y,x,y,escape);
   if(clear*distance<0.1)continue;
   const endX=actor.x+(x-actor.x)*clear,endY=actor.y+(y-actor.y)*clear;
   const wallSpace=Math.min(endX-28,canvas.width-28-endX,endY-28,canvas.height-28-endY);
@@ -3686,8 +3693,7 @@ function abilityWeather() {
 function entryAbility(actor,opponent) {
  if(!actor?.entryPending || actor.hp<=0 || !opponent || opponent.hp<=0) return;
  actor.entryPending=false;
- applyEntryHazards(actor,opponent);
- if(actor.hp<=0)return;
+
  actor.abilityTimer=0;
  const ability=activeAbility(actor);
  if(weatherAbilities[ability]) setWeather(weatherAbilities[ability]);
@@ -4071,7 +4077,7 @@ function arenaDefenseTypes(target) {
  return [target.type,target.singleType?target.copiedSecondary:extraTypes[target.name],target.addedType].filter(Boolean);
 }
 let entryHazards=[{},{}];
-const hazardCaps={'Spikes':3,'Toxic Spikes':2,'Stealth Rock':1,'Sticky Web':1};
+const hazardCaps={'Spikes':1,'Toxic Spikes':2,'Stealth Rock':1,'Sticky Web':1};
 function hazardMove(name,description) {
  const side=actor=>entryHazards[actor.friendly?1:0];
  return {description,score:actor=>{
@@ -4091,10 +4097,14 @@ function applyEntryHazards(actor,opponent) {
  }
  if(grounded && hazards['Sticky Web'])applyChanges(actor,[[6,-1]],opponent);
  if(activeAbility(actor)==='Magic Guard')return;
- const spikes=grounded?[0,1/8,1/6,1/4][hazards.Spikes ?? 0]:0;
- const rock=hazards['Stealth Rock']?effectiveness('Rock',actor)/8:0;
+ const hazardFraction=type=>{
+  const matchup=effectiveness(type,actor);
+  return matchup===0?0:matchup<1?0.05:matchup>1?0.15:0.10;
+ };
+ const spikes=grounded && hazards.Spikes?hazardFraction('Ground'):0;
+ const rock=hazards['Stealth Rock']?hazardFraction('Rock'):0;
  if(spikes+rock>0) {
-  const damage=Math.min(actor.hp,scaledBattleDamage(Math.round(actor.max*(spikes+rock)))*gymDamageMultiplier(opponent,actor));
+  const damage=Math.min(actor.hp,Math.max(1,Math.round(actor.max*(spikes+rock))));
   actor.hp-=damage;
   recordOpponentDamage(opponent,actor,damage);
  }
@@ -4299,9 +4309,9 @@ const additionalStatusMoves={
   (actor,target)=>target.moves.some(move=>moveCatalog[move][0]==='Fire')),
  'Wonder Room':arenaFieldMove('Wonder Room','Swaps which defensive stat and stat stages physical and special moves use for 10 seconds.'),
 
- Spikes:hazardMove('Spikes','Damages grounded enemies when they enter. Stacks up to three times.'),
+ Spikes:hazardMove('Spikes','Damages grounded entrants for 5%, 10%, or 15% max HP based on their Ground matchup. Immunity prevents damage.'),
  'Toxic Spikes':hazardMove('Toxic Spikes','Poisons grounded enemies when they enter. Grounded Poison Pokémon clear it.'),
- 'Stealth Rock':hazardMove('Stealth Rock','Damages entering enemies based on their Rock weakness.'),
+ 'Stealth Rock':hazardMove('Stealth Rock','Damages entrants for 5%, 10%, or 15% max HP based on their Rock matchup. Immunity prevents damage.'),
  'Sticky Web':hazardMove('Sticky Web','Lowers the Speed of grounded enemies when they enter.'),
  'Court Change':{description:'Swaps entry hazards between the two sides.',
   score:actor=>Object.keys(entryHazards[actor.friendly?0:1]).length>Object.keys(entryHazards[actor.friendly?1:0]).length?50:0,
@@ -4530,7 +4540,7 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   (damage>=target.hp?35:0)+Math.min(1-health,drain)*20-recoil*15+
   (!target.ailment && rules.ailment ? rules.ailmentChance*0.12 : 0))*(accuracy ?? 100)/100;
 }
-function moveActor(actor,dx,dy,remaining,dt,run,navigationTarget) {
+function moveActor(actor,dx,dy,remaining,dt,run,navigationTarget,escape=false) {
  if(actor.ingrainAt)return;
   actor.gait = run ? 'run' : 'walk';
   const ability=activeAbility(actor);
@@ -4542,7 +4552,7 @@ function moveActor(actor,dx,dy,remaining,dt,run,navigationTarget) {
   const slowed=pendingCasts.some(cast=>cast.actor.hp>0 && cast.actor.friendly!==actor.friendly &&
    sacrificeProfiles.has(cast.move) && inSkill(actor,cast.center,cast.radius,null));
   const terrainBoost=[actor.type,extraTypes[actor.name]].some(type=>arenaBonus(actor,type))?1.2:1;
-  const route=terrainMovement(actor,dx,dy,Math.min(pace*gaitSpeed*dt*terrainBoost*(slowed?0.65:1),remaining),navigationTarget);
+  const route=terrainMovement(actor,dx,dy,Math.min(pace*gaitSpeed*dt*terrainBoost*(slowed?0.65:1),remaining),navigationTarget,escape);
   ({dx,dy}=route);
   const {step}=route;
   actor.motionTicks+=step*(actor.gait==='run' ? 1.48 : 1.18);
@@ -4663,6 +4673,30 @@ function moveRestricted(actor,move) {
   actor.encoreUntil>clock && actor.encoreMove!==move ||
   actor.tormentUntil>clock && actor.lastUsedMove===move;
 }
+function escapeCrowding(actor,opponents,dt) {
+ if(actor.ingrainAt || pendingCasts.some(cast=>cast.actor===actor &&
+  !cast.flight && (cast.shape==='dash' || cast.shape==='landing' || sacrificeProfiles.has(cast.move))))return false;
+ const edge=Math.min(actor.x-28,canvas.width-28-actor.x,actor.y-28,canvas.height-28-actor.y);
+ const nearby=opponents.filter(foe=>foe.hp>0 && Math.hypot(foe.x-actor.x,foe.y-actor.y)<bodyRadius(actor)+bodyRadius(foe)+35);
+ if((edge<62 && nearby.length) || nearby.length>=2)actor.crowdedFor=(actor.crowdedFor ?? 0)+dt;
+ else actor.crowdedFor=0;
+ if(actor.crowdedFor>=0.65 && !(actor.escapeUntil>clock)) {
+  actor.escapeUntil=clock+2.5;
+  const points=[];
+  for(const x of [canvas.width*.32,canvas.width*.5,canvas.width*.68])
+   for(const y of [canvas.height*.3,canvas.height*.5,canvas.height*.7])
+    points.push({x,y,score:Math.min(...opponents.filter(foe=>foe.hp>0).map(foe=>Math.hypot(x-foe.x,y-foe.y)))-
+     Math.hypot(x-actor.x,y-actor.y)*.35,
+     clear:rockIntersection(actor.x,actor.y,x,y,bodyRadius(actor))});
+  actor.escapeGoal=points.sort((a,b)=>(b.clear===1)-(a.clear===1) || b.score-a.score)[0];
+ }
+ if(!(actor.escapeUntil>clock) || !actor.escapeGoal)return false;
+ const dx=actor.escapeGoal.x-actor.x,dy=actor.escapeGoal.y-actor.y;
+ const distance=Math.hypot(dx,dy);
+ if(distance<20){actor.escapeUntil=0;actor.crowdedFor=0;return false;}
+ moveActor(actor,dx/distance,dy/distance,distance,dt,true,null,true);
+ return true;
+}
 function act(actor, opponents, dt, teammates=[actor]) {
  actor.gait = null;
  if(actor.hp<=0) return;
@@ -4681,6 +4715,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
   return;
  }
  actor.charge=Math.max(0,actor.charge-dt);
+ if(escapeCrowding(actor,opponents,dt))return;
  if(actor.ailment===6)opponents=[...opponents,...teammates.filter(member=>member!==actor)];
  let target = null;
  let gap = Infinity;
@@ -4940,7 +4975,7 @@ function resolveOffensiveMove(actor,move,rules,center,opponents,cast=null,reflec
  const line=cast?.line;
  const radius=cast?.radius ?? rules.radius;
  if(line && !cast.flight) effect(line.end,'',1,{x:line.x,y:line.y,line:!line.halfAngle,sector:line.halfAngle?line:null,shape:cast.shape,halfWidth:line.halfWidth});
- else if(radius && !cast?.flight) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
+ else if(radius && !cast?.flight && cast?.quakeRing===undefined) effect(center,'',1,{radius,zone:true,shape:cast?.shape});
  const pillars=new Set();
  if(!status && power>0) {
   if(line || radius) {
@@ -5772,12 +5807,20 @@ function drawSkillWarning({actor,center,radius,remaining,line,warning,flight,tra
   return;
  }
  if(move==='Earthquake') {
-  for(let ring=2;ring>=0;ring--) {
-   ctx.beginPath();ctx.arc(center.x,center.y,radius*(ring+1)/3,0,Math.PI*2);
-   ctx.strokeStyle=color;ctx.lineWidth=ring===(quakeRing ?? 0)?4:1.5;
-   ctx.globalAlpha=ring===(quakeRing ?? 0)?0.95:0.45;
-   ctx.stroke();
+  const ring=quakeRing ?? 0;
+  const inner=radius*ring/3;
+  const outer=radius*(ring+1)/3;
+  ctx.beginPath();
+  ctx.arc(center.x,center.y,outer,0,Math.PI*2);
+  if(inner>0) {
+   ctx.moveTo(center.x+inner,center.y);
+   ctx.arc(center.x,center.y,inner,0,Math.PI*2);
   }
+  ctx.fillStyle=color;
+  ctx.globalAlpha=0.16+progress*0.3;
+  ctx.fill('evenodd');
+  ctx.globalAlpha=0.95;ctx.strokeStyle=color;ctx.lineWidth=2;
+  ctx.stroke();
   ctx.restore();
   return;
  }
