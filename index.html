@@ -1709,7 +1709,7 @@ let skillsetPage=0;
 let selectedSkill=null;
 const skillCategory=rules=>({1:'Status',2:'Physical',3:'Special'})[rules.category] ?? 'Physical';
 const moveStatNames=['','HP','Attack','Defense','Special Attack','Special Defense','Speed','Accuracy','Evasion'];
-const skillConditions={1:'paralysis',2:'sleep',3:'freeze',4:'burn',5:'poison'};
+const skillConditions={1:'paralysis',2:'sleep',3:'freeze',4:'burn',5:'poison',6:'confusion'};
 const referenceMoveOptions=moveOptions;
 const unsupportedMoveNote='This move has no additional effect implemented in the arena.';
 for(const type of [...new Set(referenceMoveOptions.map(move=>moveReferences[move][1]))].sort()) {
@@ -1718,15 +1718,53 @@ for(const type of [...new Set(referenceMoveOptions.map(move=>moveReferences[move
 function skillHealingPercent(move,rules) {
  return (rules.healing || (move==='Aqua Ring'?20:0))/4;
 }
+const conditionalPowerNotes={
+ Brine:'Doubles base power against targets at half HP or less.',
+ Hex:'Doubles base power against targets with a status condition.',
+ Venoshock:'Doubles base power against poisoned targets.',
+ Facade:'Doubles base power while the user is paralyzed, burned, or poisoned.',
+ Acrobatics:'Doubles base power when the user has no held item.',
+ 'Grass Knot':'Base power increases with the target’s weight.',
+ 'Low Kick':'Base power increases with the target’s weight.',
+ 'Gyro Ball':'Base power increases when the target’s Speed exceeds the user’s.',
+ 'Electro Ball':'Base power increases with the user’s Speed relative to the target.',
+ Eruption:'Base power scales with the user’s remaining HP.',
+ 'Water Spout':'Base power scales with the user’s remaining HP.',
+ 'Dragon Energy':'Base power scales with the user’s remaining HP.',
+};
+function arenaMoveGeometry(move,rules) {
+ const shape=skillShape(move);
+ const blast=sacrificeProfiles.get(move);
+ const selfCentered=Boolean(blast) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
+ const radius=shape==='landing'?42:rules.radius*(blast?.radius ?? 1);
+ const range=shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?radius:rules.range;
+ const warning=blast?.charge ?? (shape==='dash'?(moveCatalog[move][3]>0?0.35:0.55):
+  shape==='arc'?0.45:shape==='projectile'?0.55:castWindup);
+ return {shape,selfCentered,radius,range,warning};
+}
 function skillDescription(move) {
  const [type,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
  const rules=moveRules(move);
- const selfArea=rules.scope==='area' && [9,12,14].includes(rules.target);
+ const {shape,selfCentered:selfArea,radius,warning}=arenaMoveGeometry(move,rules);
  const target=rules.scope==='ally' ? ([13,15].includes(rules.target)?'all active allies':
   [3,5].includes(rules.target)?'a low-HP active ally':'the user') :
   rules.scope==='area' ? (selfArea?'enemies around the user':'enemies around the target') : 'one enemy';
  const notes=[status?'Targets '+target+'.':
   'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage to '+target+'.'];
+ const geometryNotes={
+  wave:'Sweeps a wide forward rectangle.',beam:'Fires a narrow forward beam.',
+  cone:'Hits enemies in a forward cone.',arc:'Sweeps a short forward arc.',
+  dash:'Dashes along a marked path that can hit multiple opponents.',
+  projectile:'Launches a projectile that hits the first enemy it reaches.',
+  landing:'Leaps to a marked landing area.',
+ };
+ if(shape)notes[0]=(status?type+' status move.': 'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage.')+' '+geometryNotes[shape];
+ if(rules.scope!=='ally' && (shape || radius) && !sacrificeProfiles.has(move))notes.push('The warning lasts '+warning+' battle seconds.');
+ if(conditionalPowerNotes[move])notes.push(conditionalPowerNotes[move]);
+ const [criticalStage,flinchChance]=moveExtras[move] ?? [];
+ if(!status && criticalStage)notes.push('Increased critical-hit chance.');
+ if(!status && flinchChance)notes.push(flinchChance+'% base chance to flinch the target for 0.5 battle seconds.');
+ if(Object.hasOwn(additionalStatusMoves,move))notes.length=0;
  if(status && rules.scope==='ally' && (rules.healing || move==='Aqua Ring'))
   notes.push('Restores '+skillHealingPercent(move,rules)+'% of maximum HP.');
  if(status && rules.scope==='ally' && guardMoves.has(move)) {
@@ -1749,15 +1787,15 @@ function skillDescription(move) {
  if(weatherMoves[move]) notes.push('Sets '+weatherMoves[move].toLowerCase()+' weather for 25 battle seconds.');
  if(terrainMoves[move]) notes.push('Sets '+terrainMoves[move].toLowerCase()+' terrain for 25 battle seconds.');
  if(move==='Tailwind') notes.push('Raises Speed by two stages in the arena.');
- if(['Seismic Toss','Night Shade'].includes(move)) notes.push('Deals damage equal to the user’s level.');
- if(move==='Dragon Rage') notes.push('Deals 40 fixed damage.');
- if(move==='Sonic Boom') notes.push('Deals 20 fixed damage.');
- if(move==='Baton Pass')notes.push('Switches to a healthy reserve and passes the user’s stat stages.');
+ if(['Seismic Toss','Night Shade'].includes(move)) notes.push('Fixed damage scales with the user’s level after the Arena damage reduction, with a minimum of 1 HP.');
+ if(move==='Dragon Rage') notes.push('Deals '+scaledBattleDamage(40)+' base fixed HP damage on a hit.');
+ if(move==='Sonic Boom') notes.push('Deals '+scaledBattleDamage(20)+' base fixed HP damage on a hit.');
+ if(move==='Baton Pass')notes.push('Switches to a random healthy reserve and passes the user’s stat stages.');
  if(move==='Belly Drum')notes.push('Spends half the user’s maximum HP to raise Attack to +6.');
  if(move==='Confuse Ray' && !skillConditions[6])notes.push('Inflicts confusion for 6 battle seconds.');
  if(forcedSwitchMoves.has(move))notes.push('Forces the target to switch to a random healthy reserve.');
  if(Object.hasOwn(additionalStatusMoves,move))notes.push(additionalStatusMoves[move].description);
- if(status && notes.length===1) notes.push(unsupportedMoveNote);
+ if(status && notes.length===1 && !Object.hasOwn(additionalStatusMoves,move)) notes.push(unsupportedMoveNote);
  return notes.join(' ');
 }
 let visibleMoveCache=null;
@@ -1778,7 +1816,7 @@ function renderSkillsetDetail(move) {
   ['Type',type],['Category',category ?? 'Varies'],['Listed power',String(power ?? '—')],
   ['Listed accuracy',accuracy===null?'—':accuracy+'%'],
   ['Arena cooldown',rules.cooldown.toFixed(1)+' s'],['Priority',String(moveCatalog[move][3])],
-  ['Arena range',rules.scope==='ally'?'Support':rules.range+' px'],['Area radius',rules.radius?rules.radius+' px':'—'],
+  ['Arena range',rules.scope==='ally'?'Support':arenaMoveGeometry(move,rules).range+' px'],['Area radius',!skillShape(move) || skillShape(move)==='landing' ? (arenaMoveGeometry(move,rules).radius || '—') : '—'],
   ['Shop price',item.price+' coins']
  ];
  for(const [label,value] of values) {
@@ -4284,9 +4322,9 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
 }
 const sacrificeActivationChance=0.5;
 const sacrificeProfiles=new Map([
- ['Explosion',{charge:5,radius:3,damage:10}],
- ['Misty Explosion',{charge:5,radius:3,damage:10}],
- ['Self-Destruct',{charge:3,radius:2,damage:5}],
+ ['Explosion',{charge:5,radius:2,damage:10}],
+ ['Misty Explosion',{charge:5,radius:2,damage:10}],
+ ['Self-Destruct',{charge:3,radius:1,damage:5}],
 ]);
 
 const forcedSwitchMoves=new Set(['Whirlwind','Roar','Dragon Tail','Circle Throw']);
@@ -5027,9 +5065,7 @@ function act(actor, opponents, dt, teammates=[actor]) {
   const move=actor.moves[slot];
   if(moveRestricted(actor,move))continue;
   const rules=moveRules(move);
-  const shape=skillShape(move);
-  const selfCentered=sacrificeProfiles.has(move) || !shape && rules.scope==='area' && [9,12,14].includes(rules.target);
-  const range=shape==='wave'?210:shape==='dash'?90:shape==='arc'?26:selfCentered?rules.radius*(sacrificeProfiles.get(move)?.radius ?? 1):rules.range;
+  const {shape,selfCentered,range}=arenaMoveGeometry(move,rules);
   const remaining=rules.scope==='ally' ? 0 : Math.max(0,gap-range);
   const score=tacticalMoveScore(actor,target,move,rules,gap);
   if(score>0 && !moveCatalog[move][4]) {
@@ -5177,11 +5213,9 @@ function act(actor, opponents, dt, teammates=[actor]) {
  }
  const center=selfCentered ? actor : target;
  if(shape || rules.radius) {
-  const warning=sacrificeProfiles.has(move)?sacrificeProfiles.get(move).charge:shape==='dash' ? (priority>0?0.35:0.55) : shape==='arc'?0.45:
-   shape==='projectile'?0.55:castWindup;
+  const {warning,radius}=arenaMoveGeometry(move,rules);
   const halfAngle=shape==='cone'?Math.PI/7:shape==='arc'?Math.PI/3:0;
   const line=shape && shape!=='landing' ? skillLane(actor,target,range,shape,halfAngle) : null;
-  const radius=shape==='landing'?42:rules.radius*(sacrificeProfiles.get(move)?.radius ?? 1);
   const ground={x:clamp(center.x,28,canvas.width-28),y:clamp(center.y,28,canvas.height-28)};
   playSkillSound(move,'warning',shape);
   pendingCasts.push({actor,move,rules,shape,line,center:ground,radius,warning,remaining:warning,started:clock,friendlyFire:actor.ailment===6});
@@ -5203,7 +5237,7 @@ function skillLane(actor,target,range,shape,halfAngle) {
   length=Math.hypot(end.x-actor.x,end.y-actor.y);
   if(length) {dx=(end.x-actor.x)/length;dy=(end.y-actor.y)/length;}
  }
- return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?85:0,radius:shape==='projectile'?10:shape==='dash'?19:14,end,angle,halfAngle};
+ return {x:actor.x,y:actor.y,dx,dy,length,halfWidth:shape==='wave'?42.5:0,radius:shape==='projectile'?10:shape==='dash'?19:14,end,angle,halfAngle};
 }
 function nearestLinePoint(point,line) {
  if(line.halfAngle) {
