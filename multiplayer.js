@@ -128,12 +128,14 @@
      const identity=battleRosterIdentity(actor.name,actor.level);
      const hp=element('progress');hp.max=actor.max;hp.setAttribute('aria-label',actor.name+' HP');
      const stages=element('span',null,'battle-stage-icons');
-     card.append(pokemonPortrait(actor.name),identity,hp,stages);
+     const exhaustion=makeExhaustionBar(actor);
+     card.append(pokemonPortrait(actor.name),identity,hp,exhaustion,stages);
      if(row)row.card.replaceWith(card);else container.append(card);
-     row={card,hp,stages,form:actor.name};rosterRows.set(actor.onlineId,row);
+     row={card,hp,stages,exhaustion,form:actor.name};rosterRows.set(actor.onlineId,row);
     }
     row.hp.value=actor.hp;
     updateStageIcons(row.stages,actor);
+    updateExhaustionBar(row.exhaustion,actor);
     row.card.classList.toggle('is-out',actor.hp<=0);
     row.card.classList.toggle('is-active',trainerFields.flat().some(slot=>trainerOnField(actor,[slot])) && actor.hp>0);
     row.card.setAttribute('aria-pressed',String(index>=0 && recallSlotOnline===index));
