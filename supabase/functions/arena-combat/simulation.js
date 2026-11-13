@@ -51,6 +51,8 @@ function initializeOnline(match) {
     return slot;
    }));
  damageBuckets=[];
+ entryHazards=[{},{}];
+ fieldMoveExpiry={};
  clock=lastDamageClock=weatherTime=terrainTime=recallCooldown=0;
  battleWeather=battleTerrain=null;
  effects=[];pendingCasts=[];onlineSounds=[];onlineRecalls={};
@@ -67,12 +69,14 @@ function saveOnlineState() {
     incoming:slot.transition.incoming.onlineId}:null}))),
   casts:pendingCasts.map(cast=>({...cast,actor:cast.actor.onlineId})),effects,
   clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime,
-  arenaMap,damageBuckets,recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
+  arenaMap,damageBuckets,entryHazards,fieldMoveExpiry,recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
  };
 }
 function loadOnlineState(state) {
  ({allies,enemies,effects,clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime}=state);
  arenaMap=state.arenaMap ?? null;
+ fieldMoveExpiry=state.fieldMoveExpiry ?? {};
+ entryHazards=state.entryHazards ?? [{},{}];
  damageBuckets=state.damageBuckets ?? [];
  onlineRecalls=state.recalls;
  onlineSounds=state.sounds ?? [];
@@ -91,6 +95,9 @@ function onlineSend(side,incomingId,fieldIndex) {
  const incoming=[...allies,...enemies].find(actor=>actor.onlineId===incomingId && actor.side===side && actor.hp>0);
  if(!slot || slot.transition || !incoming || trainerFields.flat().some(field=>trainerOnField(incoming,[field])))
   throw Error('Choose an available reserve and field slot.');
+ if(slot.actor?.hp>0 && fieldMoveActive('Fairy Lock'))throw Error('Fairy Lock prevents recalls.');
+ if(slot.actor?.hp>0 && (slot.actor.trappedUntil>clock || slot.actor.octolockUntil>clock))throw Error('This Pokémon is trapped.');
+ if(slot.actor?.hp>0 && slot.actor.ingrainAt)throw Error('This Pokémon is rooted by Ingrain.');
  if(slot.actor?.hp>0 && (onlineRecalls[side] ?? 0)>clock) throw Error('Recall is on cooldown.');
  placeOnline(slot,incoming);
  if(slot.transition.stage==='recall')onlineRecalls[side]=clock+recallDelay+ballDuration;
@@ -107,7 +114,7 @@ function onlineFrame(dt) {
    slot.transition=null;
   } else if(recalling && transition.stage==='send') {
    transition.incoming.revealed=true;
-   if(!transition.outgoing.friendly)restoreOpponentTeam(allies);
+   if(!transition.forced && !transition.outgoing.friendly)restoreOpponentTeam(allies);
   }
  }
  const sides=combatSides();
