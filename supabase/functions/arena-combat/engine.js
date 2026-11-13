@@ -1295,6 +1295,9 @@ const unsupportedMoveNote='This move has no additional effect implemented in the
 for(const type of [...new Set(referenceMoveOptions.map(move=>moveReferences[move][1]))].sort()) {
  appendFilterOption('skillset-type',type);
 }
+function skillHealingPercent(move,rules) {
+ return (rules.healing || (move==='Aqua Ring'?20:0))/4;
+}
 function skillDescription(move) {
  const [type,power,accuracy,priority,status,drain,recoil]=moveCatalog[move];
  const rules=moveRules(move);
@@ -1305,7 +1308,7 @@ function skillDescription(move) {
  const notes=[status?'Targets '+target+'.':
   'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage to '+target+'.'];
  if(status && rules.scope==='ally' && (rules.healing || move==='Aqua Ring'))
-  notes.push('Restores '+(rules.healing || 20)+'% of maximum HP.');
+  notes.push('Restores '+skillHealingPercent(move,rules)+'% of maximum HP.');
  if(status && rules.scope==='ally' && guardMoves.has(move)) {
   notes.push('Halves incoming damage for '+(['Protect','Detect'].includes(move)?'1 second.':'2.5 seconds.'));
  }
@@ -3109,6 +3112,7 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
 }
 let nextGymSwitchCheck=0;
 function prepare() {
+ damageBuckets=[];lastDpsRender=-1;
  nextGymSwitchCheck=4;
  battleWeather=null;weatherTime=0;battleTerrain=null;terrainTime=0;
  lastDamageClock=0;
@@ -3316,12 +3320,21 @@ function tickAbility(actor,dt) {
  }
  if((ability==='Rain Dish'||ability==='Dry Skin') && weather==='Rain') healActor(actor,actor.max/(ability==='Dry Skin'?8:16));
  if(ability==='Ice Body' && weather==='Snow') healActor(actor,actor.max/16);
- if(battleTerrain==='Grass' && isGrounded(actor)) healActor(actor,actor.max/16);
+ if(battleTerrain==='Grass' && isGrounded(actor)) healActor(actor,actor.max/64);
  if(weather==='Sun' && ['Solar Power','Dry Skin'].includes(ability)) actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8))));
 }
 let lastDamageClock=0;
+let damageBuckets=[];
+let lastDpsRender=-1;
 function recordOpponentDamage(source,victim,amount) {
  if(amount<=0 || !source || source.friendly===victim.friendly) return;
+ const second=Math.floor(clock);
+ let bucket=damageBuckets.at(-1);
+ if(bucket?.second!==second) {
+  bucket={second,damage:[0,0]};
+  damageBuckets.push(bucket);
+ }
+ bucket.damage[source.friendly?0:1]+=amount;
  lastDamageClock=clock;
  source.damagedOpponent=true;
  victim.lastDamageBy=source;
@@ -3498,7 +3511,7 @@ function tacticalMoveScore(actor,target,move,rules,gap) {
   return total+Math.abs(clamp(current+change,-6,6)-current)/(1+Math.abs(current)*0.35);
  },0);
  if(status) {
-  const healing=Math.min(1-health,(rules.healing || (move==='Aqua Ring'?20:0))/100);
+  const healing=Math.min(1-health,skillHealingPercent(move,rules)/100);
   const guard=guardMoves.has(move) && !actor.guard && target.charge<0.35 && gap<90;
   const ailment=rules.ailment && !target.ailment && !ally;
   const field=(weatherMoves[move] && weatherMoves[move]!==abilityWeather()) ||
@@ -3684,8 +3697,8 @@ function act(actor, opponents, dt, teammates=[actor]) {
   for(const recipient of recipients) {
    applyChanges(recipient,rules.changes,actor);
    if(move==='Tailwind') {applyChanges(recipient,[[6,2]]);if(activeAbility(recipient)==='Wind Rider') applyChanges(recipient,[[2,1]]);}
-   const healing = rules.healing || (move==='Aqua Ring' ? 20 : 0);
-   if(healing) recipient.hp=Math.min(recipient.max,recipient.hp+Math.round(recipient.max*healing/100));
+   const healing=skillHealingPercent(move,rules);
+   if(healing) healActor(recipient,Math.round(recipient.max*healing/100));
    const guard=guardMoves.has(move);
    if(guard) recipient.guard=move==='Protect' || move==='Detect' ? 1 : 2.5;
    effect(recipient,rules.changes.length ? 'Buff' : healing ? 'Heal' : guard ? 'Guard' : '',1,{status:true});
@@ -4233,13 +4246,70 @@ function drawUnit(actor) {
  ctx.font = '600 13px system-ui';
  const caught=registeredPokemon.has(name);
  const plateWidth=ctx.measureText(name).width+(caught?29:14);
- ctx.fillStyle='#142138';
- ctx.fillRect(x-plateWidth/2,ground+6,plateWidth,18);
  ctx.fillStyle='#f0f6e7';
+ ctx.save();
+ ctx.strokeStyle='#101b20';ctx.lineWidth=3;ctx.lineJoin='round';
+ ctx.strokeText(name,x+(caught?6:0),ground+18);
  ctx.fillText(name,x+(caught?6:0),ground+18);
+ ctx.restore();
  if(caught){ctx.save();ctx.translate(x-plateWidth/2+9,ground+14);ctx.scale(.55,.55);drawSwitchBall(0,0,0);ctx.restore();}
 
 
+}
+let showDamageTaken=false;
+let dpsSnapshot;
+for(const [index,button] of Array.from(byId('battle-dps-tabs').children ?? []).entries()) {
+ button.onclick=()=>{
+  showDamageTaken=index===1;
+  for(const tab of byId('battle-dps-tabs').children)tab.setAttribute('aria-pressed',String(tab===button));
+  lastDpsRender=-1;
+  if(dpsSnapshot)renderBattleDps(...dpsSnapshot);
+ };
+}
+function battleDamageHistory(time,buckets,reverse) {
+ const totals=[0,0],points=[];
+ let index=0;
+ const samples=Math.max(1,Math.min(120,Math.ceil(time)));
+ for(let sample=0;sample<=samples;sample++){
+  const elapsed=time*sample/samples;
+  while(index<buckets.length && buckets[index].second<=Math.floor(elapsed) && sample>0) {
+   const {damage}=buckets[index++];
+   totals[0]+=damage[reverse?1:0];
+   totals[1]+=damage[reverse?0:1];
+  }
+  points.push(totals.map(total=>total/Math.max(1,elapsed)));
+ }
+ return {points,totals};
+}
+function renderBattleDps(time,buckets,mirror=false) {
+ dpsSnapshot=[time,buckets,mirror];
+ const second=Math.floor(time);
+ if(lastDpsRender===second)return;
+ lastDpsRender=second;
+ const {points,totals}=battleDamageHistory(time,buckets,mirror!==showDamageTaken);
+ const [your,opponent]=points.at(-1);
+ byId('battle-dps-values').textContent='Your side: '+your.toFixed(1)+' HP/s ('+totals[0]+' HP) · Opponent: '+opponent.toFixed(1)+' HP/s ('+totals[1]+' HP)';
+ const chart=byId('battle-dps-chart');
+ const graph=chart.getContext('2d');
+ const {width,height}=chart;
+ const peak=Math.max(1,...points.flat());
+ graph.clearRect(0,0,width,height);
+ graph.font='12px system-ui';
+ graph.fillStyle='#c9d8ee';
+ graph.fillText(peak.toFixed(1)+' HP/s',4,13);
+ graph.fillText('0',4,height-6);
+ graph.strokeStyle='#52647d';
+ graph.beginPath();graph.moveTo(65,height-10);graph.lineTo(width-8,height-10);graph.stroke();
+ ['#b8ec92','#ff8c85'].forEach((color,side)=>{
+  graph.strokeStyle=color;graph.lineWidth=2;graph.beginPath();
+  points.forEach((point,index)=>{
+   const x=65+index*(width-73)/(points.length-1);
+   const y=height-10-point[side]/peak*(height-25);
+   if(index)graph.lineTo(x,y);else graph.moveTo(x-1,y);
+   if(!index)graph.lineTo(x,y);
+  });
+  graph.stroke();
+ });
 }
 function paint() {
  ctx.fillStyle = '#1c372d';
@@ -4358,7 +4428,8 @@ function drawMoveBubbles(actors) {
   }
   occupied.push({x,y,width});
   ctx.globalAlpha = Math.min(1,actor.labelTime/0.2);
-  ctx.fillStyle = actor.friendly ? '#eff8df' : '#ffe8dd';
+  const color=moveColors[moveCatalog[actor.moveLabel]?.[0]] ?? '#eff8df';
+  ctx.fillStyle=color;
   ctx.beginPath();
   ctx.roundRect(x,y,width,27,8);
   ctx.fill();
@@ -4368,7 +4439,9 @@ function drawMoveBubbles(actors) {
   ctx.lineTo(tail+5,y+26);
   ctx.lineTo(tail,y+34);
   ctx.fill();
-  ctx.fillStyle = '#16251d';
+  ctx.fillStyle='#101827';
+  ctx.strokeStyle='#ffffffb8';ctx.lineWidth=2;ctx.lineJoin='round';
+  ctx.strokeText(actor.moveLabel,x+width/2,y+14);
   ctx.fillText(actor.moveLabel,x+width/2,y+14);
  }
  ctx.restore();
@@ -4697,7 +4770,8 @@ function frame(now) {
  if(phase==='online-battle') {window.paintOnlineBattle(dt);requestAnimationFrame(frame);return;}
  const wasBattling=phase==='battle';
  const before=clock;
- if(wasBattling) advance(dt*speed,dt);
+ if(wasBattling) {advance(dt*speed,dt);renderBattleDps(clock,damageBuckets);}
+ else if(phase==='setup')renderBattleDps(0,[]);
  else for(const actor of [...allies,...enemies]) {
   actor.labelTime=Math.max(0,actor.labelTime-dt);
   actor.attack=Math.max(0,actor.attack-dt*speed);
@@ -4874,6 +4948,7 @@ function initializeOnline(match) {
     placeOnline(slot,actor);
     return slot;
    }));
+ damageBuckets=[];
  clock=lastDamageClock=weatherTime=terrainTime=recallCooldown=0;
  battleWeather=battleTerrain=null;
  effects=[];pendingCasts=[];onlineSounds=[];onlineRecalls={};
@@ -4889,11 +4964,12 @@ function saveOnlineState() {
     incoming:slot.transition.incoming.onlineId}:null}))),
   casts:pendingCasts.map(cast=>({...cast,actor:cast.actor.onlineId})),effects,
   clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime,
-  recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
+  damageBuckets,recalls:onlineRecalls,random:onlineRandomState,sounds:onlineSounds,
  };
 }
 function loadOnlineState(state) {
  ({allies,enemies,effects,clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime}=state);
+ damageBuckets=state.damageBuckets ?? [];
  onlineRecalls=state.recalls;
  onlineSounds=state.sounds ?? [];
  onlineRandomState=state.random;
@@ -4978,7 +5054,7 @@ export function onlineView(state,side) {
   if(!transition || ids.has(transition.incoming))return slot;
   return {...slot,transition:{...transition,incoming:null}};
  }));
- return {actors:visible,fields,casts:state.casts,effects:state.effects,
+ return {actors:visible,fields,damageBuckets:state.damageBuckets ?? [],casts:state.casts,effects:state.effects,
   weather:state.battleWeather,terrain:state.battleTerrain,clock:state.clock,
   recall:Math.max(0,(state.recalls[side] ?? 0)-state.clock),sounds:state.sounds};
 }
