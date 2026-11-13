@@ -3851,7 +3851,7 @@ function tickPillars(dt) {
   const source=(fall.sourceSide?allies:enemies)[fall.sourceSlot];
   for(const victim of fieldActors()) {
    if(!victim || victim.hp<=0 || !inSkill(victim,null,0,fall))continue;
-   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12)));
+   const dealt=Math.min(victim.hp,Math.max(1,Math.round(victim.max*0.12))*gymDamageMultiplier(source,victim));
    victim.hp-=dealt;
    recordOpponentDamage(source,victim,dealt);
   }
@@ -4175,7 +4175,7 @@ function tickStatus(actor,dt) {
   if(!actor[key] || clock<actor[key])continue;
   actor[key]+=1;
   if(activeAbility(actor)==='Magic Guard')continue;
-  const damage=Math.min(actor.hp,Math.max(1,Math.floor(actor.max*fraction)));
+  const damage=Math.min(actor.hp,Math.max(1,Math.floor(actor.max*fraction))*gymDamageMultiplier(key==='nightmareAt'?actor.ailmentSource:fieldActors().find(member=>member?.friendly!==actor.friendly && member?.hp>0),actor));
   actor.hp-=damage;
   if(key==='seedAt') {
    const recipient=fieldActors().find(member=>member?.hp>0 && member.friendly!==actor.friendly);
@@ -4201,7 +4201,7 @@ function tickStatus(actor,dt) {
    const amount=actor.ailment===5?actor.max*0.01:(actor.burnPower ?? 0)*(ability==='Heatproof'?0.5:1);
    if(actor.ailment===5 && ability==='Poison Heal')healActor(actor,actor.max/8);
    else if(ability!=='Magic Guard') {
-    const dealt=Math.min(actor.hp,Math.max(1,Math.round(amount)));
+    const dealt=Math.min(actor.hp,Math.max(1,Math.round(amount))*gymDamageMultiplier(actor.ailmentSource,actor));
     actor.hp-=dealt;
     recordOpponentDamage(actor.ailmentSource,actor,dealt);
    }
@@ -4252,14 +4252,17 @@ function movePower(move,power,actor,victim) {
  }
  return power || 55;
 }
+function gymDamageMultiplier(source,target) {
+ return selectedGym && source?.friendly===false && target?.friendly===true ? 2 : 1;
+}
 function scaledBattleDamage(damage) {
  return damage>0 ? Math.max(1,Math.round(damage/8)) : 0;
 }
 function battleDamage(actor,victim,power,multiplier,physical,element,move,critical=false) {
  if(multiplier===0) return 0;
- if(move==='Seismic Toss' || move==='Night Shade') return scaledBattleDamage(actor.level);
- if(move==='Dragon Rage') return scaledBattleDamage(40);
- if(move==='Sonic Boom') return scaledBattleDamage(20);
+ if(move==='Seismic Toss' || move==='Night Shade') return scaledBattleDamage(actor.level)*gymDamageMultiplier(actor,victim);
+ if(move==='Dragon Rage') return scaledBattleDamage(40)*gymDamageMultiplier(actor,victim);
+ if(move==='Sonic Boom') return scaledBattleDamage(20)*gymDamageMultiplier(actor,victim);
  const superEffective=multiplier>1;
  const ability=activeAbility(actor);
  const defender=targetAbility(actor,victim);
@@ -4314,7 +4317,7 @@ function battleDamage(actor,victim,power,multiplier,physical,element,move,critic
  if(element==='Fire' && fieldMoveActive('Water Sport') || element==='Electric' && fieldMoveActive('Mud Sport'))multiplier/=3;
  if(critical) multiplier*=ability==='Sniper'?2.25:1.5;
  const raw=Math.floor((Math.floor(2*actor.level/5)+2)*movePower(move,power,actor,victim)*attack/defense/50)+2;
- return scaledBattleDamage(Math.max(1,Math.round(raw*multiplier*(victim.guard>0 && !critical ? 0.5 : 1))));
+ return scaledBattleDamage(Math.max(1,Math.round(raw*multiplier*(victim.guard>0 && !critical ? 0.5 : 1))))*gymDamageMultiplier(actor,victim);
 }
 function respondToHit(actor,victim,move,element,physical,dealt) {
  const ability=activeAbility(actor);
@@ -4328,7 +4331,7 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
     case 'burn':tryAilment(actor,4,victim);break;
     case 'spikes':
      if(ability!=='Magic Guard') {
-      const damage=Math.min(actor.hp,scaledBattleDamage(Math.floor(actor.max/8)));
+      const damage=Math.min(actor.hp,scaledBattleDamage(Math.floor(actor.max/8))*gymDamageMultiplier(victim,actor));
       actor.hp-=damage;recordOpponentDamage(victim,actor,damage);
      }
      break;
@@ -4337,9 +4340,9 @@ function respondToHit(actor,victim,move,element,physical,dealt) {
    }
   }
   if(['Rough Skin','Iron Barbs'].includes(defender) && ability!=='Magic Guard')
-   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8))));
+   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/8)))*gymDamageMultiplier(victim,actor));
   if(defender==='Aftermath' && victim.hp<=0 && ability!=='Damp' && ability!=='Magic Guard')
-   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/4))));
+   actor.hp=Math.max(0,actor.hp-scaledBattleDamage(Math.max(1,Math.floor(actor.max/4)))*gymDamageMultiplier(victim,actor));
   if(Math.random()<0.30) {
    if(contactAilments[defender]) tryAilment(actor,contactAilments[defender],victim);
    if(defender==='Effect Spore' && ![actor.type,extraTypes[actor.name]].includes('Grass'))
@@ -4494,7 +4497,7 @@ function applyEntryHazards(actor,opponent) {
  const spikes=grounded?[0,1/8,1/6,1/4][hazards.Spikes ?? 0]:0;
  const rock=hazards['Stealth Rock']?effectiveness('Rock',actor)/8:0;
  if(spikes+rock>0) {
-  const damage=Math.min(actor.hp,scaledBattleDamage(Math.round(actor.max*(spikes+rock))));
+  const damage=Math.min(actor.hp,scaledBattleDamage(Math.round(actor.max*(spikes+rock)))*gymDamageMultiplier(opponent,actor));
   actor.hp-=damage;
   recordOpponentDamage(opponent,actor,damage);
  }
