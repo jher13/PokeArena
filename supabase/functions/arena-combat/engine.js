@@ -1165,9 +1165,9 @@ const heldItems={
  Magnet:{price:230,description:'Boosts Electric-type damage by 20%.',element:'Electric',power:1.2},
  Eviolite:{price:420,description:'Boosts both defenses by 50% for Pokémon that can still evolve.'}
 };
-const ballCraftCost=10;
+const ballCraftCost=2;
 const ballPrices=[24];
-for(let tier=1;tier<ballTypes.length-1;tier++)ballPrices.push(ballPrices[tier-1]*11);
+for(let tier=1;tier<ballTypes.length-1;tier++)ballPrices.push(Math.ceil(ballPrices[tier-1]*ballCraftCost*1.1));
 ballPrices.push(null);
 const ballDescriptions=ballTypes.map(ball=>ball.multiplier===Infinity?
  'Guaranteed capture, including Legendary and Mythical Pokémon. Special rewards only.':
