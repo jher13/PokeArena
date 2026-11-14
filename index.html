@@ -264,6 +264,9 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 }
 #item-bag{max-width:680px;margin:12px auto;padding:16px clamp(10px,4vw,32px);background:#f4faef;color:#253d36;border-radius:14px}
 #item-bag .menu-heading h2{color:#253d36}
+#item-bag button{color:#fff;background:#294438}
+#item-bag button:disabled{opacity:1;background:#596961;color:#fff;cursor:default}
+.bag-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .bag-section-title{display:flex;align-items:center;gap:10px;margin:20px 0 12px;color:#49635a;font:700 11px system-ui;letter-spacing:.16em;text-transform:uppercase}
 .bag-section-title::before,.bag-section-title::after{content:"";height:1px;background:#cddbcf;flex:1}
 .bag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 6px}
@@ -418,7 +421,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 <div id="rogue-choices" class="gym-grid"></div>
 </section>
 <section id="item-bag" class="gym-screen" hidden>
- <div class="menu-heading"><h2>Item Bag</h2><button id="bag-back">Main menu</button></div>
+ <div class="menu-heading"><h2>Item Bag</h2><div class="bag-actions"><button id="bag-auto-craft" type="button">Auto Craft</button><button id="bag-back" type="button">Main menu</button></div></div>
  <p id="bag-status" role="status"></p>
  <div id="bag-inventory"></div>
 </section>
@@ -2005,6 +2008,17 @@ function craftBall(index) {
  saveWildProgress();
  return true;
 }
+function autoCraftBalls() {
+ let crafted=0;
+ for(let tier=0;tier<ballTypes.length-2;tier++) {
+  const quantity=Math.floor(wildProgress.balls[tier]/ballCraftCost);
+  wildProgress.balls[tier]-=quantity*ballCraftCost;
+  wildProgress.balls[tier+1]+=quantity;
+  crafted+=quantity;
+ }
+ if(crafted)saveWildProgress();
+ return crafted;
+}
 const bagPixelShapes={
  ball:['...oooooo...','..occcccco..','.ocllccccco.','ocllccccccco','occcccccccco','oooooooooooo','owwwoddowwwo','owwwodlowwwo','.owwwowwwwo.','..oooooooo..'],
  stone:['.....oo.....','....ogco....','...olcgco...','..olgcccgo..','..olccggco..','..ogccccgo..','...ogcgco...','....ogco....','.....oo.....'],
@@ -2034,17 +2048,19 @@ function bagItemIcon(name) {
 }
 function renderItemBag(message='') {
  byId('bag-status').textContent=message;
+ byId('bag-auto-craft').disabled=!wildProgress.balls.slice(0,-2).some(count=>count>=ballCraftCost);
  const bag=byId('bag-inventory');
  bag.replaceChildren();
  const group=(title,entries)=>{
   if(!entries.length)return;
   const grid=element('div',null,'bag-grid');
-  for(const [name,count,detail,action] of entries) {
+  for(const [name,count,detail,action,recipe] of entries) {
    const card=element('div',null,'bag-item');
    const art=element('div',null,'bag-art');
    art.append(bagItemIcon(name),element('small','×'+count,'bag-count'));
    card.append(art,element('strong',name));
    if(detail)card.append(element('small',detail));
+   if(recipe)card.append(element('small',recipe));
    if(action)card.append(action);
    grid.append(card);
   }
@@ -2061,7 +2077,7 @@ function renderItemBag(message='') {
     if(craftBall(index))renderItemBag('Crafted 1 '+next.name+'.');
    };
   }
-  return [ball.name,count,next?ballCraftCost+' '+ball.name+' → 1 '+next.name:ballDescriptions[index],button];
+  return [ball.name,count,ballDescriptions[index],button,next?ballCraftCost+' '+ball.name+' → 1 '+next.name:null];
  }));
  group('Held items and evolution items',Object.entries(wildProgress.items).filter(([,count])=>count>0)
   .map(([name,count])=>[name,count,(count-freeHeldCopies(name))+' equipped']));
@@ -4288,6 +4304,10 @@ byId('find-trainer').onclick=()=>{
 byId('home-shop').onclick=openShop;
 byId('home-bag').onclick=openItemBag;
 byId('bag-back').onclick=openMenu;
+byId('bag-auto-craft').onclick=()=>{
+ const crafted=autoCraftBalls();
+ renderItemBag(crafted?'Completed '+crafted+' ball upgrades.':'No eligible ball upgrades.');
+};
 byId('home-skills').onclick=openSkillShop;
 byId('home-skillset').onclick=openSkillset;
 byId('skillset-back').onclick=openMenu;
@@ -8310,6 +8330,7 @@ function setToolbarUnread(id,count) {
 }
 // Add each release to the top. The newest version also drives the subtitle.
 const updateLogEntries=[
+ {version:'0.2.1',changes:['Improved Item Bag button contrast, restored catch descriptions, and added Auto Craft.']},
  {version:'0.2.0',changes:['Redesigned the Item Bag with a three-column layout, pixel-art items, and quantity badges.','Redrew the Settings icon as a pixel cogwheel.']},
  {version:'0.1.7',changes:['Made sign-in work independently of the Remember me control and improved login status messages.']},
  {version:'0.1.6',changes:['Added pixel-art Fullscreen and Settings icons to the main toolbar.','Added color-coded type badges to the lead Pokémon on the main menu.']},
