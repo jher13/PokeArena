@@ -8273,6 +8273,7 @@ function setToolbarUnread(id,count) {
 }
 // Add each release to the top. The newest version also drives the subtitle.
 const updateLogEntries=[
+ {version:'0.1.7',changes:['Made sign-in work independently of the Remember me control and improved login status messages.']},
  {version:'0.1.6',changes:['Added pixel-art Fullscreen and Settings icons to the main toolbar.','Added color-coded type badges to the lead Pokémon on the main menu.']},
  {version:'0.1.5',changes:['Remember me prefills the login email without signing in automatically.']},
  {version:'0.1.4',changes:['Added the game version to the subtitle and the five-release Update Log.']},
@@ -8345,4 +8346,4 @@ phase='login';
 showScreen('login');
 byId('login').hidden=true;
 requestAnimationFrame(frame);
-</script><p id="arena-sync-error" role="alert" hidden></p><script src="./cloud.js"></script><script src="./multiplayer.js"></script></html>
+</script><p id="arena-sync-error" role="alert" hidden></p><script src="./cloud.js?v=0.1.7"></script><script src="./multiplayer.js"></script></html>
