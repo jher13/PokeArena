@@ -2687,7 +2687,18 @@ function trainerEncounter(region,tier,format) {
   roster.push({name:choices[Math.floor(Math.random()*choices.length)],level});
  }
  const averageLevel=roster.reduce((total,member)=>total+member.level,0)/count;
- return {region,tier,format,roster,coins:Math.round((25+averageLevel*5)*(1+(count-1)*0.25))};
+ // Increase the full-roster premium as trainers get stronger.
+ const tierIndex=wildDifficulties.findIndex(entry=>entry.label===tier.label);
+ const progress=clamp(tierIndex/(wildDifficulties.length-1),0,1);
+ const earlyMultiplier=[0.6,1.15,1.75,2.4,3.1,3.9][count-1];
+ const endgameMultiplier=[0.6,1.2,1.95,2.8,3.75,5][count-1];
+ const multiplier=earlyMultiplier+(endgameMultiplier-earlyMultiplier)*progress;
+ const rewardLevel=tier.label==='X'?averageLevel:(tier.min+tier.max)/2;
+ const ultraPrice=ballPrices[ballTypes.findIndex(ball=>ball.name==='Ultra Ball')];
+ const topTier=wildDifficulties.at(-1);
+ const fullRosterBase=(25+topTier.min*5)*5;
+ const payoutScale=2*ultraPrice/fullRosterBase;
+ return {region,tier,format,roster,coins:Math.round((25+rewardLevel*5)*multiplier*payoutScale)};
 }
 function startTrainerEncounter(tier,format) {
  if(format>team.length) return;
