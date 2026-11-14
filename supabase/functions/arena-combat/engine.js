@@ -1519,8 +1519,9 @@ const unsupportedMoveNote='This move has no additional effect implemented in the
 for(const type of [...new Set(referenceMoveOptions.map(move=>moveReferences[move][1]))].sort()) {
  appendFilterOption('skillset-type',type);
 }
+const battleDamageScale=0.25;
 function skillHealingPercent(move,rules) {
- return Math.min(25,(rules.healing || (move==='Aqua Ring'?20:0))/2);
+ return Math.min(50,rules.healing || (move==='Aqua Ring'?20:0))*battleDamageScale;
 }
 const conditionalPowerNotes={
  Brine:'Doubles base power against targets at half HP or less.',
@@ -3453,7 +3454,10 @@ function finishRogueRound(won) {
 }
 byId('home-roguelit').onclick=openRogueLobby;
 byId('rogue-back').onclick=openMenu;
+byId('battle-settings-button').onclick=()=>byId('battle-settings').showModal();
 function showScreen(screen) {
+ byId('battle-settings-button').hidden=screen!=='battle';
+ if(screen!=='battle' && byId('battle-settings').open)byId('battle-settings').close();
  if(screen!=='home')stopHomeSprite();
  stopBattleMusic();
  for(const id of ['home','login','roguelit','starter-setup','wild-regions','wild-result','trainer-regions','gyms','gym-collection','pokedex','shop','skill-shop','skillset','abilities','menu','battle']) byId(id).hidden=id!==screen;
@@ -4653,8 +4657,8 @@ function tickStatus(actor,dt) {
   actor.yawnAt=0;
   tryAilment(actor,2,actor);
  }
- if(actor.wishAt && clock>=actor.wishAt){actor.wishAt=0;healActor(actor,actor.max/4);}
- if(actor.ingrainAt && clock>=actor.ingrainAt){actor.ingrainAt+=1;healActor(actor,actor.max/64);}
+ if(actor.wishAt && clock>=actor.wishAt){actor.wishAt=0;healActor(actor,actor.max*battleDamageScale/2);}
+ if(actor.ingrainAt && clock>=actor.ingrainAt){actor.ingrainAt+=1;healActor(actor,actor.max*battleDamageScale/32);}
  actor.guard = Math.max(0,actor.guard-dt);
  if(!actor.guard)actor.contactShield=null;
  if(!actor.ailment) return;
@@ -4720,7 +4724,7 @@ function movePower(move,power,actor,victim) {
  return power || 55;
 }
 function scaledBattleDamage(damage) {
- return damage>0 ? Math.max(1,Math.round(damage/2)) : 0;
+ return damage>0 ? Math.max(1,Math.round(damage*battleDamageScale)) : 0;
 }
 function battleDamage(actor,victim,power,multiplier,physical,element,move,critical=false) {
  if(multiplier===0) return 0;
@@ -5311,10 +5315,10 @@ const additionalStatusMoves={
  Yawn:{description:'Makes the target fall asleep after 2 seconds if still on the field and free of status.',
   score:(_,target)=>!target.ailment && !target.yawnAt?49:0,
   apply:(_,target)=>{if(!target.ailment && !target.yawnAt)target.yawnAt=clock+2;}},
- Ingrain:{description:'Roots the user until it leaves the field and restores 1/64 max HP every second.',
+ Ingrain:{description:'Roots the user until it leaves the field and restores '+100*battleDamageScale/32+'% max HP every second.',
   score:actor=>!actor.ingrainAt && actor.hp<actor.max*.8?42:0,
   apply:actor=>{actor.ingrainAt=clock+1;}},
- Wish:{description:'Restores 25% max HP to the user after 2 seconds.',
+ Wish:{description:'Restores '+50*battleDamageScale+'% max HP to the user after 2 seconds.',
   score:actor=>!actor.wishAt && !(actor.healBlockUntil>clock) && actor.hp<=actor.max*.75?48:0,
   apply:actor=>{actor.wishAt=clock+2;}},
 
@@ -5352,9 +5356,9 @@ const additionalStatusMoves={
     clearArenaAilment(actor);
    }
   }},
- Purify:{description:'Cures the target’s status and restores 25% of the user’s max HP.',
+ Purify:{description:'Cures the target’s status and restores '+50*battleDamageScale+'% of the user’s max HP.',
   score:(actor,target)=>target.ailment && actor.hp<actor.max*.65?40:0,
-  apply:(actor,target)=>{if(target.ailment){clearArenaAilment(target);healActor(actor,actor.max/4);}}},
+  apply:(actor,target)=>{if(target.ailment){clearArenaAilment(target);healActor(actor,actor.max*battleDamageScale/2);}}},
  Acupressure:{description:'Raises a random uncapped stat of the user or an active teammate by two stages.',
   score:actor=>[2,3,4,5,6,7,8].some(i=>actor.stages[i]<battleStageCap)?40:0,
   apply:actor=>{
@@ -5384,18 +5388,18 @@ const additionalStatusMoves={
   score:actor=>forcedSwitchOptions(actor,null).length && (battleWeather!=='Snow' || actor.hp<actor.max*.35)?48:0,
   apply:actor=>{setWeather('Snow');recallWithMove(actor);}},
 
- 'Heal Pulse':allyHealingMove(25),
- 'Floral Healing':allyHealingMove(25),
+ 'Heal Pulse':allyHealingMove(50*battleDamageScale),
+ 'Floral Healing':allyHealingMove(50*battleDamageScale),
  'Victory Dance':stageMove('Raises Attack, Defense, and Speed by one stage.',[[2,1],[3,1],[6,1]]),
  Shelter:stageMove('Raises Defense by two stages.',[[3,2]]),
  'Focus Energy':stageMove('Raises critical-hit stage by two.',[[9,2]]),
  'Take Heart':{description:'Clears the user’s status and raises Sp. Atk and Sp. Def one stage.',
   score:actor=>actor.ailment || actor.stages[4]<battleStageCap || actor.stages[5]<battleStageCap?55:0,
   apply:actor=>{clearArenaAilment(actor);applyChanges(actor,[[4,1],[5,1]]);}},
- 'Lunar Blessing':{description:'Cures and heals active allies for 12.5% of max HP.',
+ 'Lunar Blessing':{description:'Cures and heals active allies for '+25*battleDamageScale+'% of max HP.',
   score:actor=>fieldActors().some(member=>member?.friendly===actor.friendly && member.hp>0 && (member.ailment || member.hp<member.max*.8))?55:0,
   apply:actor=>fieldActors().filter(member=>member?.friendly===actor.friendly && member.hp>0).forEach(member=>{
-   clearArenaAilment(member);if(member.hp<member.max)healActor(member,member.max/8);
+   clearArenaAilment(member);if(member.hp<member.max)healActor(member,member.max*battleDamageScale/4);
   })},
  'Role Play':{description:'Copies the target’s ability.',score:(actor,target)=>target.ability && target.ability!==actor.ability?38:0,
   apply:(actor,target)=>{if(target.ability)actor.ability=target.ability;}},
@@ -5428,8 +5432,8 @@ const additionalStatusMoves={
   apply:actor=>(actor.friendly?allies:enemies).filter(member=>member.hp>0).forEach(clearArenaAilment)},
  Aromatherapy:{description:'Cures status conditions on the user’s team.',score:actor=>(actor.friendly?allies:enemies).some(member=>member.hp>0&&member.ailment)?65:0,
   apply:actor=>(actor.friendly?allies:enemies).filter(member=>member.hp>0).forEach(clearArenaAilment)},
- Rest:{description:'Restores 50% max HP, clears the current status, and puts the user to sleep until hit.',score:actor=>actor.hp<actor.max*.35 && !(actor.healBlockUntil>clock)?90:0,
-  apply:actor=>{if(actor.healBlockUntil>clock)return;healActor(actor,actor.max/2);clearArenaAilment(actor);actor.ailment=2;actor.ailmentTime=null;}},
+ Rest:{description:'Restores '+100*battleDamageScale+'% max HP, clears the current status, and puts the user to sleep until hit.',score:actor=>actor.hp<actor.max*.35 && !(actor.healBlockUntil>clock)?90:0,
+  apply:actor=>{if(actor.healBlockUntil>clock)return;healActor(actor,actor.max*battleDamageScale);clearArenaAilment(actor);actor.ailment=2;actor.ailmentTime=null;}},
  'Pain Split':{description:'Averages the current HP of the user and target, capped by their maximum HP.',score:(actor,target)=>target.hp>actor.hp+5?55:0,
   apply:(actor,target)=>{const hp=Math.ceil((actor.hp+target.hp)/2);actor.hp=Math.min(actor.max,hp);target.hp=Math.min(target.max,hp);}},
 };
@@ -5970,7 +5974,10 @@ function act(actor, opponents, dt) {
   return;
  }
  const basic=move==='Normal Attack';
- if(basic)actor.normalAttackAt=clock+0.5;
+ if(basic) {
+  actor.normalAttackAt=clock+0.5;
+  addMoveExhaustion(actor,slot,0.58,1);
+ }
  else beginMoveCooldown(actor,slot);
  actor.firstAction=!actor.actedSinceEntry;
  actor.actedSinceEntry=true;
@@ -5996,13 +6003,13 @@ function act(actor, opponents, dt) {
  actor.attackSpan=(pmdMotion(actor,actor.attackStyle)?.duration ?? 21.6)/60;
  actor.attack=actor.attackSpan;
  if(slot>=0)actor.moveCooldownStarts[slot]=clock+Math.max(0.58,actor.attackSpan);
- if(!basic)actor.exhaustionAnimationUntil=Math.max(actor.exhaustionAnimationUntil,clock+actor.attackSpan);
+ actor.exhaustionAnimationUntil=Math.max(actor.exhaustionAnimationUntil,clock+actor.attackSpan);
  const aim=distance || 1;
  actor.attackX=rules.scope==='ally' ? 0 : (target.x-actor.x)/aim;
  actor.attackY=rules.scope==='ally' ? 0 : (target.y-actor.y)/aim;
  actor.lastUsedMove=move;
- actor.moveLabel=move;
- actor.labelTime=0.95;
+ actor.moveLabel=basic?null:move;
+ actor.labelTime=basic?0:0.95;
  const color=moveColors[element] ?? '#f6e7af';
  const effect=(victim,damage,multiplier,extra={})=>effects.push({
   x:actor.x,y:actor.y,tx:victim.x,ty:victim.y,damage,color,move,multiplier,life:0.58,...extra
@@ -6321,13 +6328,13 @@ function updateExhaustionBar(bar,actor) {
  const label=actor.name+' · '+(value===100?'Exhausted':'Exhaustion '+value+'%');
  if(bar.title!==label){bar.title=label;bar.setAttribute('aria-label',label);}
 }
-function addMoveExhaustion(actor,slot,animation) {
+function addMoveExhaustion(actor,slot,animation,overrideCost) {
  const move=actor.moves[slot] ?? 'Struggle';
  const power=moveCatalog[move][1];
  const cooldown=actor.moveCooldowns[slot] ?? 2;
  const quick=power<=60 && (cooldown<=3 || moveCatalog[move][3]>0);
  const cost=quick?6:power>=120?32:power>=90?23:power>0?15:12;
- actor.exhaustion=Math.min(100,(actor.exhaustion ?? 0)+cost);
+ actor.exhaustion=Math.min(100,(actor.exhaustion ?? 0)+(overrideCost ?? cost));
  actor.exhaustionAnimationUntil=Math.max(actor.exhaustionAnimationUntil ?? 0,clock+animation);
 }
 function tickExhaustion(actor,dt) {
