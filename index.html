@@ -332,6 +332,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 #shop-purchase{margin:auto;width:min(410px,calc(100vw - 32px));padding:20px;border:1px solid #879f91;border-radius:12px;background:#f4faef;color:#253d36}
 #shop-purchase::backdrop{background:#101725aa}
 #shop-purchase label{display:grid;gap:5px;margin-block:10px}
+#shop-purchase #shop-purchase-total{color:#000}
 #shop-purchase input{width:100%;accent-color:#294438}
 </style>
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
@@ -2086,24 +2087,45 @@ const bagPixelShapes={
  disc:['...oooooo...','..olwccgco..','.olwccccgco.','olwccocccgco','olwcowoocgco','occcoooccgco','.occcccgcco.','..ogggccco..','...oooooo...'],
  gear:['....oooo....','..ooccgcoo..','.olccggggco.','.olcooocgco.','.olcowocgco.','.olcooocgco.','.olcccccgco.','..oogcgcoo..','....oooo....'],
 };
+const bagItemArt={
+ 'Shell Bell':['#dfbd66','.....oo..... ....ocgo.... ...olccgo... ...olccgo... ..olccccgo.. .olccccccgo. .oooooooooo. .....oo.....'],
+ 'Wise Glasses':['#83cafa','............ .oooo..oooo. olccoooocclo olcco..occlo .oooo..oooo.'],
+ 'Muscle Band':['#db5939','..oooooooo.. .olccccccgo. olccccccccgo occcwwwcccgo occcwwwcccgo .occcccccgo. ..oooooooo..'],
+ Leftovers:['#c96d46','...oooooo... ..owwwwwwo.. .olcccccco.. .ocooocoo... .olccccco... ..ocoooo.... ...oo.......'],
+ Charcoal:['#4e4755','...oooo..... ..olccoo.... .olccccgo... .ocgcccggoo. .ocgccccgco. ..oogggcgo.. ....ooooo...'],
+ 'Mystic Water':['#399cdc','.....oo..... ....olco.... ...olccgo... ..olccccgo.. ..olccccgo.. ...ogccgo... ....oooo....'],
+ 'Miracle Seed':['#6db944','......ooo... .....olco... ....olco.... ..ooooc..... .olccgo..... .olccgo..... ..oooo......'],
+ Magnet:['#d15b61','..ooo..ooo.. .owwo..owwo. .occo..occo. .occo..occo. .occo..occo. .occcooocco. ..ogccccgo.. ...oooooo...'],
+ 'Ability Capsule':['#a366de','............ .....oooo... ....owwco... ...owwcco... ..owwccgo... .owwccgo.... .occcgo..... ..oooo......'],
+ 'Linking Cord':['#e8a65d','..ooo....... .olco....... .ocgo..ooo.. ..ocooocgo.. ...occcgo... ....oooo....'],
+ 'Oval Stone':['#ddd5ba','....oooo.... ...olccgo... ..olccccgo.. ..olccccgo.. ..occcccgo.. ...oggggo... ....oooo....'],
+};
+const bagStoneColors={
+ 'Dawn Stone':'#7bcbd0','Dusk Stone':'#62458e','Fire Stone':'#ec7040','Ice Stone':'#87d6ed',
+ 'Leaf Stone':'#6cb553','Moon Stone':'#63677f','Shiny Stone':'#ebdb99','Sun Stone':'#efad44',
+ 'Thunder Stone':'#e7ce4b','Water Stone':'#4279c8',Eviolite:'#a86cc7',
+};
+
 const bagItemNames=[...new Set([...Object.keys(heldItems),...Object.keys(trainingItems),'Ability Capsule'])];
 function bagItemIcon(name) {
  const tier=ballTypes.findIndex(ball=>ball.name===name);
- const kind=tier>=0?'ball':name.includes('Berry')?'berry':evolutionStones.includes(name)?'stone':
+ const art=bagItemArt[name];
+ const kind=tier>=0?'ball':name.includes('Berry')?'berry':(evolutionStones.includes(name) || name==='Eviolite')?'stone':
   name.includes(' · ')?'disc':name==='Ability Capsule' || Object.hasOwn(trainingItems,name)?'bottle':'gear';
  const machineColor={TM:'#3989ed',TR:'#d65262',HM:'#38a86f','Arena TM':'#9560cd'};
  const hue=(bagItemNames.indexOf(name)*137.508+24)%360;
  const color=tier>=0?ballColors[tier]:kind==='disc'?machineColor[name.split(' · ')[0]] ?? '#779cf1':
-  'hsl('+hue+' 70% 53%)';
+  art?.[0] ?? bagStoneColors[name] ?? 'hsl('+hue+' 70% 53%)';
  const canvas=element('canvas');
  canvas.width=12;canvas.height=12;
  canvas.setAttribute('aria-hidden','true');
  const context=canvas.getContext('2d');
  const palette={o:'#343e51',c:color,l:'#fff3d2',g:kind==='berry'?'#619c58':'#68798d',w:'#e1e8e9',d:'#bbd0db'};
- bagPixelShapes[kind].forEach((row,y)=>Array.from(row).forEach((pixel,x)=>{
+ const rows=art?art[1].split(' '):bagPixelShapes[kind];
+ rows.forEach((row,y)=>Array.from(row).forEach((pixel,x)=>{
   if(!palette[pixel])return;
   context.fillStyle=palette[pixel];
-  context.fillRect(x,y+1,1,1);
+  context.fillRect(x,y+(art?Math.floor((12-rows.length)/2):1),1,1);
  }));
  return canvas;
 }
@@ -8403,6 +8425,7 @@ function setToolbarUnread(id,count) {
 }
 // Add each release to the top. The newest version also drives the subtitle.
 const updateLogEntries=[
+ {version:'0.4.1',changes:['Improved checkout total contrast and redrew item icons to match their names.']},
  {version:'0.4.0',changes:['Added bulk purchases with a quantity slider and live coin totals in the Item Shop.','Separated Arena TM from regular TM in Skill Shop filters.']},
  {version:'0.3.2',changes:['Added move-type badges to the Skill Shop and distinct palettes for items and skill machines.']},
  {version:'0.3.1',changes:['Added a centered Auto Craft results popup showing the balls used and produced at each tier.']},
