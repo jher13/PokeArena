@@ -323,10 +323,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 <button id="toolbar-settings">Settings</button>
 <button id="toolbar-logout">Log out</button>
 </div>
-<dialog id="battle-settings" aria-labelledby="battle-settings-title">
- <div class="menu-heading"><h2 id="battle-settings-title">Battle settings</h2><form method="dialog"><button>Done</button></form></div>
- <div class="battle-settings-grid"><button id="battle-sfx" aria-pressed="true">SFX: On</button><button id="battle-music" aria-pressed="true">Music: On</button><button id="basic-attacks" type="button" aria-pressed="true">Normal Attack: On</button><button id="speed" aria-pressed="false">1× speed</button><button id="battle-auto-start" aria-pressed="false" hidden>Auto Start: Off</button><button id="battle-auto-capture" aria-pressed="false" hidden>Auto capture: Off</button><button id="battle-auto-repeat" aria-pressed="false" hidden>Auto repeat: Off</button><button id="auto-reserve" aria-pressed="false" hidden>Auto send-out: Off</button></div>
-</dialog>
+
 <dialog id="home-dialog"><div class="menu-heading"><h2 id="home-dialog-title"></h2><form method="dialog"><button>Close</button></form></div><div id="home-dialog-content"></div></dialog>
 <div class="home-grid">
 <nav class="home-links" aria-label="Battle and team">
@@ -475,6 +472,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 
 <section id="choices" class="choices" aria-label="Team and upgrades"></section>
 <div class="toolbar battle-actions"><button id="start">Start battle</button><button id="next-gym" class="campaign-next" hidden>Next gym</button><button id="reset">Main menu</button></div></div></main>
+<dialog id="battle-settings" aria-labelledby="battle-settings-title">
+ <div class="menu-heading"><h2 id="battle-settings-title">Battle settings</h2><form method="dialog"><button>Done</button></form></div>
+ <div class="battle-settings-grid"><button id="battle-sfx" aria-pressed="true">SFX: On</button><button id="battle-music" aria-pressed="true">Music: On</button><button id="basic-attacks" type="button" aria-pressed="true">Normal Attack: On</button><button id="speed" aria-pressed="false">1× speed</button><button id="battle-auto-start" aria-pressed="false" hidden>Auto Start: Off</button><button id="battle-auto-capture" aria-pressed="false" hidden>Auto capture: Off</button><button id="battle-auto-repeat" aria-pressed="false" hidden>Auto repeat: Off</button><button id="auto-reserve" aria-pressed="false" hidden>Auto send-out: Off</button></div>
+</dialog>
 <script>
 const byId = id => document.getElementById(id);
 const profileIndexKey='pokemon-arena-player-index';
