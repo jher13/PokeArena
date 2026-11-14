@@ -302,6 +302,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .toolbar-pixel[data-unread]{border-color:#ff5365;box-shadow:inset 0 0 0 1px #ff5365}
 .toolbar-pixel[data-unread]::after{content:attr(data-unread);position:absolute;right:1px;bottom:1px;border-radius:5px;padding:1px 3px;background:#ae2238;color:white;font:700 10px system-ui;line-height:1}
 
+#toolbar-fullscreen .menu-pixel::before{box-shadow:2px 2px #c4defa,4px 2px #c4defa,6px 2px #c4defa,12px 2px #c4defa,14px 2px #c4defa,16px 2px #c4defa,2px 4px #c4defa,16px 4px #c4defa,2px 6px #c4defa,16px 6px #c4defa,2px 12px #c4defa,16px 12px #c4defa,2px 14px #c4defa,16px 14px #c4defa,2px 16px #c4defa,4px 16px #c4defa,6px 16px #c4defa,12px 16px #c4defa,14px 16px #c4defa,16px 16px #c4defa}
+#toolbar-settings .menu-pixel::before{box-shadow:6px 2px #c4defa,12px 2px #c4defa,4px 4px #c4defa,6px 4px #c4defa,8px 4px #c4defa,10px 4px #c4defa,12px 4px #c4defa,14px 4px #c4defa,2px 6px #c4defa,4px 6px #c4defa,8px 6px #c4defa,10px 6px #c4defa,14px 6px #c4defa,16px 6px #c4defa,2px 8px #c4defa,4px 8px #c4defa,6px 8px #c4defa,12px 8px #c4defa,14px 8px #c4defa,16px 8px #c4defa,2px 10px #c4defa,4px 10px #c4defa,6px 10px #c4defa,12px 10px #c4defa,14px 10px #c4defa,16px 10px #c4defa,2px 12px #c4defa,4px 12px #c4defa,8px 12px #c4defa,10px 12px #c4defa,14px 12px #c4defa,16px 12px #c4defa,4px 14px #c4defa,6px 14px #c4defa,8px 14px #c4defa,10px 14px #c4defa,12px 14px #c4defa,14px 14px #c4defa,6px 16px #c4defa,12px 16px #c4defa}
+#feature-type{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.home-type-badge{display:inline-block;padding:3px 9px;border:1px solid var(--type-color);border-radius:5px;background:color-mix(in srgb,var(--type-color) 22%,#171e30);color:#fff;font-size:12px;font-weight:700}
 </style>
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -363,8 +367,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 <button id="toolbar-notices" class="toolbar-pixel" type="button" title="Notifications" aria-label="Notifications"><span class="menu-pixel" aria-hidden="true"></span></button>
 <button id="toolbar-updates" class="toolbar-pixel" type="button" title="Update Log" aria-label="Update Log"><span class="menu-pixel" aria-hidden="true"></span></button>
 
-<button id="toolbar-fullscreen">Fullscreen</button>
-<button id="toolbar-settings">Settings</button>
+<button id="toolbar-fullscreen" class="toolbar-pixel" type="button" title="Fullscreen" aria-label="Fullscreen"><span class="menu-pixel" aria-hidden="true"></span></button>
+<button id="toolbar-settings" class="toolbar-pixel" type="button" title="Settings" aria-label="Settings"><span class="menu-pixel" aria-hidden="true"></span></button>
 <button id="toolbar-logout">Log out</button>
 </div>
 
@@ -540,8 +544,7 @@ try {
    new Set(saved.players.map(player=>player.id)).size===saved.players.length) playerIndex=saved;
 } catch {}
 const currentPlayer=playerIndex.players.find(player=>player.id===playerIndex.active);
-const rememberedAccountKey='arena-remembered-user';
-const onlineSaveId=sessionStorage.getItem('arena-online-user') ?? localStorage.getItem(rememberedAccountKey);
+const onlineSaveId=sessionStorage.getItem('arena-online-user');
 function playerSaveKey(key) {
  if(onlineSaveId) return 'arena-online:'+onlineSaveId+':'+key;
  return currentPlayer.id==='default'?key:'pokemon-arena-player:'+currentPlayer.id+':'+key;
@@ -4122,7 +4125,11 @@ function openMenu() {
  const lead=team[0];
 
  byId('feature-name').textContent=lead+' · Lv. '+ownedPokemon(lead).level;
- byId('feature-type').textContent=dex[lead].slice(1,3).filter(Boolean).join(' / ');
+ byId('feature-type').replaceChildren(...dex[lead].slice(1,3).filter(Boolean).map(type=>{
+  const badge=element('span',type,'home-type-badge');
+  badge.style.setProperty('--type-color',moveColors[type] ?? '#b7c7dd');
+  return badge;
+ }));
  
  showScreen('home');
  animateHomeSprite(lead);
@@ -8266,6 +8273,8 @@ function setToolbarUnread(id,count) {
 }
 // Add each release to the top. The newest version also drives the subtitle.
 const updateLogEntries=[
+ {version:'0.1.6',changes:['Added pixel-art Fullscreen and Settings icons to the main toolbar.','Added color-coded type badges to the lead Pokémon on the main menu.']},
+ {version:'0.1.5',changes:['Remember me prefills the login email without signing in automatically.']},
  {version:'0.1.4',changes:['Added the game version to the subtitle and the five-release Update Log.']},
  {version:'0.1.3',changes:['Kept the Notifications bell visible during refreshes.','Added unread counts and red borders to toolbar icons.']},
  {version:'0.1.2',changes:['Added Remember me to online sign-in.']},
@@ -8296,7 +8305,9 @@ byId('toolbar-fullscreen').onclick=async()=>{
  } catch {openHomeDialog('Fullscreen',element('p','Fullscreen is unavailable in this window.'));}
 };
 document.addEventListener('fullscreenchange',()=>{
- byId('toolbar-fullscreen').textContent=document.fullscreenElement?'Windowed':'Fullscreen';
+ const button=byId('toolbar-fullscreen');
+ button.title=document.fullscreenElement?'Exit fullscreen':'Fullscreen';
+ button.setAttribute('aria-label',button.title);
 });
 byId('toolbar-settings').onclick=()=>{
  const music=element('button',musicButton.textContent);
