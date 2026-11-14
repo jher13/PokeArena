@@ -4,10 +4,26 @@ const arenaSaveKeys = [
 ].map(key=>'pokemon-arena-'+key);
 const cloudRedirect='https://jher13.github.io/PokeArena/';
 let arenaCloudClient;
+let rememberCloudSession=Boolean(localStorage.getItem(rememberedAccountKey));
+const cloudAuthStorage={
+ getItem(key) {return sessionStorage.getItem(key) ?? localStorage.getItem(key);},
+ setItem(key,value) {
+  const target=rememberCloudSession?localStorage:sessionStorage;
+  const other=rememberCloudSession?sessionStorage:localStorage;
+  target.setItem(key,value);
+  other.removeItem(key);
+ },
+ removeItem(key) {sessionStorage.removeItem(key);localStorage.removeItem(key);},
+};
+function clearCloudAccountMarker() {
+ sessionStorage.removeItem('arena-online-user');
+ localStorage.removeItem(rememberedAccountKey);
+ rememberCloudSession=false;
+}
 function cloudClient() {
  return arenaCloudClient ??= import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
   .then(({createClient})=>createClient('https://ckgcuhaiuwlccyaxewbv.supabase.co',
-   'sb_publishable_NftRvgvLu2zPCvsAcIUqGA_GzNcyYxz',{auth:{detectSessionInUrl:false}}))
+   'sb_publishable_NftRvgvLu2zPCvsAcIUqGA_GzNcyYxz',{auth:{detectSessionInUrl:false,storage:cloudAuthStorage}}))
   .catch(error=>{arenaCloudClient=null;throw error;});
 }
 function readArenaSave() {
@@ -104,6 +120,8 @@ function installAccountGate() {
  const signup=byId('account-signup');
  const submit=byId('account-submit');
  const password=byId('account-password');
+ const remember=byId('account-remember');
+ remember.checked=rememberCloudSession;
  let creating=false;
  function proceed() {
   gate.hidden=true;
@@ -127,7 +145,8 @@ function installAccountGate() {
     if(error) throw error;
    } catch(error) {status.textContent=error.message;return;}
   }
-  if(onlineSaveId) {sessionStorage.removeItem('arena-online-user');window.location.reload();return;}
+  clearCloudAccountMarker();
+  if(onlineSaveId) {window.location.reload();return;}
   proceed();
  };
  form.onsubmit=async event=>{
@@ -137,13 +156,18 @@ function installAccountGate() {
   status.textContent='Sending email link…';
   try {
    const client=await cloudClient();
+   rememberCloudSession=remember.checked;
    const credentials={email:byId('account-email').value.trim(),password:password.value};
    const {data,error}=creating
     ? await client.auth.signUp({...credentials,options:{emailRedirectTo:cloudRedirect}})
     : await client.auth.signInWithPassword(credentials);
    if(error) throw error;
    password.value='';
-   if(data.session) await enterCloudAccount(client,data.session.user,proceed,true);
+   if(data.session) {
+    if(rememberCloudSession)localStorage.setItem(rememberedAccountKey,data.session.user.id);
+    else localStorage.removeItem(rememberedAccountKey);
+    await enterCloudAccount(client,data.session.user,proceed,true);
+   }
    else status.textContent='Confirm your email, then log in with your password.';
   } catch(error) {status.textContent=error.message || 'Could not send the link.';}
   finally {submit.disabled=false;}
@@ -166,7 +190,8 @@ function installAccountGate() {
     const {error}=await client.auth.signOut();
     if(error) throw error;
    }
-   if(onlineSaveId) {sessionStorage.removeItem('arena-online-user');window.location.reload();return;}
+   clearCloudAccountMarker();
+  if(onlineSaveId) {window.location.reload();return;}
    returnToAccountGate();
   } catch(error) {
    openHomeDialog('Log out',element('p',error.message || 'Could not sign out.'));
@@ -176,6 +201,6 @@ function installAccountGate() {
   const {data,error}=await client.auth.getUser();
   if(error || !data.user || data.user.id!==onlineSaveId) throw new Error('Log in again to load your cloud save.');
   await enterCloudAccount(client,data.user,proceed);
- }).catch(error=>{status.textContent=error.message;});
+ }).catch(error=>{if(localStorage.getItem(rememberedAccountKey)===onlineSaveId)localStorage.removeItem(rememberedAccountKey);status.textContent=error.message;});
 }
 installAccountGate();

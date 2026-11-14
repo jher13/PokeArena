@@ -294,6 +294,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 #home-coop .menu-pixel::before{box-shadow:4px 2px #9becbe,6px 2px #9becbe,12px 2px #9becbe,14px 2px #9becbe,2px 4px #9becbe,4px 4px #9becbe,6px 4px #9becbe,8px 4px #9becbe,10px 4px #9becbe,12px 4px #9becbe,14px 4px #9becbe,16px 4px #9becbe,2px 6px #9becbe,4px 6px #9becbe,6px 6px #9becbe,8px 6px #9becbe,10px 6px #9becbe,12px 6px #9becbe,14px 6px #9becbe,16px 6px #9becbe,2px 8px #9becbe,4px 8px #9becbe,6px 8px #9becbe,8px 8px #9becbe,10px 8px #9becbe,12px 8px #9becbe,14px 8px #9becbe,16px 8px #9becbe,4px 10px #9becbe,6px 10px #9becbe,8px 10px #9becbe,10px 10px #9becbe,12px 10px #9becbe,14px 10px #9becbe,6px 12px #9becbe,8px 12px #9becbe,10px 12px #9becbe,12px 12px #9becbe,8px 14px #9becbe,10px 14px #9becbe}
 #home-pvp .menu-pixel::before{box-shadow:2px 2px #ffa8a3,16px 2px #ffa8a3,2px 4px #ffa8a3,4px 4px #ffa8a3,14px 4px #ffa8a3,16px 4px #ffa8a3,4px 6px #ffa8a3,6px 6px #ffa8a3,12px 6px #ffa8a3,14px 6px #ffa8a3,6px 8px #ffa8a3,8px 8px #ffa8a3,10px 8px #ffa8a3,12px 8px #ffa8a3,6px 10px #ffa8a3,8px 10px #ffa8a3,10px 10px #ffa8a3,12px 10px #ffa8a3,4px 12px #ffa8a3,6px 12px #ffa8a3,12px 12px #ffa8a3,14px 12px #ffa8a3,2px 14px #ffa8a3,4px 14px #ffa8a3,14px 14px #ffa8a3,16px 14px #ffa8a3,2px 16px #ffa8a3,16px 16px #ffa8a3}
 #home-roguelit .menu-pixel::before{box-shadow:4px 2px #d4aeff,6px 2px #d4aeff,8px 2px #d4aeff,10px 2px #d4aeff,12px 2px #d4aeff,14px 2px #d4aeff,2px 4px #d4aeff,4px 4px #d4aeff,14px 4px #d4aeff,16px 4px #d4aeff,2px 6px #d4aeff,4px 6px #d4aeff,8px 6px #d4aeff,10px 6px #d4aeff,14px 6px #d4aeff,16px 6px #d4aeff,2px 8px #d4aeff,4px 8px #d4aeff,8px 8px #d4aeff,10px 8px #d4aeff,14px 8px #d4aeff,16px 8px #d4aeff,2px 10px #d4aeff,4px 10px #d4aeff,14px 10px #d4aeff,16px 10px #d4aeff,2px 12px #d4aeff,4px 12px #d4aeff,6px 12px #d4aeff,12px 12px #d4aeff,14px 12px #d4aeff,16px 12px #d4aeff,2px 14px #d4aeff,4px 14px #d4aeff,6px 14px #d4aeff,12px 14px #d4aeff,14px 14px #d4aeff,16px 14px #d4aeff,2px 16px #d4aeff,4px 16px #d4aeff,6px 16px #d4aeff,8px 16px #d4aeff,10px 16px #d4aeff,12px 16px #d4aeff,14px 16px #d4aeff,16px 16px #d4aeff}
+#remember-account{display:flex;align-items:center;gap:8px}
+#toolbar-notices{position:relative}#toolbar-notices[data-unread]::after{content:attr(data-unread);position:absolute;right:-5px;top:-6px;border-radius:9px;padding:1px 4px;background:#9b3043;color:white;font-size:10px}
 </style>
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -309,6 +311,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 <input id="account-email" type="email" autocomplete="email" required>
 <label for="account-password">Password</label>
 <input id="account-password" type="password" autocomplete="current-password" required>
+<label id="remember-account"><input id="account-remember" type="checkbox"> Remember me</label>
 <button id="account-submit" class="home-play" type="submit">Log in</button>
 </form>
 <p id="account-status" role="status"></p>
@@ -531,7 +534,8 @@ try {
    new Set(saved.players.map(player=>player.id)).size===saved.players.length) playerIndex=saved;
 } catch {}
 const currentPlayer=playerIndex.players.find(player=>player.id===playerIndex.active);
-const onlineSaveId=sessionStorage.getItem('arena-online-user');
+const rememberedAccountKey='arena-remembered-user';
+const onlineSaveId=sessionStorage.getItem('arena-online-user') ?? localStorage.getItem(rememberedAccountKey);
 function playerSaveKey(key) {
  if(onlineSaveId) return 'arena-online:'+onlineSaveId+':'+key;
  return currentPlayer.id==='default'?key:'pokemon-arena-player:'+currentPlayer.id+':'+key;

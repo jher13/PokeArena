@@ -53,6 +53,7 @@
   if(!packet.battle || packet.turn<=displayedTurn)return;
   displayedTurn=packet.turn;
   const data=packet.battle;
+  updateNormalAttackToggle(data.normalAttacks ?? true,normalAttacks=>send({normalAttacks}));
   const mirror=active.mode!=='coop' && active.side==='guest';
   const mx=x=>mirror?canvas.width-x:x;
   const dx=x=>mirror?-x:x;
@@ -394,7 +395,10 @@
   try {
    const data=await rpc('notifications');
    const count=data.friends.length+data.invites.length;
-   byId('toolbar-notices').textContent=count?'Notifications ('+count+')':'Notifications';
+   const bell=byId('toolbar-notices');
+   if(count)bell.dataset.unread=count>99?'99+':String(count);
+   else delete bell.dataset.unread;
+   bell.setAttribute('aria-label',count?'Notifications, '+count+' unread':'Notifications');
   } catch {}
  },5000);
  byId('home-coop').onclick=()=>open('Co-op',()=>lobby(true));
