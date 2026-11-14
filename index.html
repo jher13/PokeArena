@@ -266,6 +266,34 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .bag-item{display:grid;align-content:start;gap:6px;min-width:0;padding:10px;border:1px solid #506581;border-radius:9px;background:#18243a}
 .bag-item strong{overflow-wrap:anywhere}.bag-item small{color:#c0cfe4}.bag-item button{font-size:12px}
 #bag-status:empty{display:none}
+#home-bag{display:inline-grid;place-items:center;min-width:36px;min-height:34px;padding:5px;vertical-align:middle}
+.pixel-bag{display:block;width:22px;height:22px;background:#502f30;clip-path:polygon(32% 0,68% 0,68% 14%,82% 14%,82% 23%,91% 23%,91% 36%,100% 36%,100% 91%,91% 91%,91% 100%,9% 100%,9% 91%,0 91%,0 36%,9% 36%,9% 23%,18% 23%,18% 14%,32% 14%);position:relative}
+.pixel-bag::before,.pixel-bag::after{content:"";position:absolute}
+.pixel-bag::before{inset:5px 3px 3px;background:linear-gradient(#f9ca83 0 38%,#b36345 38% 50%,#da8b50 50%);clip-path:polygon(12% 0,88% 0,88% 14%,100% 14%,100% 100%,0 100%,0 14%,12% 14%)}
+.pixel-bag::after{width:6px;height:5px;left:8px;top:10px;background:#ffe5a3;border:1px solid #754936;box-shadow:0 -9px 0 -1px #f9ca83}
+.menu-pixel{display:inline-block;position:relative;width:20px;height:20px;flex:none;vertical-align:middle}
+.menu-pixel::before{content:"";position:absolute;left:0;top:0;width:2px;height:2px}
+.toolbar-pixel{display:inline-grid;place-items:center;min-width:36px;min-height:34px;padding:5px}
+.home-feature button .menu-pixel{margin-right:5px}
+#toolbar-messages .menu-pixel::before{box-shadow:4px 2px #7bdcff,6px 2px #7bdcff,8px 2px #7bdcff,10px 2px #7bdcff,12px 2px #7bdcff,14px 2px #7bdcff,2px 4px #7bdcff,4px 4px #7bdcff,6px 4px #7bdcff,8px 4px #7bdcff,10px 4px #7bdcff,12px 4px #7bdcff,14px 4px #7bdcff,16px 4px #7bdcff,2px 6px #7bdcff,4px 6px #7bdcff,8px 6px #7bdcff,10px 6px #7bdcff,14px 6px #7bdcff,16px 6px #7bdcff,2px 8px #7bdcff,4px 8px #7bdcff,6px 8px #7bdcff,8px 8px #7bdcff,10px 8px #7bdcff,12px 8px #7bdcff,14px 8px #7bdcff,16px 8px #7bdcff,2px 10px #7bdcff,4px 10px #7bdcff,6px 10px #7bdcff,8px 10px #7bdcff,10px 10px #7bdcff,12px 10px #7bdcff,14px 10px #7bdcff,16px 10px #7bdcff,4px 12px #7bdcff,6px 12px #7bdcff,8px 12px #7bdcff,10px 12px #7bdcff,12px 12px #7bdcff,14px 12px #7bdcff,6px 14px #7bdcff,8px 14px #7bdcff,6px 16px #7bdcff}
+#toolbar-notices .menu-pixel::before{box-shadow:8px 2px #ffd270,10px 2px #ffd270,6px 4px #ffd270,8px 4px #ffd270,10px 4px #ffd270,12px 4px #ffd270,4px 6px #ffd270,6px 6px #ffd270,8px 6px #ffd270,10px 6px #ffd270,12px 6px #ffd270,14px 6px #ffd270,4px 8px #ffd270,6px 8px #ffd270,8px 8px #ffd270,10px 8px #ffd270,12px 8px #ffd270,14px 8px #ffd270,4px 10px #ffd270,6px 10px #ffd270,8px 10px #ffd270,10px 10px #ffd270,12px 10px #ffd270,14px 10px #ffd270,2px 12px #ffd270,4px 12px #ffd270,6px 12px #ffd270,8px 12px #ffd270,10px 12px #ffd270,12px 12px #ffd270,14px 12px #ffd270,16px 12px #ffd270,8px 16px #ffd270,10px 16px #ffd270}
+#toolbar-updates .menu-pixel::before{box-shadow:4px 2px #f5d4a1,6px 2px #f5d4a1,8px 2px #f5d4a1,10px 2px #f5d4a1,12px 2px #f5d4a1,14px 2px #f5d4a1,2px 4px #f5d4a1,4px 4px #f5d4a1,6px 4px #f5d4a1,8px 4px #f5d4a1,10px 4px #f5d4a1,12px 4px #f5d4a1,14px 4px #f5d4a1,16px 4px #f5d4a1,6px 6px #f5d4a1,8px 6px #f5d4a1,10px 6px #f5d4a1,12px 6px #f5d4a1,14px 6px #f5d4a1,6px 8px #f5d4a1,14px 8px #f5d4a1,6px 10px #f5d4a1,8px 10px #f5d4a1,10px 10px #f5d4a1,12px 10px #f5d4a1,14px 10px #f5d4a1,6px 12px #f5d4a1,14px 12px #f5d4a1,2px 14px #f5d4a1,4px 14px #f5d4a1,6px 14px #f5d4a1,8px 14px #f5d4a1,10px 14px #f5d4a1,12px 14px #f5d4a1,14px 14px #f5d4a1,4px 16px #f5d4a1,6px 16px #f5d4a1,8px 16px #f5d4a1,10px 16px #f5d4a1,12px 16px #f5d4a1}
+#home-dex .menu-pixel::before{box-shadow:2px 2px #ff9295,4px 2px #ff9295,6px 2px #ff9295,8px 2px #ff9295,10px 2px #ff9295,12px 2px #ff9295,14px 2px #ff9295,2px 4px #ff9295,14px 4px #ff9295,2px 6px #ff9295,6px 6px #ff9295,8px 6px #ff9295,10px 6px #ff9295,14px 6px #ff9295,2px 8px #ff9295,6px 8px #ff9295,10px 8px #ff9295,14px 8px #ff9295,2px 10px #ff9295,6px 10px #ff9295,8px 10px #ff9295,10px 10px #ff9295,14px 10px #ff9295,2px 12px #ff9295,14px 12px #ff9295,2px 14px #ff9295,4px 14px #ff9295,6px 14px #ff9295,8px 14px #ff9295,10px 14px #ff9295,12px 14px #ff9295,14px 14px #ff9295,16px 14px #ff9295,4px 16px #ff9295,6px 16px #ff9295,8px 16px #ff9295,10px 16px #ff9295,12px 16px #ff9295,14px 16px #ff9295,16px 16px #ff9295}
+#home-teams .menu-pixel::before{box-shadow:2px 2px #9bc9ff,4px 2px #9bc9ff,6px 2px #9bc9ff,8px 2px #9bc9ff,10px 2px #9bc9ff,12px 2px #9bc9ff,14px 2px #9bc9ff,16px 2px #9bc9ff,2px 4px #9bc9ff,16px 4px #9bc9ff,2px 6px #9bc9ff,6px 6px #9bc9ff,8px 6px #9bc9ff,10px 6px #9bc9ff,12px 6px #9bc9ff,16px 6px #9bc9ff,2px 8px #9bc9ff,6px 8px #9bc9ff,8px 8px #9bc9ff,10px 8px #9bc9ff,12px 8px #9bc9ff,16px 8px #9bc9ff,2px 10px #9bc9ff,16px 10px #9bc9ff,2px 12px #9bc9ff,4px 12px #9bc9ff,6px 12px #9bc9ff,8px 12px #9bc9ff,10px 12px #9bc9ff,12px 12px #9bc9ff,14px 12px #9bc9ff,16px 12px #9bc9ff,8px 14px #9bc9ff,10px 14px #9bc9ff,6px 16px #9bc9ff,8px 16px #9bc9ff,10px 16px #9bc9ff,12px 16px #9bc9ff}
+#home-skillset .menu-pixel::before{box-shadow:8px 2px #d4a8ff,6px 4px #d4a8ff,8px 4px #d4a8ff,10px 4px #d4a8ff,4px 6px #d4a8ff,6px 6px #d4a8ff,8px 6px #d4a8ff,10px 6px #d4a8ff,12px 6px #d4a8ff,2px 8px #d4a8ff,4px 8px #d4a8ff,6px 8px #d4a8ff,8px 8px #d4a8ff,10px 8px #d4a8ff,12px 8px #d4a8ff,14px 8px #d4a8ff,6px 10px #d4a8ff,8px 10px #d4a8ff,10px 10px #d4a8ff,6px 12px #d4a8ff,10px 12px #d4a8ff,6px 14px #d4a8ff,10px 14px #d4a8ff,6px 16px #d4a8ff,8px 16px #d4a8ff,10px 16px #d4a8ff}
+#home-shop .menu-pixel::before{box-shadow:2px 2px #ffce76,4px 2px #ffce76,6px 2px #ffce76,8px 2px #ffce76,10px 2px #ffce76,12px 2px #ffce76,14px 2px #ffce76,16px 2px #ffce76,2px 4px #ffce76,6px 4px #ffce76,10px 4px #ffce76,14px 4px #ffce76,16px 4px #ffce76,2px 6px #ffce76,4px 6px #ffce76,6px 6px #ffce76,8px 6px #ffce76,10px 6px #ffce76,12px 6px #ffce76,14px 6px #ffce76,16px 6px #ffce76,4px 8px #ffce76,14px 8px #ffce76,4px 10px #ffce76,6px 10px #ffce76,8px 10px #ffce76,10px 10px #ffce76,14px 10px #ffce76,4px 12px #ffce76,10px 12px #ffce76,14px 12px #ffce76,4px 14px #ffce76,10px 14px #ffce76,14px 14px #ffce76,4px 16px #ffce76,6px 16px #ffce76,8px 16px #ffce76,10px 16px #ffce76,12px 16px #ffce76,14px 16px #ffce76}
+#home-skills .menu-pixel::before{box-shadow:6px 2px #8de6d5,8px 2px #8de6d5,10px 2px #8de6d5,12px 2px #8de6d5,4px 4px #8de6d5,6px 4px #8de6d5,12px 4px #8de6d5,14px 4px #8de6d5,2px 6px #8de6d5,4px 6px #8de6d5,8px 6px #8de6d5,10px 6px #8de6d5,14px 6px #8de6d5,16px 6px #8de6d5,2px 8px #8de6d5,6px 8px #8de6d5,12px 8px #8de6d5,16px 8px #8de6d5,2px 10px #8de6d5,6px 10px #8de6d5,12px 10px #8de6d5,16px 10px #8de6d5,2px 12px #8de6d5,4px 12px #8de6d5,8px 12px #8de6d5,10px 12px #8de6d5,14px 12px #8de6d5,16px 12px #8de6d5,4px 14px #8de6d5,6px 14px #8de6d5,12px 14px #8de6d5,14px 14px #8de6d5,6px 16px #8de6d5,8px 16px #8de6d5,10px 16px #8de6d5,12px 16px #8de6d5}
+#home-events .menu-pixel::before{box-shadow:4px 2px #ffa8da,14px 2px #ffa8da,6px 4px #ffa8da,12px 4px #ffa8da,2px 6px #ffa8da,4px 6px #ffa8da,6px 6px #ffa8da,8px 6px #ffa8da,10px 6px #ffa8da,12px 6px #ffa8da,14px 6px #ffa8da,16px 6px #ffa8da,2px 8px #ffa8da,4px 8px #ffa8da,8px 8px #ffa8da,10px 8px #ffa8da,14px 8px #ffa8da,16px 8px #ffa8da,2px 10px #ffa8da,4px 10px #ffa8da,6px 10px #ffa8da,8px 10px #ffa8da,10px 10px #ffa8da,12px 10px #ffa8da,14px 10px #ffa8da,16px 10px #ffa8da,4px 12px #ffa8da,8px 12px #ffa8da,10px 12px #ffa8da,14px 12px #ffa8da,4px 14px #ffa8da,8px 14px #ffa8da,10px 14px #ffa8da,14px 14px #ffa8da,4px 16px #ffa8da,6px 16px #ffa8da,8px 16px #ffa8da,10px 16px #ffa8da,12px 16px #ffa8da,14px 16px #ffa8da}
+#home-trainer .menu-pixel::before{box-shadow:2px 2px #c0dfff,16px 2px #c0dfff,2px 4px #c0dfff,4px 4px #c0dfff,14px 4px #c0dfff,16px 4px #c0dfff,4px 6px #c0dfff,6px 6px #c0dfff,12px 6px #c0dfff,14px 6px #c0dfff,6px 8px #c0dfff,8px 8px #c0dfff,10px 8px #c0dfff,12px 8px #c0dfff,6px 10px #c0dfff,8px 10px #c0dfff,10px 10px #c0dfff,12px 10px #c0dfff,4px 12px #c0dfff,6px 12px #c0dfff,12px 12px #c0dfff,14px 12px #c0dfff,2px 14px #c0dfff,4px 14px #c0dfff,14px 14px #c0dfff,16px 14px #c0dfff,2px 16px #c0dfff,16px 16px #c0dfff}
+#home-gyms .menu-pixel::before{box-shadow:8px 2px #a4b8ff,10px 2px #a4b8ff,6px 4px #a4b8ff,8px 4px #a4b8ff,10px 4px #a4b8ff,12px 4px #a4b8ff,4px 6px #a4b8ff,6px 6px #a4b8ff,8px 6px #a4b8ff,10px 6px #a4b8ff,12px 6px #a4b8ff,14px 6px #a4b8ff,2px 8px #a4b8ff,4px 8px #a4b8ff,6px 8px #a4b8ff,8px 8px #a4b8ff,10px 8px #a4b8ff,12px 8px #a4b8ff,14px 8px #a4b8ff,16px 8px #a4b8ff,4px 10px #a4b8ff,8px 10px #a4b8ff,10px 10px #a4b8ff,14px 10px #a4b8ff,4px 12px #a4b8ff,8px 12px #a4b8ff,10px 12px #a4b8ff,14px 12px #a4b8ff,4px 14px #a4b8ff,8px 14px #a4b8ff,10px 14px #a4b8ff,14px 14px #a4b8ff,2px 16px #a4b8ff,4px 16px #a4b8ff,6px 16px #a4b8ff,8px 16px #a4b8ff,10px 16px #a4b8ff,12px 16px #a4b8ff,14px 16px #a4b8ff,16px 16px #a4b8ff}
+#home-collection .menu-pixel::before{box-shadow:6px 2px #ffd470,8px 2px #ffd470,10px 2px #ffd470,12px 2px #ffd470,4px 4px #ffd470,6px 4px #ffd470,8px 4px #ffd470,10px 4px #ffd470,12px 4px #ffd470,14px 4px #ffd470,2px 6px #ffd470,4px 6px #ffd470,8px 6px #ffd470,10px 6px #ffd470,14px 6px #ffd470,16px 6px #ffd470,2px 8px #ffd470,4px 8px #ffd470,6px 8px #ffd470,8px 8px #ffd470,10px 8px #ffd470,12px 8px #ffd470,14px 8px #ffd470,16px 8px #ffd470,4px 10px #ffd470,6px 10px #ffd470,8px 10px #ffd470,10px 10px #ffd470,12px 10px #ffd470,14px 10px #ffd470,6px 12px #ffd470,8px 12px #ffd470,10px 12px #ffd470,12px 12px #ffd470,6px 14px #ffd470,12px 14px #ffd470,4px 16px #ffd470,6px 16px #ffd470,12px 16px #ffd470,14px 16px #ffd470}
+#home-friendlist .menu-pixel::before{box-shadow:4px 2px #92ebbd,6px 2px #92ebbd,12px 2px #92ebbd,14px 2px #92ebbd,4px 4px #92ebbd,6px 4px #92ebbd,12px 4px #92ebbd,14px 4px #92ebbd,2px 8px #92ebbd,4px 8px #92ebbd,6px 8px #92ebbd,8px 8px #92ebbd,10px 8px #92ebbd,12px 8px #92ebbd,14px 8px #92ebbd,16px 8px #92ebbd,2px 10px #92ebbd,4px 10px #92ebbd,6px 10px #92ebbd,8px 10px #92ebbd,10px 10px #92ebbd,12px 10px #92ebbd,14px 10px #92ebbd,16px 10px #92ebbd,2px 12px #92ebbd,4px 12px #92ebbd,6px 12px #92ebbd,8px 12px #92ebbd,10px 12px #92ebbd,12px 12px #92ebbd,14px 12px #92ebbd,16px 12px #92ebbd,2px 14px #92ebbd,4px 14px #92ebbd,8px 14px #92ebbd,10px 14px #92ebbd,14px 14px #92ebbd,16px 14px #92ebbd}
+#home-guilds .menu-pixel::before{box-shadow:2px 2px #ffa880,4px 2px #ffa880,6px 2px #ffa880,8px 2px #ffa880,10px 2px #ffa880,12px 2px #ffa880,14px 2px #ffa880,2px 4px #ffa880,6px 4px #ffa880,8px 4px #ffa880,10px 4px #ffa880,12px 4px #ffa880,14px 4px #ffa880,16px 4px #ffa880,2px 6px #ffa880,4px 6px #ffa880,6px 6px #ffa880,8px 6px #ffa880,10px 6px #ffa880,12px 6px #ffa880,14px 6px #ffa880,2px 8px #ffa880,6px 8px #ffa880,8px 8px #ffa880,10px 8px #ffa880,12px 8px #ffa880,2px 10px #ffa880,2px 12px #ffa880,2px 14px #ffa880,2px 16px #ffa880,4px 16px #ffa880,6px 16px #ffa880}
+#home-leaderboard .menu-pixel::before{box-shadow:2px 2px #ffe68f,4px 2px #ffe68f,6px 2px #ffe68f,8px 2px #ffe68f,10px 2px #ffe68f,12px 2px #ffe68f,14px 2px #ffe68f,16px 2px #ffe68f,2px 4px #ffe68f,6px 4px #ffe68f,8px 4px #ffe68f,10px 4px #ffe68f,12px 4px #ffe68f,16px 4px #ffe68f,2px 6px #ffe68f,6px 6px #ffe68f,8px 6px #ffe68f,10px 6px #ffe68f,12px 6px #ffe68f,16px 6px #ffe68f,4px 8px #ffe68f,6px 8px #ffe68f,8px 8px #ffe68f,10px 8px #ffe68f,12px 8px #ffe68f,14px 8px #ffe68f,6px 10px #ffe68f,8px 10px #ffe68f,10px 10px #ffe68f,12px 10px #ffe68f,8px 12px #ffe68f,10px 12px #ffe68f,8px 14px #ffe68f,10px 14px #ffe68f,6px 16px #ffe68f,8px 16px #ffe68f,10px 16px #ffe68f,12px 16px #ffe68f}
+#home-play .menu-pixel::before{box-shadow:6px 2px #ffaaaa,8px 2px #ffaaaa,10px 2px #ffaaaa,12px 2px #ffaaaa,4px 4px #ffaaaa,6px 4px #ffaaaa,8px 4px #ffaaaa,10px 4px #ffaaaa,12px 4px #ffaaaa,14px 4px #ffaaaa,2px 6px #ffaaaa,4px 6px #ffaaaa,6px 6px #ffaaaa,8px 6px #ffaaaa,10px 6px #ffaaaa,12px 6px #ffaaaa,14px 6px #ffaaaa,16px 6px #ffaaaa,2px 8px #ffaaaa,4px 8px #ffaaaa,14px 8px #ffaaaa,16px 8px #ffaaaa,2px 10px #ffaaaa,4px 10px #ffaaaa,8px 10px #ffaaaa,10px 10px #ffaaaa,14px 10px #ffaaaa,16px 10px #ffaaaa,2px 12px #ffaaaa,4px 12px #ffaaaa,6px 12px #ffaaaa,8px 12px #ffaaaa,10px 12px #ffaaaa,12px 12px #ffaaaa,14px 12px #ffaaaa,16px 12px #ffaaaa,4px 14px #ffaaaa,6px 14px #ffaaaa,8px 14px #ffaaaa,10px 14px #ffaaaa,12px 14px #ffaaaa,14px 14px #ffaaaa,6px 16px #ffaaaa,8px 16px #ffaaaa,10px 16px #ffaaaa,12px 16px #ffaaaa}
+#home-coop .menu-pixel::before{box-shadow:4px 2px #9becbe,6px 2px #9becbe,12px 2px #9becbe,14px 2px #9becbe,2px 4px #9becbe,4px 4px #9becbe,6px 4px #9becbe,8px 4px #9becbe,10px 4px #9becbe,12px 4px #9becbe,14px 4px #9becbe,16px 4px #9becbe,2px 6px #9becbe,4px 6px #9becbe,6px 6px #9becbe,8px 6px #9becbe,10px 6px #9becbe,12px 6px #9becbe,14px 6px #9becbe,16px 6px #9becbe,2px 8px #9becbe,4px 8px #9becbe,6px 8px #9becbe,8px 8px #9becbe,10px 8px #9becbe,12px 8px #9becbe,14px 8px #9becbe,16px 8px #9becbe,4px 10px #9becbe,6px 10px #9becbe,8px 10px #9becbe,10px 10px #9becbe,12px 10px #9becbe,14px 10px #9becbe,6px 12px #9becbe,8px 12px #9becbe,10px 12px #9becbe,12px 12px #9becbe,8px 14px #9becbe,10px 14px #9becbe}
+#home-pvp .menu-pixel::before{box-shadow:2px 2px #ffa8a3,16px 2px #ffa8a3,2px 4px #ffa8a3,4px 4px #ffa8a3,14px 4px #ffa8a3,16px 4px #ffa8a3,4px 6px #ffa8a3,6px 6px #ffa8a3,12px 6px #ffa8a3,14px 6px #ffa8a3,6px 8px #ffa8a3,8px 8px #ffa8a3,10px 8px #ffa8a3,12px 8px #ffa8a3,6px 10px #ffa8a3,8px 10px #ffa8a3,10px 10px #ffa8a3,12px 10px #ffa8a3,4px 12px #ffa8a3,6px 12px #ffa8a3,12px 12px #ffa8a3,14px 12px #ffa8a3,2px 14px #ffa8a3,4px 14px #ffa8a3,14px 14px #ffa8a3,16px 14px #ffa8a3,2px 16px #ffa8a3,16px 16px #ffa8a3}
+#home-roguelit .menu-pixel::before{box-shadow:4px 2px #d4aeff,6px 2px #d4aeff,8px 2px #d4aeff,10px 2px #d4aeff,12px 2px #d4aeff,14px 2px #d4aeff,2px 4px #d4aeff,4px 4px #d4aeff,14px 4px #d4aeff,16px 4px #d4aeff,2px 6px #d4aeff,4px 6px #d4aeff,8px 6px #d4aeff,10px 6px #d4aeff,14px 6px #d4aeff,16px 6px #d4aeff,2px 8px #d4aeff,4px 8px #d4aeff,8px 8px #d4aeff,10px 8px #d4aeff,14px 8px #d4aeff,16px 8px #d4aeff,2px 10px #d4aeff,4px 10px #d4aeff,14px 10px #d4aeff,16px 10px #d4aeff,2px 12px #d4aeff,4px 12px #d4aeff,6px 12px #d4aeff,12px 12px #d4aeff,14px 12px #d4aeff,16px 12px #d4aeff,2px 14px #d4aeff,4px 14px #d4aeff,6px 14px #d4aeff,12px 14px #d4aeff,14px 14px #d4aeff,16px 14px #d4aeff,2px 16px #d4aeff,4px 16px #d4aeff,6px 16px #d4aeff,8px 16px #d4aeff,10px 16px #d4aeff,12px 16px #d4aeff,14px 16px #d4aeff,16px 16px #d4aeff}
 </style>
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -319,10 +347,13 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 <div class="home-toolbar" aria-label="Player controls">
 <span class="home-pill" id="toolbar-coins"></span>
 <button id="toolbar-profile"></button>
-<button id="toolbar-messages">Messages</button>
-<button id="toolbar-notices">Notifications</button>
-<button id="toolbar-updates">Update Log</button>
-<button id="toolbar-sound" aria-pressed="true">Sound: On</button>
+<button id="home-bag" type="button" aria-label="Open Item Bag" title="Item Bag">
+ <span class="pixel-bag" aria-hidden="true"></span>
+</button>
+<button id="toolbar-messages" class="toolbar-pixel" type="button" title="Messages" aria-label="Messages"><span class="menu-pixel" aria-hidden="true"></span></button>
+<button id="toolbar-notices" class="toolbar-pixel" type="button" title="Notifications" aria-label="Notifications"><span class="menu-pixel" aria-hidden="true"></span></button>
+<button id="toolbar-updates" class="toolbar-pixel" type="button" title="Update Log" aria-label="Update Log"><span class="menu-pixel" aria-hidden="true"></span></button>
+
 <button id="toolbar-fullscreen">Fullscreen</button>
 <button id="toolbar-settings">Settings</button>
 <button id="toolbar-logout">Log out</button>
@@ -331,27 +362,27 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 <dialog id="home-dialog"><div class="menu-heading"><h2 id="home-dialog-title"></h2><form method="dialog"><button>Close</button></form></div><div id="home-dialog-content"></div></dialog>
 <div class="home-grid">
 <nav class="home-links" aria-label="Battle and team">
-<button id="home-dex" class="home-link"><span class="home-icon" aria-hidden="true">▤</span><span><strong>Pokédex</strong><small>Browse 947 Pokémon</small></span></button>
-<button id="home-teams" class="home-link"><span class="home-icon" aria-hidden="true">▦</span><span><strong>PC</strong><small>Manage your caught Pokémon</small></span></button>
-<button id="home-skillset" class="home-link"><span class="home-icon" aria-hidden="true">✧</span><span><strong>Skillset</strong><small>Move descriptions and stats</small></span></button>
-<button id="home-bag" class="home-link"><span class="home-icon" aria-hidden="true">▦</span><span><strong>Item Bag</strong></span></button>
-<button id="home-shop" class="home-link"><span class="home-icon" aria-hidden="true">●</span><span><strong>Item Shop</strong><small id="home-coins"></small></span></button>
-<button id="home-skills" class="home-link"><span class="home-icon" aria-hidden="true">▣</span><span><strong>Skill Shop</strong><small>TM, TR, and HM moves</small></span></button>
-<button id="home-events" class="home-link"><span class="home-icon" aria-hidden="true">✦</span><span><strong>Events</strong></span></button>
+<button id="home-dex" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Pokédex</strong><small>Browse 947 Pokémon</small></span></button>
+<button id="home-teams" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>PC</strong><small>Manage your caught Pokémon</small></span></button>
+<button id="home-skillset" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Skillset</strong><small>Move descriptions and stats</small></span></button>
+
+<button id="home-shop" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Item Shop</strong><small id="home-coins"></small></span></button>
+<button id="home-skills" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Skill Shop</strong><small>TM, TR, and HM moves</small></span></button>
+<button id="home-events" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Events</strong></span></button>
 </nav>
-<div class="home-feature"><div class="feature-orb" id="feature-sprite"></div><h2 id="feature-name"></h2><p id="feature-type"></p><button id="home-play" class="home-play">Pokebattle</button>
+<div class="home-feature"><div class="feature-orb" id="feature-sprite"></div><h2 id="feature-name"></h2><p id="feature-type"></p><button id="home-play" class="home-play"><span class="menu-pixel" aria-hidden="true"></span>Pokebattle</button>
 <div class="home-multiplayer" aria-label="Multiplayer modes">
-<button id="home-coop" class="home-link">Co-op</button>
-<button id="home-pvp" class="home-link">PvP</button>
+<button id="home-coop" class="home-link"><span class="menu-pixel" aria-hidden="true"></span>Co-op</button>
+<button id="home-pvp" class="home-link"><span class="menu-pixel" aria-hidden="true"></span>PvP</button>
 </div>
-<button id="home-roguelit" class="home-link">Roguelit</button></div>
+<button id="home-roguelit" class="home-link"><span class="menu-pixel" aria-hidden="true"></span>Roguelit</button></div>
 <nav class="home-links" aria-label="Gyms and Pokédex">
-<button id="home-trainer" class="home-link"><span class="home-icon" aria-hidden="true">⚔</span><span><strong>Trainer Battles</strong><small>Challenge regional trainers · earn coins</small></span></button>
-<button id="home-gyms" class="home-link"><span class="home-icon" aria-hidden="true">◆</span><span><strong>Gym Battles</strong><small>Challenge themed teams</small></span></button>
-<button id="home-collection" class="home-link"><span class="home-icon" aria-hidden="true">✦</span><span><strong>Gym Collection</strong><small id="home-badge-count"></small></span></button>
-<button id="home-friendlist" class="home-link"><span class="home-icon" aria-hidden="true">♟</span><span><strong>Friendlist</strong></span></button>
-<button id="home-guilds" class="home-link"><span class="home-icon" aria-hidden="true">⚑</span><span><strong>Guilds</strong></span></button>
-<button id="home-leaderboard" class="home-link"><span class="home-icon" aria-hidden="true">★</span><span><strong>Leaderboard</strong></span></button>
+<button id="home-trainer" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Trainer Battles</strong><small>Challenge regional trainers · earn coins</small></span></button>
+<button id="home-gyms" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Gym Battles</strong><small>Challenge themed teams</small></span></button>
+<button id="home-collection" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Gym Collection</strong><small id="home-badge-count"></small></span></button>
+<button id="home-friendlist" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Friendlist</strong></span></button>
+<button id="home-guilds" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Guilds</strong></span></button>
+<button id="home-leaderboard" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Leaderboard</strong></span></button>
 </nav>
 </div>
 <details id="sprite-credits" class="sprite-credits">
@@ -4082,7 +4113,7 @@ function openMenu() {
 
  byId('feature-name').textContent=lead+' · Lv. '+ownedPokemon(lead).level;
  byId('feature-type').textContent=dex[lead].slice(1,3).filter(Boolean).join(' / ');
- updateHomeSound();
+ 
  showScreen('home');
  animateHomeSprite(lead);
 }
@@ -8202,11 +8233,7 @@ function openHomeDialog(title,...content) {
  byId('home-dialog-content').replaceChildren(...content);
  byId('home-dialog').showModal();
 }
-function updateHomeSound() {
- const enabled=battleMusicEnabled || skillSoundEnabled;
- byId('toolbar-sound').textContent='Sound: '+(enabled?'On':'Off');
- byId('toolbar-sound').setAttribute('aria-pressed',String(enabled));
-}
+
 byId('toolbar-profile').onclick=()=>openHomeDialog('Player profile',
  element('p',starterSave?.ign ?? currentPlayer.name),
  element('p','Player level '+trainerProfileLevel()),
@@ -8224,12 +8251,7 @@ byId('toolbar-notices').onclick=()=>openHomeDialog('Notifications',
 byId('toolbar-updates').onclick=()=>openHomeDialog('Update Log',
  element('p','Added local sign-in and a main menu featuring your lead Pokémon.'),
  element('p','Added badge rewards that unlock 3× and 4× battle speed.'));
-byId('toolbar-sound').onclick=()=>{
- const enabled=!(battleMusicEnabled || skillSoundEnabled);
- if(battleMusicEnabled!==enabled) musicButton.onclick();
- if(skillSoundEnabled!==enabled) sfxButton.onclick();
- updateHomeSound();
-};
+
 byId('toolbar-fullscreen').onclick=async()=>{
  try {
   if(document.fullscreenElement) await document.exitFullscreen();
@@ -8242,8 +8264,8 @@ document.addEventListener('fullscreenchange',()=>{
 byId('toolbar-settings').onclick=()=>{
  const music=element('button',musicButton.textContent);
  const sfx=element('button',sfxButton.textContent);
- music.onclick=()=>{musicButton.onclick();music.textContent=musicButton.textContent;updateHomeSound();};
- sfx.onclick=()=>{sfxButton.onclick();sfx.textContent=sfxButton.textContent;updateHomeSound();};
+ music.onclick=()=>{musicButton.onclick();music.textContent=musicButton.textContent;};
+ sfx.onclick=()=>{sfxButton.onclick();sfx.textContent=sfxButton.textContent;};
  openHomeDialog('Settings',music,sfx,...audioVolumeControls());
 };
 function audioVolumeControls() {
