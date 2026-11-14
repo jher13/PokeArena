@@ -380,8 +380,21 @@
   show('Leaderboards',...sections.flatMap(([title,rows,describe])=>[element('h3',title),
    ...(rows.length?rows.map((row,i)=>element('p',(i+1)+'. '+row.name+' · '+describe(row))):[element('p','No results yet.')])]));
  }
+ const notificationReadKey='pokemon-arena-read-notifications';
+ const notificationKeys=data=>[
+  ...data.friends.map(name=>'friend:'+name),
+  ...data.invites.map(invite=>'invite:'+invite.code),
+ ];
+ function updateNotificationUnread(data,markRead=false) {
+  const keys=notificationKeys(data);
+  const prior=new Set(JSON.parse(playerStorage.getItem(notificationReadKey) ?? '[]'));
+  const seen=markRead?keys:keys.filter(key=>prior.has(key));
+  playerStorage.setItem(notificationReadKey,JSON.stringify(seen));
+  setToolbarUnread('toolbar-notices',keys.length-seen.length);
+ }
  async function notifications() {
   const data=await rpc('notifications');
+  updateNotificationUnread(data,true);
   show('Notifications',...data.friends.map(name=>element('div',name+' sent a friend request.')),
    ...data.friends.map(name=>button('Accept '+name,async()=>{await rpc('friend_request',{name});await notifications();})),
    ...data.invites.map(invite=>button('Join '+invite.name+' · '+invite.mode,async()=>{
@@ -394,11 +407,7 @@
   if(phase!=='home' || !cloudAccount)return;
   try {
    const data=await rpc('notifications');
-   const count=data.friends.length+data.invites.length;
-   const bell=byId('toolbar-notices');
-   if(count)bell.dataset.unread=count>99?'99+':String(count);
-   else delete bell.dataset.unread;
-   bell.setAttribute('aria-label',count?'Notifications, '+count+' unread':'Notifications');
+   updateNotificationUnread(data);
   } catch {}
  },5000);
  byId('home-coop').onclick=()=>open('Co-op',()=>lobby(true));
