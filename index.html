@@ -262,10 +262,10 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
  #battle-settings-button{padding:4px 7px}
  .battle-settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
-#item-bag{max-width:680px;margin:12px auto;padding:16px clamp(10px,4vw,32px);background:#f4faef;color:#253d36;border-radius:14px}
-#item-bag .menu-heading h2{color:#253d36}
-#item-bag button{color:#fff;background:#294438}
-#item-bag button:disabled{opacity:1;background:#596961;color:#fff;cursor:default}
+:is(#item-bag,#shop,#skill-shop){max-width:680px;margin:12px auto;padding:16px clamp(10px,4vw,32px);background:#f4faef;color:#253d36;border-radius:14px}
+:is(#item-bag,#shop,#skill-shop) .menu-heading h2{color:#253d36}
+:is(#item-bag,#shop,#skill-shop) button{color:#fff;background:#142d23}
+:is(#item-bag,#shop,#skill-shop) button:disabled{opacity:1;background:#596961;color:#fff;cursor:default}
 .bag-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .bag-section-title{display:flex;align-items:center;gap:10px;margin:20px 0 12px;color:#49635a;font:700 11px system-ui;letter-spacing:.16em;text-transform:uppercase}
 .bag-section-title::before,.bag-section-title::after{content:"";height:1px;background:#cddbcf;flex:1}
@@ -274,7 +274,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 .bag-item strong{font-size:13px;overflow-wrap:anywhere}.bag-item small{color:#49635a;font-size:11px}
 .bag-item button{font-size:11px;padding:4px 7px;margin-top:auto}
 .bag-art{position:relative;width:64px;max-width:100%;height:58px;display:grid;place-items:center}
-#item-bag .bag-art canvas{width:48px;height:48px;max-width:100%;border:0;background:none;image-rendering:pixelated}
+:is(#item-bag,#shop,#skill-shop) .bag-art canvas{width:48px;height:48px;max-width:100%;border:0;background:none;image-rendering:pixelated}
 .bag-item .bag-count{position:absolute;bottom:0;left:0;background:#e1eee0;padding:2px 5px;border-radius:8px;font-weight:700}
 #bag-status:empty{display:none}
 #home-bag{display:inline-grid;place-items:center;min-width:36px;min-height:34px;padding:5px;vertical-align:middle}
@@ -317,6 +317,18 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 #toolbar-settings .menu-pixel::before{box-shadow:8px 2px #c4defa,10px 2px #c4defa,4px 4px #c4defa,8px 4px #c4defa,10px 4px #c4defa,14px 4px #c4defa,2px 6px #c4defa,4px 6px #c4defa,6px 6px #c4defa,8px 6px #c4defa,10px 6px #c4defa,12px 6px #c4defa,14px 6px #c4defa,16px 6px #c4defa,4px 8px #c4defa,6px 8px #c4defa,12px 8px #c4defa,14px 8px #c4defa,4px 10px #c4defa,6px 10px #c4defa,12px 10px #c4defa,14px 10px #c4defa,2px 12px #c4defa,4px 12px #c4defa,6px 12px #c4defa,8px 12px #c4defa,10px 12px #c4defa,12px 12px #c4defa,14px 12px #c4defa,16px 12px #c4defa,4px 14px #c4defa,8px 14px #c4defa,10px 14px #c4defa,14px 14px #c4defa,8px 16px #c4defa,10px 16px #c4defa}
 #feature-type{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .home-type-badge{display:inline-block;padding:3px 9px;border:1px solid var(--type-color);border-radius:5px;background:color-mix(in srgb,var(--type-color) 22%,#171e30);color:#fff;font-size:12px;font-weight:700}
+#shop,#skill-shop{max-width:1120px}
+:is(#shop,#skill-shop) .shop-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:18px 8px}
+:is(#shop,#skill-shop) .shop-wallet{color:#36584a}
+:is(#shop,#skill-shop) .bag-item button{margin-top:auto}
+@media(max-width:850px){:is(#shop,#skill-shop) .shop-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:560px){:is(#shop,#skill-shop) .shop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+#bag-craft-results{margin:auto;width:min(390px,calc(100vw - 32px));max-height:85dvh;padding:20px;border:1px solid #879f91;border-radius:12px;background:#f4faef;color:#253d36}
+#bag-craft-results::backdrop{background:#101725aa}
+#bag-craft-results h3{margin:0 0 12px}
+#bag-craft-results ul{margin:0 0 16px;padding-left:20px}
+#bag-craft-results li+li{margin-top:6px}
+#bag-craft-results form{text-align:right}
 </style>
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -424,6 +436,11 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
  <div class="menu-heading"><h2>Item Bag</h2><div class="bag-actions"><button id="bag-auto-craft" type="button">Auto Craft</button><button id="bag-back" type="button">Main menu</button></div></div>
  <p id="bag-status" role="status"></p>
  <div id="bag-inventory"></div>
+ <dialog id="bag-craft-results" aria-labelledby="bag-craft-title">
+  <h3 id="bag-craft-title">Auto Craft Results</h3>
+  <ul id="bag-craft-list"></ul>
+  <form method="dialog"><button autofocus>Done</button></form>
+ </dialog>
 </section>
 <section id="shop" class="gym-screen" hidden>
 <div class="menu-heading"><h2>Item Shop</h2><button id="shop-back">Main menu</button></div>
@@ -1989,14 +2006,12 @@ function renderShop(message='') {
   const section=element('section',null,'shop-section');
   const grid=element('div',null,'shop-grid');
   for(const [key,name,price,description,quantity] of items) {
-   const card=element('div',null,'shop-card');
-   const buy=element('button','Buy · '+price+' coins');
+   const buy=element('button','Buy · '+price.toLocaleString()+' coins');
    buy.disabled=wildProgress.coins<price;
    buy.onclick=()=>buyShopItem(kind,key);
-   card.append(element('h4',name),element('p',description),element('p','Owned ×'+quantity),buy);
-   grid.append(card);
+   grid.append(inventoryTile(name,quantity,description,buy));
   }
-  section.append(element('h3',title),grid);
+  section.append(element('h3',title,'bag-section-title'),grid);
   list.append(section);
  }
 }
@@ -2009,14 +2024,14 @@ function craftBall(index) {
  return true;
 }
 function autoCraftBalls() {
- let crafted=0;
+ const crafted=[];
  for(let tier=0;tier<ballTypes.length-2;tier++) {
   const quantity=Math.floor(wildProgress.balls[tier]/ballCraftCost);
   wildProgress.balls[tier]-=quantity*ballCraftCost;
   wildProgress.balls[tier+1]+=quantity;
-  crafted+=quantity;
+  if(quantity)crafted.push({tier,quantity});
  }
- if(crafted)saveWildProgress();
+ if(crafted.length)saveWildProgress();
  return crafted;
 }
 const bagPixelShapes={
@@ -2046,6 +2061,16 @@ function bagItemIcon(name) {
  }));
  return canvas;
 }
+function inventoryTile(name,count,detail,action,extra) {
+ const card=element('div',null,'bag-item');
+ const art=element('div',null,'bag-art');
+ art.append(bagItemIcon(name),element('small','×'+count,'bag-count'));
+ card.append(art,element('strong',name));
+ if(detail)card.append(element('small',detail));
+ if(extra)card.append(element('small',extra));
+ if(action)card.append(action);
+ return card;
+}
 function renderItemBag(message='') {
  byId('bag-status').textContent=message;
  byId('bag-auto-craft').disabled=!wildProgress.balls.slice(0,-2).some(count=>count>=ballCraftCost);
@@ -2054,16 +2079,7 @@ function renderItemBag(message='') {
  const group=(title,entries)=>{
   if(!entries.length)return;
   const grid=element('div',null,'bag-grid');
-  for(const [name,count,detail,action,recipe] of entries) {
-   const card=element('div',null,'bag-item');
-   const art=element('div',null,'bag-art');
-   art.append(bagItemIcon(name),element('small','×'+count,'bag-count'));
-   card.append(art,element('strong',name));
-   if(detail)card.append(element('small',detail));
-   if(recipe)card.append(element('small',recipe));
-   if(action)card.append(action);
-   grid.append(card);
-  }
+  for(const entry of entries)grid.append(inventoryTile(...entry));
   bag.append(element('h3',title,'bag-section-title'),grid);
  };
  group('Poké Balls',ballTypes.map((ball,index)=>{
@@ -2139,13 +2155,10 @@ function renderSkillShop(message='') {
  for(const move of matches.slice(skillShopPage*perPage,(skillShopPage+1)*perPage)) {
   const item=skillItem(move);
   const count=wildProgress.skills[move] ?? 0;
-  const card=element('div',null,'shop-card');
-  const buy=element('button','Buy · '+item.price+' coins');
+  const buy=element('button','Buy · '+item.price.toLocaleString()+' coins');
   buy.disabled=wildProgress.coins<item.price;
   buy.onclick=()=>buySkill(move);
-  card.append(element('h4',item.name),element('p',moveCatalog[move][0]+' · '+moveRules(move).cooldown.toFixed(1)+'s cooldown'),
-   element('p','Single use · '+count+' owned'),buy);
-  grid.append(card);
+  grid.append(inventoryTile(item.name,count,moveCatalog[move][0]+' · '+moveRules(move).cooldown.toFixed(1)+'s cooldown',buy,'Single use'));
  }
 }
 let skillsetPage=0;
@@ -4304,9 +4317,20 @@ byId('find-trainer').onclick=()=>{
 byId('home-shop').onclick=openShop;
 byId('home-bag').onclick=openItemBag;
 byId('bag-back').onclick=openMenu;
+function formatBallQuantity(tier,quantity) {
+ return quantity.toLocaleString()+' '+ballTypes[tier].name+(quantity===1?'':'s');
+}
+byId('bag-craft-results').addEventListener('close',()=>{
+ const button=byId('bag-auto-craft');
+ (button.disabled?byId('bag-back'):button).focus();
+});
 byId('bag-auto-craft').onclick=()=>{
  const crafted=autoCraftBalls();
- renderItemBag(crafted?'Completed '+crafted+' ball upgrades.':'No eligible ball upgrades.');
+ renderItemBag();
+ byId('bag-craft-list').replaceChildren(...(crafted.length?crafted.map(({tier,quantity})=>
+  element('li',formatBallQuantity(tier,quantity*ballCraftCost)+' → '+formatBallQuantity(tier+1,quantity))
+ ): [element('li','No eligible ball upgrades.')]));
+ byId('bag-craft-results').showModal();
 };
 byId('home-skills').onclick=openSkillShop;
 byId('home-skillset').onclick=openSkillset;
@@ -8330,6 +8354,8 @@ function setToolbarUnread(id,count) {
 }
 // Add each release to the top. The newest version also drives the subtitle.
 const updateLogEntries=[
+ {version:'0.3.1',changes:['Added a centered Auto Craft results popup showing the balls used and produced at each tier.']},
+ {version:'0.3.0',changes:['Redesigned the Item Shop and Skill Shop with pixel-art inventory tiles.','Darkened enabled inventory buttons for clearer contrast.']},
  {version:'0.2.1',changes:['Improved Item Bag button contrast, restored catch descriptions, and added Auto Craft.']},
  {version:'0.2.0',changes:['Redesigned the Item Bag with a three-column layout, pixel-art items, and quantity badges.','Redrew the Settings icon as a pixel cogwheel.']},
  {version:'0.1.7',changes:['Made sign-in work independently of the Remember me control and improved login status messages.']},
