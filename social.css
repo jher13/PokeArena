@@ -3,6 +3,7 @@
 .social-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding-bottom:10px;border-bottom:1px solid #b5c8b9}
 #home-dialog .social-tabs button{margin:0;line-height:1.2}
 #home-dialog .social-tabs button[aria-selected="true"]{background:#365e4b;border-color:#365e4b;box-shadow:inset 0 -3px #f7c468}
+.social-mute{display:inline-flex;align-items:center;gap:.4em;justify-self:start;cursor:pointer}
 .social-panel{display:grid;gap:8px;min-width:0}
 .social-scope,.direct-state{margin:0;font-size:.9rem}
 .social-peer{display:flex;align-items:center;gap:8px}

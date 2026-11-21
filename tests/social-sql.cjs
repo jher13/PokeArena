@@ -47,12 +47,17 @@ module.exports=async function socialChecks(db,save){
  const friend=(i,j,accepted)=>db.query('insert into arena_private.friends values($1,$2,$3)',[users[i],users[j],accepted]);
  const messages=async(i,channel,peer)=>(await chat(i,channel,{peer})).messages.map(m=>m.body);
  await friend(0,1,true);await friend(1,2,true);await friend(0,2,false);
+ // Rollout starts at the existing history, even for trainers who sign in later.
+ await chat(0,'trade',{body:'Before notifications'});
+ await db.exec(fs.readFileSync(path.join(__dirname,'../supabase/migrations/20261121020000_chat_read_state.sql'),'utf8'));
+ const notices=(i,opts={})=>call(i,'arena_chat_notifications',[opts.seen??null,opts.mute??null]);
+ assert.equal((await notices(1)).counts.trade,0);
  const msgId=crypto.randomUUID();
  await chat(0,'world',{body:' Hello arena! ',key:msgId});await chat(0,'world',{body:'Hello arena!',key:msgId});
  assert.deepEqual(await messages(3,'world'),['Hello arena!']);
  await assert.rejects(chat(0,'trade',{body:'hello',key:msgId}),/identifier/);
  await chat(2,'trade',{body:'Looking for an Eevee'});
- assert.deepEqual(await messages(0,'trade'),['Looking for an Eevee']);assert.deepEqual(await messages(2,'world'),['Hello arena!']);
+ assert.deepEqual(await messages(0,'trade'),['Before notifications','Looking for an Eevee']);assert.deepEqual(await messages(2,'world'),['Hello arena!']);
  await chat(1,'guild',{body:'Rocket meet up',guild:'Rocket'});
  assert.deepEqual(await messages(0,'guild'),['Rocket meet up']);assert.deepEqual(await messages(2,'guild'),[]);
  assert.equal((await chat(3,'guild')).can_send,false);
@@ -64,10 +69,40 @@ module.exports=async function socialChecks(db,save){
  assert.deepEqual(await messages(1,'friend','Blue'),['Just us']);
  assert.deepEqual(await messages(2,'friend'),[]);assert.deepEqual(await messages(3,'friend'),[]);
  assert.equal((await chat(3,'friend')).can_send,false);
+ const idOf=async(i,channel,peer)=>Number((await chat(i,channel,{peer})).messages.at(-1).id);
+ const worldId=await idOf(1,'world'),feedId=await idOf(1,'friend'),dmId=await idOf(1,'friend','Blue');
+ const guildId=await idOf(1,'guild'),tradeId=await idOf(1,'trade');
+ assert.deepEqual((await notices(1)).counts,{world:1,trade:1,guild:0,friend:2});
+ assert.deepEqual((await notices(0)).counts,{world:0,trade:1,guild:0,friend:0});
+ assert.deepEqual((await notices(2)).counts,{world:1,trade:0,guild:0,friend:0});
+ assert.equal((await notices(3,{seen:dmId})).counts.friend,0);
+ assert.equal((await notices(1,{mute:true})).muted,true);
+ assert.equal((await notices(0)).muted,false);
+ let unread=await notices(1,{seen:feedId});assert.equal(unread.friend_feed,0);assert.deepEqual(unread.peers,{Blue:1});
+ assert.equal(unread.counts.friend,1);assert.equal(unread.counts.trade,1);
+ unread=await notices(1,{mute:false});assert.equal(unread.muted,false);assert.equal(unread.counts.friend,1);
+ assert.equal((await notices(1,{seen:dmId})).counts.friend,0);
+ assert.equal((await notices(1,{seen:worldId})).counts.world,0);
+ assert.equal((await notices(1,{seen:tradeId})).counts.trade,0);
+ assert.equal((await notices(1,{seen:tradeId-1})).counts.trade,0);
+ await notices(0,{seen:guildId}); // Blue is no longer in Rocket and cannot mark its messages.
+ await db.query("update arena_private.players set guild='Rocket' where id=$1",[users[0]]);
+ assert.equal((await notices(0)).counts.guild,1);
+ await notices(0,{seen:guildId});
+ await db.query("update arena_private.players set guild='Plasma' where id=$1",[users[0]]);
+ const late='40000000-0000-4000-8000-000000000009';
+ await db.query('insert into auth.users values ($1)',[late]);
+ await db.query("insert into arena_private.players(id,name) values($1,'Late')",[late]);
+ await db.query("select set_config('arena.test_uid',$1,false)",[late]);
+ assert.deepEqual((await db.query('select public.arena_chat_notifications() state')).rows[0].state.counts,{world:0,trade:0,guild:0,friend:0});
+
  await assert.rejects(chat(2,'friend',{peer:'Blue'}),/accepted friend/);
  await assert.rejects(chat(1,'world',{peer:'Blue'}),/Friend Chat/);
  await friend(3,0,true);assert.deepEqual(await messages(3,'friend'),[]);
+ await chat(0,'friend',{peer:'Red',body:'Friends only'});
+ assert.equal((await notices(1)).peers.Blue,1);
  await db.query('update arena_private.friends set accepted=false where sender=$1 and recipient=$2',[users[0],users[1]]);
+ assert.deepEqual((await notices(1)).peers,{});
  assert.deepEqual(await messages(1,'friend'),[]);await assert.rejects(chat(1,'friend',{peer:'Blue'}),/accepted friend/);
  await assert.rejects(chat(0,'world',{body:' \n\t '}),/1–400/);await assert.rejects(chat(0,'world',{body:'a'.repeat(401)}),/1–400/);
  assert.equal((await direct(0,'availability',{name:'Blue'})).available,false);assert.equal((await direct(0,'availability',{name:'Silver'})).available,true);
@@ -114,15 +149,26 @@ module.exports=async function socialChecks(db,save){
  await db.query("update arena_private.direct_trades set ends_at=clock_timestamp()-interval '1 minute' where id=$1",[room.id]);
  assert.equal((await market(0,'notices')).pending,1);assert.equal((await view(3,room)).status,'expired');
  await claim(0);assert.equal((await inventory(0)).filter(r=>r.profile.pid===80).length,1);
+ // A long backlog clears through the displayed message. Messages arriving afterwards stay unread.
+ await db.query("insert into arena_private.chat_messages(sender,channel,body,client_id) select $1,'trade','Trade '||n,gen_random_uuid() from generate_series(1,105) n",[users[2]]);
+ assert.equal((await notices(1)).counts.trade,100);
+ const through=await idOf(1,'trade');await chat(0,'trade',{body:'Newer than the open thread'});
+ assert.equal((await notices(1,{seen:through})).counts.trade,1);
+ await notices(1,{seen:tradeId});assert.equal((await notices(1)).counts.trade,1);
+
  await who(1);await db.exec("select set_config('arena.test_session','inactive',false)");
+ await assert.rejects(db.query('select public.arena_chat_notifications()'),/session/);
  await assert.rejects(db.query("select public.arena_chat('world')"),/session/);await assert.rejects(db.query("select public.arena_direct_trade('inbox')"),/session/);
  await who(0);await db.exec('set role authenticated');
  assert.equal((await db.query("select public.arena_chat('world') c")).rows[0].c.messages.length,1);
+ assert.equal((await db.query('select public.arena_chat_notifications() state')).rows[0].state.muted,false);
+ await assert.rejects(db.exec('select * from arena_private.chat_read_positions'),/permission denied/);
  await assert.rejects(db.exec('select * from arena_private.chat_messages'),/permission denied/);
  await assert.rejects(db.exec('select * from arena_private.direct_trades'),/permission denied/);
  await db.exec('reset role;set role anon');
+ await assert.rejects(db.query('select public.arena_chat_notifications()'),/permission denied/);
  await assert.rejects(db.query("select public.arena_chat('world')"),/permission denied/);
  await assert.rejects(db.query("select public.arena_direct_trade('inbox')"),/permission denied/);
  await db.exec('reset role');
- console.log('Four chat channels passed visibility, membership and retry checks. Direct trades passed online eligibility, offer changes, mutual confirmation, cancellation, expiry and exact-once PC delivery.');
+ console.log('Four chat channels passed visibility, membership, unread counts, mute persistence and retry checks. Direct trades passed online eligibility, offer changes, mutual confirmation, cancellation, expiry and exact-once PC delivery.');
 };

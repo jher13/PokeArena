@@ -142,7 +142,12 @@ async function socialNavigationChecks(A,net){
  const click=async(root,label)=>{const b=find(root,label);A.ok(b,label);A.ok(!b.disabled,label);await b.onclick();};
  const original=net.rpc,originalPC=window.ArenaTradePC,originalMutate=window.arenaMarketMutate;
  let unlocked=true,pendingGuild,failOnce=true,requests=[],posts=[],trade,receipts=0;
+ let muted=false,tradeUnread=0;
  net.rpc=async function(method,params){
+  if(method==='arena_chat_notifications'){
+   if(params.mute_notifications!==undefined)muted=params.mute_notifications;
+   return {data:{muted,counts:{world:0,guild:0,friend:0,trade:tradeUnread},friend_feed:0,peers:{}}};
+  }
   if(method==='arena_chat'){
    const {channel_name,peer_name,body_text,client_id}=params;
    if(channel_name==='guild' && pendingGuild)await pendingGuild;
@@ -169,7 +174,14 @@ async function socialNavigationChecks(A,net){
   await byId('toolbar-messages').onclick();
   A.deepEqual(content.querySelectorAll('button').filter(b=>b.getAttribute('role')==='tab').map(b=>b.textContent),
    ['World Chat','Guild Chat','Friend Chat','Trade Chat']);
-  const input=content.querySelector('input');input.value='<img src=x>';input.oninput();
+  const mute=content.querySelector('.social-mute').querySelector('input');
+  await new Promise(resolve=>setImmediate(resolve));tradeUnread=3;window.ArenaSocial.refreshUnread(true);
+  await new Promise(resolve=>setImmediate(resolve));A.equal(byId('toolbar-messages').dataset.unread,'3');
+  mute.checked=true;await mute.onchange();A.ok(mute.checked);A.equal(byId('toolbar-messages').dataset.unread,undefined);
+  A.ok(find(content,'Trade Chat (3)'));
+  mute.checked=false;await mute.onchange();A.equal(byId('toolbar-messages').dataset.unread,'3');
+  tradeUnread=0;window.ArenaSocial.refreshUnread(true);await new Promise(resolve=>setImmediate(resolve));
+  const input=content.querySelector('form').querySelector('input');input.value='<img src=x>';input.oninput();
   const submit=()=>content.querySelector('form').onsubmit({preventDefault(){}});
   await submit();A.match(content.textContent,/Connection interrupted/);await submit();
   A.equal(requests[0].client_id,requests[1].client_id);A.match(content.querySelector('ol').textContent,/<img src=x>/);
@@ -178,7 +190,7 @@ async function socialNavigationChecks(A,net){
   const delayed=click(content,'Guild Chat');await click(content,'Friend Chat');resume();await delayed;pendingGuild=null;
   A.match(content.textContent,/accepted friends/);const select=content.querySelector('select');select.value='Rival';await select.onchange();
   A.match(content.textContent,/Private conversation with Rival/);A.equal(content.querySelector('ol').textContent,'No messages yet.');
-  unlocked=false;await click(content,'Guild Chat');A.match(content.textContent,/Join a guild/);A.equal(content.querySelector('input').disabled,true);
+  unlocked=false;await click(content,'Guild Chat');A.match(content.textContent,/Join a guild/);A.equal(content.querySelector('form').querySelector('input').disabled,true);
   await click(content,'Trade Chat');await window.ArenaTrainerCard.open('Rival');
   await click(card,'Trade');A.equal(card.open,false);A.equal(byId('home-dialog-title').textContent,'Trade with Rival');
   A.match(content.textContent,/Waiting for Rival/);

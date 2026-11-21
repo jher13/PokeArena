@@ -15,6 +15,37 @@
  }
  const direct=(action,args={})=>rpc('arena_direct_trade',{action,args});
  const inbox=async()=>(await direct('inbox')).rooms;
+ let unreadAccount=null,unread=null,noticeQueue=Promise.resolve(),pendingNotices=0,lastNoticeCheck=0;
+ function syncNoticeAccount(){
+  if(unreadAccount===cloudAccount)return;
+  unreadAccount=cloudAccount;unread=null;lastNoticeCheck=0;
+  setToolbarUnread('toolbar-messages',0);
+ }
+ function updateNotices(args={}){
+  syncNoticeAccount();
+  const account=unreadAccount;
+  if(!account)return Promise.resolve();
+  pendingNotices++;
+  const update=noticeQueue.then(async()=>{
+   if(account!==cloudAccount)return;
+   const result=await rpc('arena_chat_notifications',args);
+   if(account!==cloudAccount)return;
+   unread=result;lastNoticeCheck=Date.now();
+   const total=channels.reduce((sum,[key])=>sum+(unread.counts[key]??0),0);
+   setToolbarUnread('toolbar-messages',unread.muted?0:total);
+   active?.drawNotices?.();
+  }).finally(()=>{pendingNotices--;});
+  // A failed request must not prevent later reads or mute changes.
+  noticeQueue=update.catch(()=>{});return update;
+ }
+ function refreshUnread(force=false){
+  syncNoticeAccount();
+  if(!cloudAccount || phase!=='home' || document.hidden || pendingNotices || (!force && Date.now()-lastNoticeCheck<10000))return;
+  lastNoticeCheck=Date.now();void updateNotices().catch(()=>{});
+ }
+ function withCount(label,count){
+  return count?label+' ('+(count>99?'99+':count)+')':label;
+ }
  function release(){
   if(active){clearInterval(active.timer);active=null;}
  }
@@ -39,14 +70,30 @@
   return view;
  }
  dialog.addEventListener('close',()=>{if(!dialog.open)release();});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&active?.live())void active.refresh?.();});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshUnread(true);if(active?.live())void active.refresh?.();}});
 
  async function messages(initial='world'){
   const view=mount('Messages');
   const tabs=node('div',null,'social-tabs'),panel=node('section',null,'social-panel');
   tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Chat channels');
   panel.setAttribute('role','tabpanel');panel.id='social-channel-panel';
-  view.root.append(tabs,panel);
+  syncNoticeAccount();
+  const mute=node('input'),muteLabel=node('label',null,'social-mute'),noticeStatus=node('span',null,'social-status');
+  mute.type='checkbox';mute.disabled=true;noticeStatus.setAttribute('role','status');
+  muteLabel.append(mute,' Mute chat notifications');view.root.append(tabs,muteLabel,noticeStatus,panel);
+  let changingMute=false,drawPeers;
+  view.drawNotices=()=>{
+   if(!view.live())return;
+   mute.checked=Boolean(unread?.muted);mute.disabled=changingMute || !unread;
+   channels.forEach(([key,label],i)=>{tabs.children[i].textContent=withCount(label,unread?.counts[key]);});
+   drawPeers?.();
+  };
+  mute.onchange=async()=>{
+   const chosen=mute.checked;changingMute=true;mute.disabled=true;noticeStatus.textContent='';
+   try{await updateNotices({mute_notifications:chosen});}
+   catch(error){if(view.live())noticeStatus.textContent=error.message;}
+   finally{changingMute=false;view.drawNotices();}
+  };
   let generation=0;const drafts=new Map();
   for(const [index,[key,label]] of channels.entries()){
    const tab=button(label,()=>selectChannel(key));tab.id='social-tab-'+key;
@@ -61,6 +108,8 @@
    const token=++generation,live=()=>view.live()&&token===generation;
    const label=channels.find(([id])=>id===key)[1],draftKey=JSON.stringify([key,peer]);
    let pendingRead=null,sending=false,enabled=false,lastRows=null,lastFriends=null,scope=null,inboxKey=null;
+   let latestIncoming=0,marked=0,marking=false;
+   drawPeers=null;
    let retry=drafts.get(draftKey)?.retry;
    for(const [i,[id]] of channels.entries()){
     const selected=id===key;tabs.children[i].setAttribute('aria-selected',String(selected));tabs.children[i].tabIndex=selected?0:-1;
@@ -81,6 +130,21 @@
     peerSelect.setAttribute('aria-label','Friend conversation');
     peerSelect.onchange=()=>selectChannel('friend',peerSelect.value||null);field.append(peerSelect);extra.append(field);
    }
+   async function markVisible(){
+    if(!live() || document.hidden || marking || latestIncoming<=marked || log.scrollHeight-log.scrollTop-log.clientHeight>40)return;
+    const seen=latestIncoming;marking=true;
+    try{await updateNotices({read_through:seen});marked=seen;}
+    catch{return;}finally{marking=false;}
+    if(latestIncoming>marked)void markVisible();
+   }
+   log.addEventListener('scroll',markVisible);
+   if(peerSelect)drawPeers=()=>{
+    for(const option of peerSelect.options){
+     const name=option.value;
+     const count=name?unread?.peers[name]:unread?.friend_feed;
+     option.textContent=withCount(name||'All friends',count);
+    }
+   };
    function renderFeed(data){
     enabled=data.can_send;scope=data.scope;
     input.disabled=!enabled;submit.disabled=!enabled||sending||!input.value.trim();
@@ -89,13 +153,14 @@
      if(stamp!==lastFriends){
       lastFriends=stamp;peerSelect.replaceChildren(...['',...names].map(name=>{
        const option=node('option',name||'All friends');option.value=name;return option;
-      }));peerSelect.value=peer??'';
+      }));peerSelect.value=peer??'';drawPeers();
      }
      scopeLine.textContent=peer?'Private conversation with '+peer+'.':enabled?'Posts here are shared with your accepted friends.':'Add a friend to use Friend Chat.';
     }else if(key==='guild')scopeLine.textContent=enabled?'Guild · '+scope:'Join a guild to use Guild Chat.';
     else scopeLine.textContent=key==='trade'?'Discuss trades with online trainers.':'Talk with trainers from across the arena.';
     const rows=data.messages,stamp=JSON.stringify(rows.map(row=>row.id));
-    if(stamp===lastRows)return;
+    if(stamp===lastRows){void markVisible();return;}
+    latestIncoming=rows.findLast(row=>!row.mine)?.id??0;
     const atBottom=lastRows===null||log.scrollHeight-log.scrollTop-log.clientHeight<40;
     lastRows=stamp;
     log.replaceChildren(...rows.map(row=>{
@@ -106,6 +171,7 @@
     }));
     if(!rows.length)log.append(node('li','No messages yet.','social-empty'));
     if(atBottom)log.scrollTop=log.scrollHeight;
+    void markVisible();
    }
    async function tradeLinks(){
     if(key!=='trade')return;
@@ -143,12 +209,13 @@
      if(!live())return;
      const data=await rpc('arena_chat',{channel_name:key,peer_name:peer,body_text:text,client_id:retry.id,expected_guild:key==='guild'?scope:null});
      if(drafts.get(draftKey)?.retry?.id===retry.id)drafts.delete(draftKey);
-     if(live()){retry=null;input.value='';renderFeed(data);log.scrollTop=log.scrollHeight;status.textContent='';}
+     if(live()){retry=null;input.value='';renderFeed(data);log.scrollTop=log.scrollHeight;void markVisible();status.textContent='';}
     }catch(error){if(live())status.textContent=error.message;}
     finally{if(live()){sending=false;input.readOnly=false;submit.disabled=!enabled||!input.value.trim();}}
    };
    view.refresh=refresh;await refresh();
   }
+  view.drawNotices();refreshUnread(true);
   await selectChannel(initial);
  }
 
@@ -267,5 +334,5 @@
   try{const data=await direct(first,args);if(view.live())draw(data);}
   catch(error){if(view.live()){state.textContent=error.message;actions.append(button('Back to Trade Chat',()=>messages('trade')));}}
  }
- window.ArenaSocial={messages,startTrade,openTrade,inbox,canTrade:async name=>(await direct('availability',{name})).available};
+ window.ArenaSocial={messages,refreshUnread,startTrade,openTrade,inbox,canTrade:async name=>(await direct('availability',{name})).available};
 })();

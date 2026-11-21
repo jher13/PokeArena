@@ -7,7 +7,14 @@
 .pc-stat-hit{position:absolute;width:28%;height:18%;transform:translate(-50%,-50%);padding:0;border:0;background:transparent;color:inherit}
 .pc-stat-hit:hover,.pc-stat-hit:focus{background:transparent}
 .pc-help-tip{position:fixed;z-index:10000;inset:auto;max-width:min(340px,calc(100vw - 16px));padding:8px 12px;border:1px solid #bbd1c4;border-radius:6px;background:#10221e;color:#fff;font:400 14px/1.4 system-ui;text-align:left;box-shadow:0 3px 12px #0005;pointer-events:none}
-@supports (appearance:base-select){select.move-options,select.move-options::picker(select){appearance:base-select}select.move-options option .damage-mark{display:inline-block}}
+@supports (appearance:base-select){select.move-options,select.move-options::picker(select){appearance:base-select}select.move-options option .damage-mark{display:inline-block}
+ .skill-teach select.move-options{display:inline-flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:.35em;box-sizing:border-box;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ :is(#menu,.raid-pc-dialog) .skill-teach select.move-options>button,.skill-teach select.move-options>button{display:contents;color:inherit;font:inherit}
+ .skill-teach select.move-options selectedcontent{display:block;flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+ .skill-teach select.move-options::picker-icon{flex:none;margin-inline-start:auto}
+}
+.move-grid:has(>.skill-teach){grid-template-columns:repeat(auto-fit,minmax(clamp(48%,11.5rem,100%),1fr))}
+.skill-teach select.move-options option{white-space:nowrap}
 .move-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:4px 0 10px;font-size:12px}.move-legend>span{display:inline-flex;align-items:center}
 select.move-options,select.move-options option,#rogue-status,#arena-conditions{font-family:ArenaMarks,Inter,system-ui,sans-serif}
 .battle-ai-settings label:has(.damage-mark){display:flex;justify-content:flex-start;gap:.3em}.battle-ai-settings label:has(.damage-mark)>select{margin-left:auto}.cooldown-caption .damage-mark{margin-right:.25em}

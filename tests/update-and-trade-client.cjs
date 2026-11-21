@@ -118,6 +118,23 @@ async function cloudChecks(){
  assert.equal(marketCalls.at(-1).rpc,'arena_direct_trade');assert.equal(marketCalls.at(-1).args.request_id,directRetry);
  assert(!ctx.window.isArenaMarketBusy());checks++;
  const before=marketCalls.length;ctx.phase='battle';await ctx.window.arenaMarketNotifications();await tick();assert.equal(marketCalls.length,before+1,'Do not claim offline deliveries during battle');checks++;
+ ctx.phase='home';
+ let reloads=0,readSnapshot=async()=>({data:{save_data:save,updated_at:'r2'}});
+ ctx.window.location={reload(){reloads++;}};ctx.window.confirm=()=>true;
+ client.from=()=>({select(){return this;},eq(){return this;},maybeSingle(){return readSnapshot();}});
+ const cloudButtons=()=>ctx.window.arenaCloudControls().filter(n=>n.tagName==='button').map(n=>n.textContent);
+ assert.deepEqual([...cloudButtons()],['Save to cloud','Load cloud save','Re-sync']);
+ assert.equal(await ctx.syncArenaCloud('sync'),'Cloud save is up to date.');assert.equal(reloads,0);checks++;
+ let finishRead;
+ readSnapshot=()=>new Promise(resolve=>{finishRead=resolve;});
+ const raced=ctx.syncArenaCloud('load');await tick();ctx.window.queueArenaSave();
+ finishRead({data:{save_data:save,updated_at:'r3'}});await assert.rejects(raced,/progress changed/);
+ assert.equal(reloads,0);assert.equal(vm.runInContext('dirty',ctx),true);checks++;
+ await ctx.syncArenaCloud('sync');assert.equal(saveWrites,1);
+ readSnapshot=async()=>({data:{save_data:save,updated_at:'r3'}});
+ await ctx.syncArenaCloud('sync');assert.equal(reloads,1);
+ assert.equal(vm.runInContext('cloudRevision',ctx),'r3');checks++;
+ vm.runInContext('cloudAccount=null',ctx);assert.equal(cloudButtons().length,0);checks++;
 }
 async function hubChecks(){
  const d=dom();d.byId('home-dialog').append(d.byId('home-dialog-content'));
@@ -134,6 +151,7 @@ async function hubChecks(){
   arenaMarketMutate:async(action,args)=>{mutations.push({action,args});return {message:'Saved.'};}},wildProgress:{coins:10000,favorites:['Bulbasaur']},
   dexNames:Object.keys(gameDex),dex:gameDex,moveColors:{Grass:'#00aa00',Poison:'#aa00aa',Fire:'#ff0000'},typeChart:{Grass:{},Poison:{},Fire:{}},
   pokemonPortrait:()=>new Node('canvas'),idlePokemonPortrait:()=>new Node('canvas'),spriteVariants:()=>({shiny:'shiny'}),
+  arenaAbilityDescriptions:{'Good as Gold':'Blocks hostile status moves.',Pressure:'Extends opposing cooldowns.'},
   dimensions:()=>[7,69],abilityFor:(_,p)=>p.abilityOverride,hiddenAbilityFor:()=>null,
   profileFor:()=>{throw Error('A Hub preview must never read or activate a local PC profile');},confirm:()=>true,console});
  vm.runInContext(html.slice(html.indexOf('const legendarySpecies='),html.indexOf('function catchChance(')),ctx);
@@ -167,6 +185,9 @@ async function hubChecks(){
  await control('Inspect Ivysaur').onclick();
  await selectCopy();let status=content.querySelector('.market-pc-status');assert.match(allText(status),/Adamant/,text());assert.match(allText(status),/Good as Gold/);assert(status.querySelector('.individual-stats'));checks++;
  const activeChart=status.querySelector('.stat-chart').attributes['aria-label'];await control('Bulbasaur · Copy 2 · Lv. 80').onclick();status=content.querySelector('.market-pc-status');
+ const descriptionOf=prefix=>status.all().find(n=>n.textContent.startsWith(prefix)).attributes['data-pc-help'];
+ assert.equal(descriptionOf('Ability: Pressure'),ctx.arenaAbilityDescriptions.Pressure);
+ assert.equal(descriptionOf('Personality: Mischievous (++Sp. Atk)'), '(+2 bonus Sp. Atk per 10 levels.)');checks++;
  assert.match(allText(status),/Modest/);assert.match(allText(status),/Pressure/);assert.match(allText(status),/Copy 2 · Stored/);assert.match(allText(status),/Lv. 80/);assert.notEqual(status.querySelector('.stat-chart').attributes['aria-label'],activeChart);checks++;
  assert.equal(status.querySelector('.stat-chart').attributes['aria-label'],['HP','Attack','Defense','Speed','Sp. Def','Sp. Atk'].map((name,i)=>name+' '+ctx.calculatedStats('Bulbasaur',copyProfile,80)[i]).join(', '));checks++;
  assert.equal(mutations.length,0,'Previewing a copy must not mutate or activate it');assert.equal(profile.pid,2);checks++;

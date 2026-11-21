@@ -58,8 +58,8 @@
   const [height,weight]=dimensions(name),ability=abilityFor(name,profile);
   info.append(node('p',sourceLabel(row)+(row.selector.slot===0?'':' · Stored'),'market-pc-source'),
    node('p','Lv. '+meta.level+(meta.level>=100?' · Max level':'')),
-   badges,node('p',height/10+' m · '+weight/10+' kg'),...individualSummary(name,profile,meta.level),node('p','Current stats: Lv. '+meta.level));
-  if(ability)info.append(node('p','Ability: '+ability+(hiddenAbilityFor(name,profile)?' (Hidden)':'')));
+   badges,node('p',height/10+' m · '+weight/10+' kg'),...individualSummary(profile),node('p','Current stats: Lv. '+meta.level));
+  if(ability)info.append(pcAbility(name,profile,ability));
   const chart=node('canvas',null,'stat-chart'),values=calculatedStats(name,profile,meta.level);chart.width=250;chart.height=168;
   chart.setAttribute('role','img');chart.setAttribute('aria-label',statLabels.map((label,i)=>label+' '+values[i]).join(', '));
   summary.append(info,statChartPanel(chart));body.append(summary,individualTable(name,profile));panel.append(title,body);drawStats(chart,values);

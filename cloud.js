@@ -47,7 +47,7 @@ function validateArenaSave(save){
   const parsed=JSON.parse(value);
   const expectsArray=['pokemon-arena-team','pokemon-arena-gym-badges',campaignSaveKeys[0]].includes(key);
   if(!parsed || typeof parsed!=='object' || Array.isArray(parsed)!==expectsArray)
-   throw new Error('The backup contains invalid '+key.replace('pokemon-arena-','')+' data.');
+   throw new Error('The save contains invalid '+key.replace('pokemon-arena-','')+' data.');
   decoded[key]=parsed;
  }
  return decoded;
@@ -99,73 +99,56 @@ window.reportLocalSaveError=error=>{
  syncError.textContent='This browser could not save your latest progress. '+error.message;
  syncError.hidden=false;
 };
-window.arenaBackupControls=()=>{
- const download=element('button','Download local save');
- download.onclick=()=>downloadLocalSave();
- const file=element('input');
- file.type='file';
- file.accept='.json,application/json';
- file.setAttribute('aria-label','Select a Pokémon Arena backup');
- const preview=element('p');
- preview.setAttribute('role','status');
- if(onlineSaveId || cloudAccount){
-  const load=element('button','Load cloud save');
-  load.onclick=async()=>{
-   if(saving || !window.confirm('Replace this browser’s progress with the latest cloud save?'))return;
-   try{
-    clearTimeout(saveTimer);
-    const row=await fetchArenaSave(await cloudClient(),cloudAccount);
-    if(!row)throw new Error('Cloud save unavailable.');
-    restoreArenaSave(row.save_data);
-    dirty=false;
-    updatePendingSave();
-    window.location.reload();
-   }catch(error){window.reportLocalSaveError(error);}
-  };
-  return [element('h3','Save backup'),download,load,
-   element('p','Importing a backup is available when playing offline.')];
+let localChangeNumber=0;
+async function syncArenaCloud(action) {
+ const account=cloudAccount;
+ if(!account)throw Error('Sign in to use your cloud save.');
+ if(saving || window.isArenaMarketBusy?.())throw Error('A save or transaction is syncing. Try again shortly.');
+ if(action==='load' && !window.confirm('Replace this browser’s progress with the latest cloud save?'))return '';
+ if(action==='save' || (action==='sync' && dirty)){
+  if(!team.length)throw Error('Choose a starter before saving to the cloud.');
+  window.queueArenaSave();clearTimeout(saveTimer);
+  await flushArenaSave();
+  return saveState.textContent;
  }
- const apply=element('button','Restore backup');
- apply.disabled=true;
- let backup=null;
- file.onchange=async()=>{
-  const selected=file.files[0];
-  backup=null;apply.disabled=true;preview.textContent='';
-  if(!selected)return;
-  try{
-   const candidate=JSON.parse(await selected.text());
-   const data=validateArenaSave(candidate);
-   if(file.files[0]!==selected)return;
-   const trainer=data['pokemon-arena-starter']?.ign ?? 'Unnamed trainer';
-   const badges=data['pokemon-arena-gym-badges']?.length ?? 0;
-   const caught=Object.keys(data['pokemon-arena-wild-progress']?.owned ?? {}).length;
-   preview.textContent=trainer+' · '+badges+' badges · '+caught+' Pokémon registered in storage';
-   backup=candidate;apply.disabled=false;
-  }catch(error){if(file.files[0]===selected)preview.textContent=error.message;}
- };
- apply.onclick=()=>{
-  if(!backup || saving || onlineSaveId || cloudAccount)return;
-  if(!window.confirm('Restore this offline backup? Download your current save first if you want to keep a copy.'))return;
-  try{
-   restoreArenaSave(backup);
-   clearTimeout(saveTimer);
-   dirty=false;
-   window.location.reload();
-  }catch(error){
-   window.reportLocalSaveError(error);
-   preview.textContent=error.message;
+ const changeNumber=localChangeNumber;
+ saving=true;
+ try {
+  const row=await fetchArenaSave(await cloudClient(),account);
+  if(cloudAccount!==account || localChangeNumber!==changeNumber || window.isArenaMarketBusy?.())
+   throw Error('Your progress changed during sync. Try again.');
+  if(!row){
+   if(action==='load' || !team.length)throw Error('There is no cloud save yet.');
+  }else{
+   if(action==='sync' && row.updated_at===cloudRevision)return 'Cloud save is up to date.';
+   restoreArenaSave(row.save_data);
+   cloudRevision=row.updated_at;sessionStorage.setItem('arena-cloud-revision',cloudRevision);
+   clearTimeout(saveTimer);dirty=false;updatePendingSave();
+   window.location.reload();return 'Loading cloud save…';
   }
- };
- return [element('h3','Save backup'),download,file,preview,apply];
-};
-function downloadLocalSave(save=readArenaSave(),filename='PokeArena-save.json'){
- const url=URL.createObjectURL(new Blob([JSON.stringify(save)],{type:'application/json'}));
- const link=element('a');
- link.href=url;
- link.download=filename;
- link.click();
- setTimeout(()=>URL.revokeObjectURL(url),1000);
+ }finally{
+  saving=false;
+  if(dirty && cloudAccount===account && !window.isArenaMarketBusy?.())window.queueArenaSave();
+ }
+ // First sync on a new account creates its cloud save using the normal revision check.
+ return syncArenaCloud('save');
 }
+window.arenaCloudControls=()=>{
+ const heading=element('h3','Cloud save');
+ if(!cloudAccount)return [heading,element('p','Sign in to save, load, or re-sync your cloud progress.')];
+ const status=element('p');status.setAttribute('role','status');
+ const controls=[['save','Save to cloud'],['load','Load cloud save'],['sync','Re-sync']].map(([action,label])=>{
+  const button=element('button',label);button.type='button';
+  button.onclick=async()=>{
+   controls.forEach(control=>{control.disabled=true;});
+   try{status.textContent=await syncArenaCloud(action);}
+   catch(error){status.textContent=error.message;}
+   finally{controls.forEach(control=>{control.disabled=false;});}
+  };
+  return button;
+ });
+ return [heading,...controls,status];
+};
 async function fetchArenaSave(client,id) {
  const {data,error}=await client.from('arena_saves').select('save_data,updated_at').eq('user_id',id).maybeSingle();
  if(error) throw error;
@@ -218,38 +201,17 @@ async function flushArenaSave() {
   const retry=element('button',error.saveConflict?'Load cloud save':'Retry sync');
   retry.onclick=async()=>{
    if(!error.saveConflict){await flushArenaSave().catch(()=>{});return;}
-   if(!window.confirm('Replace this browser’s progress with the latest cloud save?'))return;
-   try{
-    const client=await cloudClient();
-    const row=await fetchArenaSave(client,cloudAccount);
-    if(!row)throw new Error('Cloud save unavailable.');
-    clearTimeout(saveTimer);
-    dirty=false;
-    try {restoreArenaSave(row.save_data);} catch(error){dirty=true;throw error;}
-    updatePendingSave();
-    window.location.reload();
-   }catch(error){syncError.append(element('span',' '+error.message));}
+   try{await syncArenaCloud('load');}
+   catch(loadError){syncError.append(element('span',' '+loadError.message));}
   };
-  const backup=element('button','Download local save');
-  backup.onclick=()=>downloadLocalSave();
-  syncError.append(retry,backup);
-  if(error.saveConflict){
-   const downloadCloud=element('button','Download cloud save');
-   downloadCloud.onclick=async()=>{
-    try{
-     const row=await fetchArenaSave(await cloudClient(),cloudAccount);
-     if(!row)throw new Error('Cloud save unavailable.');
-     downloadLocalSave(row.save_data,'PokeArena-cloud-save.json');
-    }catch(downloadError){syncError.append(element('span',' '+downloadError.message));}
-   };
-   syncError.append(downloadCloud);
-  }
+  syncError.append(retry);
   syncError.hidden=false;
   throw error;
  } finally {saving=false;}
 }
 window.queueArenaSave=()=>{
  if(!cloudAccount) return;
+ localChangeNumber++;
  dirty=true;
  updatePendingSave();
  if(!localSaveFailed)saveState.textContent='Saved locally · sync pending';
@@ -272,9 +234,7 @@ async function checkArenaLease(){
    clearTimeout(saveTimer);
    cloudAccount=null;
    const dialog=element('dialog',null,'client-update-dialog');
-   const detail=dirty || saving?'Latest changes may exist only in this browser. Download a backup before signing in again.':'The last synced save is available when you sign in again.';
-   const download=element('button','Download local backup');
-   download.onclick=()=>downloadLocalSave();
+   const detail=dirty || saving?'Sign in again on this browser to retry any pending changes.':'The last synced save is available when you sign in again.';
    const leave=element('button','Return to sign-in');
    leave.onclick=async()=>{
     await client.auth.signOut({scope:'local'}).catch(()=>{});
@@ -282,7 +242,7 @@ async function checkArenaLease(){
     window.location.reload();
    };
    dialog.oncancel=event=>event.preventDefault();
-   dialog.append(element('strong','Your online session ended.'),element('p','This account is now active in another session. '+detail),download,leave);
+   dialog.append(element('strong','Your online session ended.'),element('p','This account is now active in another session. '+detail),leave);
    document.body.append(dialog);
    dialog.showModal();
   }catch{if(cloudAccount===id)saveState.textContent='Waiting to verify online session…';}

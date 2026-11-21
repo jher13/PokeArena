@@ -1389,6 +1389,7 @@
  byId('toolbar-notices').onclick=()=>open('Notifications',notifications);
  setInterval(async()=>{
   if(phase!=='home' || !cloudAccount || cloudAccount===leavingAccount)return;
+  window.ArenaSocial?.refreshUnread();
   try {
    const data=await readNotifications();
    updateNotificationUnread(data);

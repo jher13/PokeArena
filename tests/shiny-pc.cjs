@@ -26,7 +26,7 @@ export function sortBox(sort,order,includeCopies){
  const profile={pid:23,ivs:[31,0,0,0,0,0],evs:[0,0,0,0,0,0]};
  const shiny={...profile,shiny:true};
  for(const level of [1,10,11,50,91,100]){
-  const base=[106,110,90,130,90,154],bonus=Math.ceil(level/10);
+  const base=[106,110,90,130,90,154],bonus=2*Math.ceil(level/10);
   for(const [p,scale] of [[profile,1],[shiny,1.25]]){
    assert.deepEqual(game.individualBaseStats('Mewtwo',p),base.map(stat=>stat*scale));
    const expected=base.map((b,i)=>{
@@ -43,8 +43,15 @@ export function sortBox(sort,order,includeCopies){
  assert.equal(game.calculatedStats('Shedinja',shiny,100)[0],1);
  for(let id=0;id<30;id++){
   const p={...profile,personalityId:id},stat=Math.floor(id/5),rival=(stat+1)%6;
-  const old=game.calculatedStats('Mewtwo',{...p,personalityId:rival*5},100),now=game.calculatedStats('Mewtwo',p,100);
-  assert.deepEqual(now.map((n,i)=>n-old[i]),old.map((_,i)=>i===stat?10:i===rival?-10:0));
+  const tier=id%5+1;
+  assert.equal(game.personalityTrait(p).tier,tier);
+  for(const level of [1,9,10,11,19,20,21,90,91,99,100]){
+   const blocks=Math.ceil(level/10);
+   const old=game.calculatedStats('Mewtwo',{...p,personalityId:rival*5},level);
+   const now=game.calculatedStats('Mewtwo',p,level);
+   assert.deepEqual(now.map((n,i)=>n-old[i]),old.map((_,i)=>i===stat?tier*blocks:i===rival?-blocks:0));
+   assert.deepEqual(game.onlineActor('Mewtwo',{},'host',0,undefined,undefined,null,{level,profile:p,moves:['Recover']}).stats,now);
+  }
  }
  const legacy={pid:0,ivs:[0,0,0,0,0,30],evs:[0,0,0,0,0,0]};
  const original=game.personalityTrait(legacy);

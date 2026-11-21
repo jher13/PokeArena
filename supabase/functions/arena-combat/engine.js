@@ -419,14 +419,14 @@ function personalityIdOf(profile) {
 }
 function personalityTrait(profile) {
  const id=personalityIdOf(profile),stat=Math.floor(id/5);
- return {name:personalityTraits[stat][id%5],stat};
+ return {name:personalityTraits[stat][id%5],stat,tier:id%5+1};
 }
 function personalityOf(profile) {
  const trait=personalityTrait(profile);
  return trait.name+' · '+statLabels[trait.stat];
 }
-function personalityBonus(level) {
- return Math.max(1,Math.min(10,Math.ceil(level/10)));
+function personalityBonus(level,tier) {
+ return tier*Math.max(1,Math.min(10,Math.ceil(level/10)));
 }
 function individualBaseStats(name,profile) {
  const base=dexStats[dex[name][0]-1];
@@ -435,7 +435,7 @@ function individualBaseStats(name,profile) {
 function calculatedStats(name,profile,level=50) {
  const base=individualBaseStats(name,profile);
  const {up,down}=natureOf(profile);
- const trait=personalityTrait(profile),bonus=personalityBonus(level);
+ const trait=personalityTrait(profile),bonus=personalityBonus(level,trait.tier);
  return base.map((value,index)=>{
   const extra=index===trait.stat?bonus:0;
   if(name==='Shedinja' && index===0) return 1;
@@ -463,19 +463,27 @@ function statChartPanel(chart) {
  const frame=element('div',null,'pc-stat-chart');frame.append(chart);
  statLabels.forEach((name,i)=>{
   const angle=i*Math.PI/3-Math.PI/2;
-  const hit=pcHelp(element('button',null,'pc-stat-hit'),statDescriptions[i]);
-  hit.type='button';hit.setAttribute('aria-label',name);
+  const hit=pcHelp(element('span',null,'pc-stat-hit'),statDescriptions[i]);
+  hit.setAttribute('role','img');hit.setAttribute('aria-label',name);
   hit.style.left=((125+Math.cos(angle)*91)/250*100)+'%';
   hit.style.top=((83+Math.sin(angle)*65)/168*100)+'%';
   frame.append(hit);
  });
  return frame;
 }
-function individualSummary(name,profile,level) {
+function abilityDescription(ability) {
+ return arenaAbilityDescriptions[ability] ?? 'This ability currently has no supported arena effect.';
+}
+function pcAbility(name,profile,ability) {
+ const label='Ability: '+ability+(hiddenAbilityFor(name,profile)?' (Hidden)':'');
+ return pcHelp(element('p',label),abilityDescription(ability));
+}
+function individualSummary(profile) {
  const nature=natureOf(profile),trait=personalityTrait(profile);
  const modifier=nature.up===nature.down?'Neutral':'+'+statLabels[nature.up]+' / −'+statLabels[nature.down];
- const personality=element('p','Personality: '+trait.name+' (+'+statLabels[trait.stat]+')');
- pcHelp(personality,name==='Shedinja' && trait.stat===0?'Shedinja always has 1 HP, including with an HP personality.':'Adds '+personalityBonus(level)+' '+statLabels[trait.stat]+' at Lv. '+level+'. The bonus is +1 per ten levels, rounded up, and survives IV training.');
+ const label=statLabels[trait.stat];
+ const personality=element('p','Personality: '+trait.name+' ('+'+'.repeat(trait.tier)+label+')');
+ pcHelp(personality,'(+'+trait.tier+' bonus '+label+' per 10 levels.)');
  return [element('p','Nature: '+nature.name+' ('+modifier+')'),personality];
 }
 function individualTable(name,profile) {
@@ -1078,7 +1086,6 @@ function capsuleControl(name) {
   const close=element('button','Close');
   close.type='button';
   close.onclick=()=>dialog.close();
-  const detail=ability=>arenaAbilityDescriptions[ability] ?? 'This ability currently has no supported arena effect.';
   const roll=()=>{
    if(!wildProgress.capsules)return false;
    const profile=profileFor(name),previous=abilityFor(name,profile);
@@ -1090,9 +1097,9 @@ function capsuleControl(name) {
    playerStorage.setItem(profileStorage,JSON.stringify(profiles));
    saveWildProgress();renderDetail();
    result.replaceChildren(element('h3','Previous','ability-result-heading'),
-    element('strong',previous,'ability-result-previous'),element('p',detail(previous)),
+    element('strong',previous,'ability-result-previous'),element('p',abilityDescription(previous)),
     element('h3','New','ability-result-heading'),
-    element('strong',next,'ability-result-new'),element('p',detail(next)));
+    element('strong',next,'ability-result-new'),element('p',abilityDescription(next)));
    remaining.textContent=wildProgress.capsules+' Ability Capsules remaining';
    reroll.disabled=!wildProgress.capsules;
    return true;
@@ -1471,9 +1478,9 @@ function renderPokemonDetail(name,copy,copyNumber,trainingSelection) {
  if(copy)info.append(element('p','Copy '+copyNumber+' · Stored'));
  info.append(element('p',owned ? 'Lv. '+owned.level+(owned.level<100?' · '+owned.xp+'/'+experienceNeeded(owned.level)+' XP':' · Max level') : 'Unowned',owned?'team-owned':'team-unowned'),
 badges,element('p',height/10+' m · '+weight/10+' kg'),
-  ...individualSummary(name,profile,owned?.level ?? 50),
+  ...individualSummary(profile),
   element('p',owned?'Current stats: Lv. '+owned.level:'Base stat chart'));
- if(ability) info.append(element('p','Ability: '+ability+(hiddenAbilityFor(name,profile)?' (Hidden)':'')));
+ if(ability) info.append(pcAbility(name,profile,ability));
  const chartValues=owned?calculatedStats(name,profile,owned.level):dexStats[dex[name][0]-1];
  const chart=element('canvas',null,'stat-chart');
  chart.width=250;
@@ -2935,6 +2942,16 @@ function renderLearnableSkills(name) {
  renderList();
  return section;
 }
+function pcMoveSelect(label,prompt) {
+ const select=element('select',null,'move-options');
+ select.setAttribute('aria-label',label);
+ if('HTMLSelectedContentElement' in window){
+  const trigger=element('button');trigger.type='button';
+  trigger.append(element('selectedcontent'));select.append(trigger);
+ }
+ const blank=element('option',prompt);blank.value='';select.append(blank);
+ return select;
+}
 function renderSkillSlots(name,copy=null) {
  const grid=element('div',null,'move-grid');
  const moves=copy?legalLoadout(name,copy.moves?.length?copy.moves:movePools[name]??[]):movesFor(name);
@@ -2948,10 +2965,7 @@ function renderSkillSlots(name,copy=null) {
   card.append(move?pcMoveTitle('strong',move,(slot+1)+'. '):element('strong',(slot+1)+'. Empty move slot'));
   if(move)card.append(element('small',moveCatalog[move][0]+' · '+moveRules(move).cooldown.toFixed(1)+'s cooldown'));
   if(levelSkills.length) {
-   const select=element('select',null,'move-options');
-   select.setAttribute('aria-label','Level-up move for slot '+(slot+1));
-   const blank=element('option','Choose unlocked level-up move');
-   blank.value='';select.append(blank);
+   const select=pcMoveSelect('Level-up move for slot '+(slot+1),'Choose a level-up move');
    for(const [skill,level] of levelSkills) {
     const option=moveOption(skill,' · Lv. '+level);
     option.value=skill;select.append(option);
@@ -2969,11 +2983,7 @@ function renderSkillSlots(name,copy=null) {
    card.append(select,equip);
   }
   if(available.length) {
-   const select=element('select',null,'move-options');
-   select.setAttribute('aria-label','Skill item for move slot '+(slot+1));
-   const blank=element('option','Select skill item');
-   blank.value='';
-   select.append(blank);
+   const select=pcMoveSelect('Skill item for move slot '+(slot+1),'Select skill item');
    for(const optionMove of available) {
     const item=skillItem(optionMove);
     const option=moveOption(optionMove,' ×'+wildProgress.skills[optionMove],item.kind+' · ');
@@ -10451,6 +10461,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.92',changes:['Messages shows unread chat counts and includes a mute switch. Settings offers cloud save, load and re-sync.','Personalities now give 1–5 points to their favored stat per ten levels. PC stat labels are visible, move selectors fit on one line, and abilities show their Arena effects on hover.']},
  {version:'0.22.91',changes:['Shinies sparkle and gain 25% species base stats. PC storage can sort shinies and Legendary/Mythical Pokémon first.','Personalities grant a permanent favored-stat bonus of up to 10 points. Hover or focus a PC move or stat for its Arena description. Move categories use Pokémon Database icons.']},
  {version:'0.22.90',changes:['Messages now has World, Guild, Friend and Trade Chat. Open an online trainer’s profile to trade PC Pokémon directly. Both players review and confirm their offers.']},
  {version:'0.22.89',changes:['Room invites show online friends and guild members. The list refreshes while open and checks the recipient again before sending.']},
@@ -10745,7 +10756,7 @@ byId('toolbar-settings').onclick=()=>{
  const sfx=element('button',sfxButton.textContent);
  music.onclick=()=>{musicButton.onclick();music.textContent=musicButton.textContent;};
  sfx.onclick=()=>{sfxButton.onclick();sfx.textContent=sfxButton.textContent;};
- openHomeDialog('Settings',music,sfx,...audioVolumeControls(),...(window.arenaBackupControls?.() ?? []));
+ openHomeDialog('Settings',music,sfx,...audioVolumeControls(),...(window.arenaCloudControls?.() ?? []));
 };
 function audioVolumeControls() {
  const volumeSlider=(label,kind,value,apply)=>{

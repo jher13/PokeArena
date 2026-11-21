@@ -1,3 +1,7 @@
+# Update to 0.22.92
+
+Extract the changed files over **0.22.91** and push them together. The backend workflow applies `20261121020000_chat_read_state.sql` for account-wide unread counts and mute preferences. It also deploys the combat engine with the five personality tiers. The version check picks up the new client after an active battle or auto-repeat session ends.
+
 # Update to 0.22.91
 
 Extract the changed files over **0.22.90** and push them together. The backend workflow applies `20261121010000_permanent_personalities.sql` and deploys the matching combat engine. Pokémon Database supplies the three move category images and the listed accuracy values. The client bundles the icons for offline use.
