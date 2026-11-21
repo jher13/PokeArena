@@ -124,6 +124,7 @@
  const familyByForm=new Map(Object.entries(evolutionFamilies).flatMap(([root,paths])=>
   [root,...paths.flat()].map(name=>[name,root])));
  const familyOf=unit=>unit.family ?? familyByForm.get(unit.name) ?? unit.name;
+ const familyCopies=unit=>unit.poolCopies ?? 3**(unit.star-1);
  const branchPaths=unit=>evolutionFamilies[familyOf(unit)] ?? [];
  const signatures={
   'Bulbasaur':['Seed Burst','Grass',true],
@@ -724,14 +725,20 @@
  };
  const playableForms=new Set([...roster.flat(),...Object.values(evolutionFamilies).flat(2)]);
  for(const trait of Object.values(collectionTraits))if(trait.members)trait.members=trait.members.filter(name=>playableForms.has(name));
- const themesFor=name=>Object.entries(collectionTraits)
-  .filter(([,trait])=>!trait.derived).filter(([,trait])=>trait.role?trait.role===combatRole(name):trait.families?trait.families.includes(familyOf({name})):trait.members.includes(name)).map(([label])=>label);
+ const traitsByName=new Map();
+ function themesFor(name){
+  if(!traitsByName.has(name))traitsByName.set(name,Object.entries(collectionTraits)
+   .filter(([,trait])=>!trait.derived && (trait.role?trait.role===combatRole(name):trait.families?trait.families.includes(familyOf({name})):trait.members.includes(name)))
+   .map(([label])=>label));
+  return traitsByName.get(name);
+ }
  const rivalPairs=[['Tyranitar','Garchomp'],['Alakazam','Gengar'],['Electivire','Magmortar']];
  const rivalFor=name=>rivalPairs.find(pair=>pair.includes(name))?.find(member=>member!==name);
  const unitTraits=unit=>{
   const innate=themesFor(unit.name).filter(name=>(name!=='Rival Duo' || unit.star===3) && (!unit.glitchRole || !collectionTraits[name].role));
   return new Set([...innate,...(unit.glitchRole?[unit.glitchRole]:[]),...(unit.items ?? []).map(item=>completedItems.get(item)?.trait).filter(Boolean)]);
  };
+ const familyStock=[26,22,18,12,9];
  const benchLimit=9;
  const attackSlowdown=3;
  const overtimeStartMs=40000;
@@ -956,23 +963,35 @@
   }
   return mods;
  }
+ // A displayed card is already reserved. Buying it transfers that copy to the trainer.
+ function drawPoolCard(pool,names){
+  const total=names.reduce((sum,name)=>sum+pool.get(name).copies,0);
+  if(!total)return null;
+  let ticket=Math.random()*total;
+  for(const name of names){
+   const entry=pool.get(name);
+   ticket-=entry.copies;
+   if(ticket<0){entry.copies--;return name;}
+  }
+  return null;
+ }
  function carouselOffers(pool,stage){
   const offers=[];
   const tiers=stage===5?[5]:Array.from({length:Math.min(stage,5)},(_,i)=>i+1);
   for(let slot=0;slot<9;slot++){
    const stocked=[...pool].filter(([,entry])=>entry.copies>0 && tiers.includes(entry.tier+1));
    const matching=stocked.filter(([,entry])=>entry.tier+1===tiers[slot%tiers.length]);
-   const selected=drawRogueChoices(matching.length?matching:stocked,1)[0];
-   if(!selected)break;
-   const [name,entry]=selected;
+   const name=drawPoolCard(pool,(matching.length?matching:stocked).map(([name])=>name));
+   if(!name)break;
+   const entry=pool.get(name);
    const tier=entry.tier+1;
-   const evolved=tier<=2 && slot%3===2 && entry.copies>=3 && evolutionFamilies[name]?.length===1;
+   const evolved=tier<=2 && slot%3===2 && entry.copies>=2 && evolutionFamilies[name]?.length===1;
    const star=evolved?2:1;
    const poolCopies=evolved?3:1;
    const item=stage===5?drawRogueChoices(standardGear,1)[0]:randomComponent();
    const ball=tier===5?'Master Ball':tier===4?'Ultra Ball':tier===3?'Great Ball':'Poké Ball';
    const unit={name:evolved?evolutionFamilies[name][0][0]:name,family:name,star,position:null,items:[item],poolCopies};
-   entry.copies-=poolCopies;
+   entry.copies-=poolCopies-1;
    offers.push({slot,name,item,ball,tier,unit});
   }
   return offers;
@@ -990,7 +1009,13 @@
   const living=run.trainers.filter(t=>t.hp>0);
   if(!player.hp || living.length===1)return;
   if(augmentRound(run.round)){
-   for(const ai of living.slice(1))grantAugment(ai,drawRogueChoices(augments.filter(([label])=>!ai.augments.includes(label)),1)[0]);
+   for(const ai of living.slice(1)){
+    const options=drawRogueChoices(augments.filter(([label])=>!ai.augments.includes(label)),3);
+    const counts=traits(field(ai));
+    const benefit=([,,effect])=>effect==='weatherSurge'?(counts['Weather Trio']?5:0):
+     effect==='echo'?(counts.Spellcraft ?? 0)+1:effect==='secondWind'?(counts.Bulwark ?? 0)+1:2;
+    grantAugment(ai,options.sort((a,b)=>benefit(b)-benefit(a))[0]);
+   }
    run.choice={kind:'augment',offers:drawRogueChoices(augments.filter(([label])=>!player.augments.includes(label)),3)};
   }else if(carouselRound(run.round)){
    const {stage}=stageRound(run.round);
@@ -999,10 +1024,15 @@
    const order=[...living].sort((a,b)=>a.hp-b.hp);
    const fits=(trainer,offer)=>!fusionPlan(trainer,offer.unit).overflow;
    const aiPick=trainer=>{
-    const eligible=offers.filter(offer=>fits(trainer,offer));
-    if(!eligible.length)return;
-    const offer=eligible[Math.floor(Math.random()*eligible.length)];
-    if(draftCarousel(trainer,offer))offers.splice(offers.indexOf(offer),1);
+    const board=field(trainer),power=aiBoardPower(board);
+    let best=null;
+    for(const offer of offers){
+     const pick=aiOffer(trainer,offer.unit,board,power);
+     if(!pick)continue;
+     const value=pick.score+offer.tier*.65;
+     if(!best || value>best.value)best={offer,branch:pick.branch,value};
+    }
+    if(best && draftCarousel(trainer,best.offer,best.branch))offers.splice(offers.indexOf(best.offer),1);
    };
    while(order.length && order[0]!==player)aiPick(order.shift());
    if(!offers.some(offer=>fits(player,offer))){
@@ -1109,14 +1139,15 @@
   trainer.income.boss=15;
   trainer.items.push(randomComponent(),randomComponent());
   const tier=megaRewardTier(run.round);
-  const pool=run.tiers[tier-1];
-  const inStock=pool.filter(name=>run.pool.get(name).copies>0);
-  const name=drawRogueChoices(inStock.length?inStock:pool,1)[0];
-  if(inStock.length)run.pool.get(name).copies--;
-  const prize={name,star:1,position:null,poolCopies:inStock.length?1:0};
-  const deployed=takeBossReward(trainer,prize);
+  let prizeTier=tier,name=null;
+  for(;prizeTier>0;prizeTier--){name=drawPoolCard(run.pool,run.tiers[prizeTier-1]);if(name)break;}
+  if(!name)return 'Mega rewards: 2 item components and 15 gold. All eligible Pokémon are drafted.';
+  const prize={name,star:1,position:null,poolCopies:1};
+  const board=field(trainer);
+  const branch=trainer===run.trainers[0]?undefined:aiOffer(trainer,prize,board,aiBoardPower(board))?.branch;
+  const deployed=takeBossReward(trainer,prize,false,branch);
   if(!deployed)(trainer.bossRewards ??= []).push(prize);
-  return 'Mega rewards: 2 item components, Tier '+tier+' '+name+(deployed?'':' (claim when bench space is available)')+', and 15 gold.';
+  return 'Mega rewards: 2 item components, Tier '+prizeTier+' '+name+(deployed?'':' (claim when bench space is available)')+', and 15 gold.';
  }
 
  function button(label,fn,disabled=false){
@@ -1127,9 +1158,11 @@
   clearInterval(planningTimer);run=null;phase='tactics';showScreen('tactics');
   content.replaceChildren(heading('Poke Fight Tactics'),
    element('p','Draft from a shared shop, position your Pokémon, and outlast seven AI trainers.'),
+   element('p','At your progression, fourth place earns '+earnedCoins(tacticsCoinRate()).toLocaleString()+' account coins per credited minute, plus a placement bonus and items.'),
    button('Start match',start));
   const guide=element('details');
-  guide.append(element('summary','How to play'),element('p','Buy Pokémon from the shop, then select one and choose a hex on your half of the board. Fusing copies stars up and evolves the Pokémon. Select a branching Pokémon and pick its evolution path before it fuses. Drag items from the left rail to equip them. Focus or hover an item to see its recipes. Lock offers you want to keep for next round. Select a Pokémon to sell it and recover its items. Stages 2–18 end with a Mega boss round. Winning earns two item components, a random Pokémon of the stage’s reward tier, and 15 Tactics gold.'));
+  guide.append(element('summary','How to play'),element('p','Buy Pokémon from the shop, then select one and choose a hex on your half of the board. Fusing copies stars up and evolves the Pokémon. Select a branching Pokémon and pick its evolution path before it fuses. Drag items from the left rail to equip them. Focus or hover an item to see its recipes. Lock offers you want to keep for next round. Select a Pokémon to sell it and recover its items. All eight trainers draw from the same supply. Tiers 1 through 5 start with '+familyStock.join(', ')+' copies per Pokémon family, respectively. Shops reserve cards. Selling and elimination return their copies. Mega wins award two components, 15 Tactics gold and a Pokémon from the highest stocked tier up to the stage reward tier.'));
+  guide.append(element('p','Completed fights earn credit for simulated combat plus 18 seconds of planning, or 25 on augment and Mega rounds. Finishing pays account coins based on your highest PC level, unlocked Arena speed and placement. First place earns 25% more round coins than fourth. The Lucky Coin doubles your coins.'));
   content.append(guide);
  }
  const placementRewards=[
@@ -1142,10 +1175,28 @@
   [500,[['balls','Great Ball',2]]],
   [250,[['balls','Safari Ball',2]]],
  ];
+ const placementRates=[1.25,1.16,1.08,1,.92,.85,.78,.70];
+ function tacticsCoinRate(){
+  let level=1;
+  for(const mon of Object.values(wildProgress.owned ?? {}))level=Math.max(level,mon.level ?? 1);
+  for(const group of Object.values(wildProgress.copies ?? {}))
+   for(const copy of group)level=Math.max(level,copy.level ?? 1);
+  // Match the measured coin pace of 3v3 Trainer auto-repeat at levels 10, 50 and 100.
+  const baseRate=20+60*Math.min(level,50)+52*Math.max(0,Math.min(level,100)-50);
+  return Math.round(baseRate*(1+.7*(maximumBattleSpeed()-1))/10)*10;
+ }
+ function creditTacticsRound(match,ticks){
+  if(!ticks || openingRound(match.round) || carouselRound(match.round) || match.lastCreditedRound===match.round)return;
+  const planning=augmentRound(match.round) || megaRound(match.round)?25:18;
+  match.rewardSeconds=(match.rewardSeconds ?? 0)+planning+Math.min(ticks,combatTicks)*combatStepMs/1000;
+  match.lastCreditedRound=match.round;
+ }
  function awardPlacement(match){
   if(match.placementReward)return;
-  const [baseCoins,placementItems]=placementRewards[(match.place ?? 1)-1];
-  const coins=earnedCoins(baseCoins);
+  const rank=(match.place ?? 1)-1;
+  const [baseCoins,placementItems]=placementRewards[rank];
+  const roundCoins=Math.round((match.rewardSeconds ?? 0)*(match.coinRate ?? 0)*placementRates[rank]/60);
+  const coins=earnedCoins(baseCoins+roundCoins);
   const items=placementItems.map(item=>[...item]);
   const stageBonus=Math.min(3,Math.max(0,(match.completedStage ?? 0)-3));
   if(stageBonus){
@@ -1155,16 +1206,16 @@
   }
   for(const item of items)giveArenaItem(...item);
   wildProgress.coins+=coins;
-  match.placementReward=[coins.toLocaleString()+' coins',...items.map(([,name,count])=>count+' × '+experienceCandyName(name))].join(' · ');
+  const breakdown=roundCoins?' ('+earnedCoins(roundCoins).toLocaleString()+' from rounds + '+earnedCoins(baseCoins).toLocaleString()+' placement bonus)':'';
+  match.placementReward=[coins.toLocaleString()+' coins'+breakdown,...items.map(([,name,count])=>count+' × '+experienceCandyName(name))].join(' · ');
   saveWildProgress();
  }
  function start(){
   const tiers=roster;
-  const pool=new Map(tiers.flatMap((names,tier)=>names.map(name=>[name,{tier,copies:[26,22,18,12,9][tier]}])));
-  run={round:1,trainers:[makeTrainer('You'),...Array.from({length:7},(_,i)=>makeTrainer('Trainer '+(i+1)))],tiers,pool,selected:null,busy:false,result:''};
+  const pool=new Map(tiers.flatMap((names,tier)=>names.map(name=>[name,{tier,copies:familyStock[tier]}])));
+  run={round:1,coinRate:tacticsCoinRate(),rewardSeconds:0,trainers:[makeTrainer('You'),...Array.from({length:7},(_,i)=>makeTrainer('Trainer '+(i+1)))],tiers,pool,selected:null,busy:false,result:''};
   for(const [index,trainer] of run.trainers.entries()){
-   const name=drawRogueChoices(tiers[0].filter(name=>pool.get(name).copies>0),1)[0];
-   pool.get(name).copies--;
+   const name=drawPoolCard(pool,tiers[0]);
    trainer.units.push({name,star:1,position:index===0?null:cells[31]});
   }
   startPlanning();
@@ -1311,27 +1362,27 @@
    dragged=null;draggedItem=null;
   };
  }
- function roll(trainer){
-  const locked=trainer.lockedOffers ?? new Set();
-  const previous=trainer.shop;
-  for(const [index,name] of previous.entries())if(name && !locked.has(index))run.pool.get(name).copies++;
-  trainer.shop=Array.from({length:5},(_,i)=>{
-   if(locked.has(i) && previous[i])return previous[i];
-   const chances=odds[trainer.level-1];
-   let tierRoll=Math.random()*100;
-   const tier=chances.findIndex(chance=>(tierRoll-=chance)<0);
-   const names=run.tiers[tier].filter(name=>run.pool.get(name).copies>0);
-   const total=names.reduce((sum,name)=>sum+run.pool.get(name).copies,0);
-   let ticket=Math.random()*total;
-   const name=names.find(name=>(ticket-=run.pool.get(name).copies)<0);
-   if(name)run.pool.get(name).copies--;
-   return name ?? null;
+ function returnShopCards(trainer,keepLocks){
+  trainer.shop.forEach((name,index)=>{
+   if(!name || (keepLocks && trainer.lockedOffers?.has(index)))return;
+   run.pool.get(name).copies++;trainer.shop[index]=null;
   });
  }
+ function fillShop(trainer){
+  const chances=odds[trainer.level-1],held=trainer.shop;
+  trainer.shop=Array.from({length:5},(_,i)=>{
+   if(held[i])return held[i];
+   const available=chances.map((chance,tier)=>chance && run.tiers[tier].some(name=>run.pool.get(name).copies>0)?chance:0);
+   const total=available.reduce((sum,chance)=>sum+chance,0);
+   if(!total)return null;
+   let ticket=Math.random()*total;
+   const tier=available.findIndex(chance=>(ticket-=chance)<0);
+   return drawPoolCard(run.pool,run.tiers[tier]);
+  });
+ }
+ function roll(trainer){returnShopCards(trainer,true);fillShop(trainer);}
  function releaseShop(trainer){
-  for(const name of trainer.shop)if(name)run.pool.get(name).copies++;
-  trainer.shop=[];
-  trainer.lockedOffers?.clear();
+  returnShopCards(trainer,false);trainer.shop=[];trainer.lockedOffers?.clear();
  }
  const field=trainer=>trainer.units.filter(unit=>unit.position!==null);
  const teamSize=trainer=>trainer.level+trainer.units.reduce((total,unit)=>total+
@@ -1360,7 +1411,7 @@
    const branch=(branchStep?chosenBranch:undefined) ?? keeper.branch ?? used.find(unit=>unit.branch!==undefined)?.branch ?? 0;
    const name=paths?.[branch]?.[star-1] ?? keeper.name;
    const locked=paths && (star===2 || paths.some(path=>path[0]!==paths[0][0]));
-   const upgraded={...keeper,name,family,poolCopies:[keeper,...used].reduce((total,unit)=>total+(unit.poolCopies ?? 3**(unit.star-1)),0),branch:locked?branch:keeper.branch ?? used.find(unit=>unit.branch!==undefined)?.branch,star:star+1,items};
+   const upgraded={...keeper,name,family,poolCopies:[keeper,...used].reduce((total,unit)=>total+familyCopies(unit),0),branch:locked?branch:keeper.branch ?? used.find(unit=>unit.branch!==undefined)?.branch,star:star+1,items};
    upgrades.push({keeper,used,upgraded,branchStep});
    units[units.indexOf(keeper)]=upgraded;
    for(const unit of used)units.splice(units.indexOf(unit),1);
@@ -1438,7 +1489,7 @@
   const plan=salePlan(trainer,unit);
   if(plan.overflow)return false;
   trainer.gold+=cost(familyOf(unit))*unit.star;
-  run.pool.get(familyOf(unit)).copies+=unit.poolCopies ?? 3**(unit.star-1);
+  run.pool.get(familyOf(unit)).copies+=familyCopies(unit);
   trainer.items.push(...(unit.items ?? []));
   trainer.units.splice(trainer.units.indexOf(unit),1);
   for(const extra of plan.displaced)extra.position=null;
@@ -1804,7 +1855,7 @@
     const footer=element('span',null,'tactics-offer-footer');
     footer.append(element('strong',name),element('span','● '+cost(name),'tactics-offer-cost'));
     tile.append(art,footer);
-    const indicators=[];
+    const indicators=[run.pool.get(name).copies+' unreserved '+name+' copies left in the shared pool'];
     if(tile.dataset.ownedFamily)indicators.push('Owned family');
     if(matching.length)indicators.push('Matching traits: '+matching.join(', '));
     tile.setAttribute('aria-label',['Buy '+name+' for '+cost(name)+' gold',...indicators].join('. '));
@@ -1881,20 +1932,203 @@
   if(income)hint.append(' · Income: '+income.base+' base, +'+income.interest+' interest, +'+income.streak+' streak'+(income.win?', +1 win':''));
   content.replaceChildren(layout,...(run.round>1?[shop]:[]),hint);
  }
- function planAI(trainer){
-  if(trainer.gold>=10 && trainer.level<maxLevel){trainer.gold-=4;xp(trainer,4);}
-  for(let i=0;i<5;i++)buy(trainer,i);
-  if(trainer.bossRewards)trainer.bossRewards=trainer.bossRewards.filter(prize=>!takeBossReward(trainer,prize));
-  if(!trainer.units.length && trainer.gold>=3){trainer.gold-=2;roll(trainer);for(let i=0;i<5;i++)buy(trainer,i);}
-  for(let i=trainer.items.length-1;i>=0;i--){
-   const unit=trainer.units.find(unit=>unit.position!==null) ?? trainer.units[0];
-   if(unit && equip(trainer,unit,trainer.items[i]))trainer.items.splice(i,1);
+ const aiBasePower=new Map();
+ function aiUnitPower(unit){
+  const key=unit.name+'|'+unit.star;
+  if(!aiBasePower.has(key)){
+   const [hp,attack,defense,speed,resist,special]=dexStats[dex[unit.name][0]-1];
+   const tier=rarities.get(familyOf(unit))+1;
+   const stats=(hp+defense+resist+speed+2*Math.max(attack,special))/105;
+   aiBasePower.set(key,(4+2.2*tier+stats)*[0,1,1.55,2.45][unit.star]);
   }
-  trainer.units.sort((a,b)=>b.star-a.star || cost(familyOf(b))-cost(familyOf(a)));
-  trainer.units.forEach((unit,i)=>{
-   const ranged=roleProfiles[combatRole(unit.name)]?.range>=3;
-   unit.position=i<teamSize(trainer)?cells[28+(ranged?14:0)+i]:null;
-  });
+  return aiBasePower.get(key)+(unit.items ?? []).reduce((sum,item)=>sum+(Object.hasOwn(components,item)?1:2.8),0);
+ }
+ function aiBoardPower(board){
+  let power=0,front=0,back=0;
+  for(const unit of board){
+   power+=aiUnitPower(unit);
+   const role=combatRole(unit.name);
+   if(role==='Tank' || role==='Fighter')front++;
+   if(role==='Carry' || role==='Caster')back++;
+  }
+  power+=3*Math.min(front,Math.ceil(board.length/3))+2.5*Math.min(back,Math.ceil(board.length/4));
+  for(const [label,count] of Object.entries(traits(board))){
+   const tiers=collectionTraits[label].tiers;
+   const rank=tiers.findLastIndex(([threshold])=>count>=threshold);
+   if(rank>=0){
+    const affected=label==='Weather Trio' || label==='Starter Squad'?board.length:count;
+    const bonus=tiers[rank][1];
+    const stats=(bonus.health ?? 0)+(bonus.power ?? 0)+(bonus.speed ?? 0)+(bonus.defense ?? 0)/100+(bonus.mana ?? 0)/100;
+    power+=(1+rank*.8)*(2.4+affected*1.25)+.7*tiers[rank][0]+affected*Math.min(.7,stats);
+   }
+   const next=tiers[rank+1]?.[0];
+   if(count+1===next)power+=1.1;
+  }
+  return power;
+ }
+ function aiAdmission(board,unit,capacity){
+  if(board.length<capacity)return {score:aiBoardPower([...board,unit]),slot:board.length};
+  let score=-Infinity,slot=-1;
+  const trial=[...board];
+  for(let i=0;i<board.length;i++){
+   trial[i]=unit;const value=aiBoardPower(trial);trial[i]=board[i];
+   if(value>score){score=value;slot=i;}
+  }
+  return {score,slot};
+ }
+ const aiHexes=[4,5,7].map(row=>cells.filter(cell=>cell.y>=4).sort((a,b)=>
+  Math.abs(a.y-row)-Math.abs(b.y-row) || Math.abs(a.x-3)-Math.abs(b.x-3) || a.x-b.x));
+ function deployAI(trainer){
+  const capacity=Math.min(teamSize(trainer),trainer.units.length,aiHexes[0].length);
+  const board=field(trainer).slice(0,capacity);
+  const reserves=trainer.units.filter(unit=>!board.includes(unit));
+  // Fill new slots, then improve the existing board one exchange at a time.
+  while(reserves.length){
+   const current=board.length<capacity?-Infinity:aiBoardPower(board);
+   let choice=null;
+   for(const unit of reserves){
+    const pick=aiAdmission(board,unit,capacity);
+    if(pick.score>current+.01 && (!choice || pick.score>choice.score))choice={...pick,unit};
+   }
+   if(!choice)break;
+   const outgoing=board[choice.slot];board[choice.slot]=choice.unit;
+   reserves.splice(reserves.indexOf(choice.unit),1);if(outgoing)reserves.push(outgoing);
+  }
+  for(const unit of trainer.units)unit.position=null;
+  const taken=new Set();
+  for(const unit of board.sort((a,b)=>aiUnitPower(b)-aiUnitPower(a))){
+   const range=roleProfiles[combatRole(unit.name)].range;
+   const hex=aiHexes[range===1?0:range===2?1:2].find(cell=>!taken.has(cell));
+   unit.position=hex;taken.add(hex);
+  }
+ }
+ function aiOffer(trainer,incoming,board,boardPower,fromShop=false){
+  const family=familyOf(incoming);
+  const initial=fusionPlan(trainer,incoming);
+  const splits=initial.upgrades.some(upgrade=>upgrade.branchStep);
+  const paths=splits?branchPaths(incoming).length:1;
+  let best=null;
+  for(let branch=0;branch<paths;branch++){
+   const plan=splits?fusionPlan(trainer,incoming,branch):initial;
+   if(plan.overflow)continue;
+   const upgraded=plan.upgrades.at(-1)?.upgraded;
+   const unit=upgraded ?? incoming;
+   const deployed=plan.units.filter(member=>member.position!==null && !plan.displaced.includes(member));
+   const capacity=teamSize({...trainer,units:plan.units});
+   let score;
+   if(upgraded){
+    // A fusion can free several hexes. Include the bench replacements the trainer could field immediately.
+    const bench=plan.units.filter(member=>!deployed.includes(member));
+    while(deployed.length<capacity && bench.length){
+     let pick=0,bestPower=-Infinity;
+     for(let i=0;i<bench.length;i++){
+      const power=aiBoardPower([...deployed,bench[i]]);
+      if(power>bestPower){pick=i;bestPower=power;}
+     }
+     deployed.push(bench.splice(pick,1)[0]);
+    }
+    score=aiBoardPower(deployed);
+    if(!deployed.includes(unit))score=Math.max(score,aiAdmission(deployed,unit,capacity).score);
+    const openSlots=Math.max(0,Math.min(board.length,capacity)-deployed.length);
+    score+=3.5*plan.upgrades.length+2*openSlots-boardPower;
+   }else {
+    score=aiAdmission(deployed,unit,capacity).score-boardPower;
+    const copies=trainer.units.filter(other=>familyOf(other)===family);
+    const singles=copies.filter(other=>other.star===1).length;
+    const doubles=copies.filter(other=>other.star===2).length;
+    const available=run.pool.get(family).copies+trainer.shop.filter(name=>name===family).length-(fromShop?1:0);
+    if(!copies.some(other=>other.star===3) && available>=1){
+     const onBoard=board.some(other=>familyOf(other)===family);
+     // A pair has bench value even when the duplicate adds no trait. A contested long chase has less.
+     const potential=singles===1?6:doubles && available>=8-3*doubles-singles?2.8:0;
+     const benchValue=potential*(onBoard?1:.55);
+     if(benchValue)score=Math.max(score,0)+benchValue;
+    }
+   }
+   if(!best || score>best.score)best={score,branch:splits?branch:undefined};
+  }
+  return best;
+ }
+ function clearAIBench(trainer){
+  const bench=trainer.units.filter(unit=>unit.position===null);
+  if(bench.length<benchLimit-1)return;
+  const fielded=field(trainer);
+  const disposable=bench.filter(unit=>unit.star===1 && !(unit.items?.length) &&
+   (!trainer.units.some(other=>other!==unit && familyOf(other)===familyOf(unit)) ||
+    fielded.some(other=>familyOf(other)===familyOf(unit) && other.star===3)));
+  disposable.sort((a,b)=>aiUnitPower(a)-aiUnitPower(b));
+  for(const unit of disposable.slice(0,bench.length-(benchLimit-2)))sell(trainer,unit);
+  if(bench.length===benchLimit && !disposable.length){
+   const retention=unit=>aiUnitPower(unit)+(fielded.some(other=>familyOf(other)===familyOf(unit))?8:0);
+   const lowest=[...bench].filter(unit=>!salePlan(trainer,unit).displaced.length).sort((a,b)=>retention(a)-retention(b))[0];
+   if(lowest)sell(trainer,lowest);
+  }
+ }
+ function shopAI(trainer){
+  for(;;){
+   const board=field(trainer),current=aiBoardPower(board);
+   let best=null;
+   for(const [index,name] of trainer.shop.entries()){
+    if(!name || trainer.gold<cost(name))continue;
+    const offer=aiOffer(trainer,{name,star:1,position:null},board,current,true);
+    if(!offer)continue;
+    const value=offer.score-.55*cost(name);
+    if(value>.15 && (!best || value>best.value))best={index,branch:offer.branch,value};
+   }
+   if(!best || !buy(trainer,best.index,best.branch))break;
+   deployAI(trainer);
+  }
+ }
+ function lockAIUpgrade(trainer){
+  const board=field(trainer),power=aiBoardPower(board);
+  const nextGold=trainer.gold+passiveGold()+goldInterest(trainer.gold)+streakGold(trainer.streak);
+  let best=null;
+  for(const [index,name] of trainer.shop.entries()){
+   if(!name || cost(name)<=trainer.gold || cost(name)>nextGold)continue;
+   const offer=aiOffer(trainer,{name,star:1,position:null},board,power,true);
+   if(offer && offer.score>4 && (!best || offer.score>best.score))best={index,score:offer.score};
+  }
+  if(best)(trainer.lockedOffers ??=new Set()).add(best.index);
+ }
+ function equipAI(trainer){
+  for(let i=trainer.items.length-1;i>=0;i--){
+   const item=trainer.items[i],stats=itemBonuses(item);
+   const defensive=stats.armor || stats.spDefense || stats.health || stats.flatHP || stats.startShield;
+   const magical=stats.spAttack || stats.regen || stats.mana;
+   const score=unit=>{
+    const role=combatRole(unit.name);
+    const fit=defensive?role==='Tank' || role==='Fighter':magical?role==='Caster' || role==='Specialist':role==='Carry' || role==='Reaper' || role==='Fighter';
+    return aiUnitPower(unit)*.25+(fit?6:0);
+   };
+   const candidates=field(trainer).sort((a,b)=>score(b)-score(a));
+   if(candidates.some(unit=>equip(trainer,unit,item)))trainer.items.splice(i,1);
+  }
+ }
+ function planAI(trainer){
+  const stage=stageRound(run.round).stage;
+  const reserve=trainer.hp<=35?0:Math.min(30,10*(stage-1));
+  trainer.lockedOffers?.clear();
+  deployAI(trainer);clearAIBench(trainer);
+  if(trainer.bossRewards?.length){
+   trainer.bossRewards=trainer.bossRewards.filter(prize=>{
+    const board=field(trainer),offer=aiOffer(trainer,prize,board,aiBoardPower(board));
+    if(!offer || !takeBossReward(trainer,prize,false,offer.branch))return true;
+    deployAI(trainer);return false;
+   });
+  }
+  shopAI(trainer);
+  for(let i=0;i<2 && trainer.level<maxLevel && trainer.gold>=4;i++){
+   const immediate=levels[trainer.level]-trainer.xp<=4 && trainer.units.length>teamSize(trainer);
+   if(!immediate && trainer.gold<reserve+12)break;
+   const before=trainer.level;trainer.gold-=4;xp(trainer,4);
+   if(trainer.level!==before)deployAI(trainer);
+  }
+  const pairs=trainer.units.some(u=>u.star===1 && trainer.units.some(v=>v!==u && v.star===1 && familyOf(v)===familyOf(u)));
+  const rolls=trainer.hp<=35?3:pairs || trainer.level===maxLevel?2:1;
+  for(let i=0;i<rolls && trainer.gold>=reserve+6;i++){
+   trainer.gold-=2;roll(trainer);shopAI(trainer);
+  }
+  equipAI(trainer);deployAI(trainer);lockAIUpgrade(trainer);
  }
  function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
  function combatPosition(position,opponent){
@@ -2429,8 +2663,7 @@
    if(!trainer.hp){
     trainer.eliminated=run.round;
     releaseShop(trainer);
-    for(const unit of trainer.units)run.pool.get(familyOf(unit)).copies+=unit.poolCopies ?? 3**(unit.star-1);
-    for(const prize of trainer.bossRewards ?? [])run.pool.get(prize.name).copies+=prize.poolCopies;
+    for(const unit of [...trainer.units,...(trainer.bossRewards ?? [])])run.pool.get(familyOf(unit)).copies+=familyCopies(unit);
     trainer.bossRewards=[];
     trainer.units=[];
    }
@@ -2593,7 +2826,10 @@
  }
  function advanceRound(){
   run.round++;
-  for(const trainer of run.trainers)if(trainer.hp)roll(trainer);
+  const living=run.trainers.filter(trainer=>trainer.hp>0);
+  for(const trainer of living)returnShopCards(trainer,true);
+  // Return the whole lobby's unlocked offers before dealing any new shops.
+  for(const trainer of drawRogueChoices(living,living.length))fillShop(trainer);
   run.selected=null;
   run.busy=false;
   run.spectate=null;
@@ -2668,6 +2904,7 @@
   if(remainingEffect>0)await new Promise(resolve=>setTimeout(resolve,remainingEffect));
   if(run!==current || phase!=='tactics')return;
   run.damageReport=matches[0];
+  if(matches[0].units.some(unit=>!unit.opponent) && matches[0].units.some(unit=>unit.opponent))creditTacticsRound(run,frame);
   const sign=matches[0].sign ?? 0;
   let loot='';
   if(neutral){

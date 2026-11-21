@@ -10519,6 +10519,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.94',changes:['Poke Fight Tactics trainers now draft for trait breakpoints, evolutions and stronger boards, spend on levels and rerolls, and compete for a finite shared pool.','Finishing a Tactics match pays account coins for completed rounds as well as placement and items. Round coins scale with PC level and unlocked Arena speed.']},
  {version:'0.22.93',changes:['PC Pokémon can have 93 total IVs and up to 31 per stat. Every existing active Pokémon and stored copy above 93 gets a one-time random 93-point spread.','Speed above 210 now improves movement and skill recovery with diminishing returns. Move menus use category icons, and personality tooltips use plain text.']},
  {version:'0.22.92',changes:['Messages shows unread chat counts and includes a mute switch. Settings offers cloud save, load and re-sync.','Personalities now give 1–5 points to their favored stat per ten levels. PC stat labels are visible, move selectors fit on one line, and abilities show their Arena effects on hover.']},
  {version:'0.22.91',changes:['Shinies sparkle and gain 25% species base stats. PC storage can sort shinies and Legendary/Mythical Pokémon first.','Personalities grant a permanent favored-stat bonus of up to 10 points. Hover or focus a PC move or stat for its Arena description. Move categories use Pokémon Database icons.']},

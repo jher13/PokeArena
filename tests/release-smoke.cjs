@@ -105,7 +105,7 @@ const byId=id=>{if(!nodes.has(id))nodes.set(id,element('div'));return nodes.get(
 let seed=0x13579bdf;
 const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/2**32);
 const context=vm.createContext({
- byId,element,window:{},phase:'home',showScreen(){},setInterval(){},clearInterval(){},
+ byId,element,window:{},phase:'home',wildProgress:{owned:{},copies:{}},maximumBattleSpeed:()=>2,earnedCoins:coins=>coins,showScreen(){},setInterval(){},clearInterval(){},
  experienceCandyName:new Function(candyCode+'return experienceCandyName;')(),
  idlePokemonPortrait:()=>element('canvas'),getSprite:()=>({image:{}}),
  types:{},moveColors:{},pmdDirection:()=>0,pmdMotion:()=>null,checkGameVersion(){},structuredClone,openMenu(){},
@@ -114,7 +114,7 @@ const context=vm.createContext({
 });
 context.button=(label,onclick,disabled)=>Object.assign(element('button',label),{onclick,disabled});
 const source=read('tactics.js');
-const auditExports='globalThis.audit={makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
+const auditExports='globalThis.audit={drawPoolCard,roll,releaseShop,buy,field,teamSize,planAI,beginChoices,result,tacticsCoinRate,creditTacticsRound,makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
 new vm.Script(data+'\n'+source.replace(/\}\)\(\);\s*$/,auditExports+'})();'),{filename:'tactics.js'}).runInContext(context);
 const a=context.audit;
 byId('home-tactics').onclick();
@@ -575,6 +575,7 @@ draftTrainer.units=[
 ];
 assert.equal(a.fusionPlan(draftTrainer,{name:'Pikachu',star:1,position:null}).overflow,0);
 assert.equal(a.fusionPlan(draftTrainer,{name:'Charmander',star:1,position:null}).overflow,1);
+require('./pft-draft.cjs')(a,context);
 
 async function verifyPendingRecovery(){
  const from=cloud.indexOf('const pendingSaveKey=');

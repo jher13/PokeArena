@@ -1,0 +1,110 @@
+const assert=require('node:assert/strict');
+
+module.exports=function checkTacticsDraft(game,context){
+ const {getRun,makeTrainer,familyOf,field,roll,buy,sell,planAI}=game;
+ const mon=(name,position=null,star=1)=>({name,position,star});
+ const front={x:3,y:4},back={x:3,y:7};
+ const totalCopies=unit=>unit.poolCopies ?? 3**(unit.star-1);
+ function checkStock(){
+  const run=getRun();
+  const counts=new Map([...run.pool].map(([name,entry])=>[name,entry.copies]));
+  const add=(name,copies)=>counts.set(name,counts.get(name)+copies);
+  for(const trainer of run.trainers){
+   for(const name of trainer.shop)if(name)add(name,1);
+   for(const unit of [...trainer.units,...(trainer.bossRewards ?? [])])add(familyOf(unit),totalCopies(unit));
+  }
+  for(const offer of run.choice?.offers ?? [])if(offer.unit)add(offer.name,totalCopies(offer.unit));
+  for(const [name,{copies,tier}] of run.pool){
+   assert(Number.isInteger(copies) && copies>=0,name);
+   assert.equal(counts.get(name),[26,22,18,12,9][tier],name+' must conserve its family stock');
+  }
+ }
+ game.start();const run=getRun();
+ checkStock();
+ const trainer=run.trainers[1];trainer.gold=100;
+ for(const u of [...trainer.units])sell(trainer,u);
+ // Three actual shop reservations become one evolved unit. Buying never debits the reserved copies twice.
+ for(let i=0;i<3;i++){
+  trainer.shop=[game.drawPoolCard(run.pool,['Abra'])];const left=run.pool.get('Abra').copies;
+  assert(buy(trainer,0));assert.equal(run.pool.get('Abra').copies,left);checkStock();
+ }
+ assert.equal(trainer.units[0].name,'Kadabra');assert.equal(totalCopies(trainer.units[0]),3);
+ assert(sell(trainer,trainer.units[0]));checkStock();
+ const small=new Map([['A',{copies:9}],['B',{copies:1}]]);
+ let frequent=0;
+ for(let i=0;i<1000;i++){const name=game.drawPoolCard(small,['A','B']);if(name==='A')frequent++;small.get(name).copies++;}
+ assert(frequent>840 && frequent<960,'Offers must be weighted by remaining copies');
+ // Alternate paid rolls, purchases and locks across eight separate shops.
+ for(let round=2;round<=12;round++){
+  game.setRound(round);
+  for(const t of run.trainers){
+   t.gold+=7;roll(t);
+   if(t===run.trainers[0]){
+    t.lockedOffers=new Set([0]);const held=t.shop[0];roll(t);assert.equal(t.shop[0],held);if(t.shop[1])buy(t,1);
+   }else planAI(t);
+   assert(t.gold>=0);checkStock();
+   const board=field(t);
+   assert(board.length<=game.teamSize(t));
+   const tiles=board.map(u=>u.position);assert(tiles.every(c=>c && c.x>=0 && c.x<7 && c.y>=4 && c.y<=7));
+   assert.equal(new Set(tiles.map(c=>c.x+','+c.y)).size,tiles.length);
+  }
+ }
+ while(run.trainers[0].units.length>5)sell(run.trainers[0],run.trainers[0].units.at(-1));
+ run.trainers[2].hp=98;game.setRound(15);game.beginChoices();
+ assert.equal(run.choice.kind,'carousel');checkStock();
+ const player=run.trainers[0],choice=run.choice;
+ const chosen=choice.offers.find(o=>!game.fusionPlan(player,o.unit).overflow);
+ assert(game.draftCarousel(player,chosen));choice.offers.splice(choice.offers.indexOf(chosen),1);
+ choice.complete();run.choice=null;checkStock();
+ // An unclaimed Mega prize, field, bench and locked shop all return on elimination.
+ const queued=game.drawPoolCard(run.pool,['Regice']);trainer.bossRewards=[mon(queued)];
+ trainer.hp=1;game.result(trainer,run.trainers[2],[],-1);assert.equal(trainer.hp,0);checkStock();
+
+ function draft(units,shop,gold,level=3){
+  const t=makeTrainer('Draft test');Object.assign(t,{units,shop,gold,level});return t;
+ }
+ const synergy=draft([mon('Bulbasaur',back),mon('Squirtle',front)],['Eevee','Abra'],1);
+ planAI(synergy);assert.equal(game.traits(field(synergy)).Spellcraft,2);assert(!synergy.units.some(u=>u.name==='Eevee'));
+ const upgrade=draft([mon('Bulbasaur',back),mon('Squirtle',front),mon('Weedle',{x:2,y:4})],['Caterpie','Mewtwo'],5);
+ planAI(upgrade);assert(field(upgrade).some(u=>u.name==='Mewtwo'));assert.equal(upgrade.gold,0);
+ const pair=draft([mon('Abra',back),mon('Abra'),mon('Squirtle',front)],['Eevee','Abra'],1);
+ planAI(pair);assert(field(pair).some(u=>u.name==='Kadabra' && u.star===2));
+ const waiting=draft([mon('Bulbasaur',back),mon('Squirtle',front)],['Mewtwo',null,null,null,null],0);
+ planAI(waiting);assert(waiting.lockedOffers.has(0));roll(waiting);assert.equal(waiting.shop[0],'Mewtwo');
+ const packed=draft([mon('Bulbasaur',back),mon('Squirtle',front),mon('Weedle',{x:2,y:4}),
+  ...['Pichu','Starly','Seedot','Ralts','Geodude','Cleffa','Caterpie','Hoppip','Machop'].map(n=>mon(n))],['Mewtwo'],5);
+ planAI(packed);assert(field(packed).some(u=>u.name==='Mewtwo'));
+ assert(packed.units.filter(u=>u.position===null).length<=9);
+ assert(field(packed).find(u=>u.name==='Mewtwo').position.y>=6);
+ game.setRound(11);
+ for(const entry of run.pool.values())entry.copies=0;
+ const empty=draft([],[],20);empty.level=9;
+ run.pool.get('Abra').copies=1;roll(empty);assert.deepEqual(Array.from(empty.shop).filter(Boolean),['Abra']);
+ const missing=game.completeNeutral(empty,true);assert.match(missing,/All eligible Pokémon are drafted/);assert(!empty.units.length);
+ game.releaseShop(empty);const fallback=game.completeNeutral(empty,true);assert.match(fallback,/Tier 1 Abra/);assert.equal(empty.units[0].name,'Abra');
+ assert.equal(run.pool.get('Abra').copies,0);assert.equal(totalCopies(empty.units[0]),1);
+ const none=game.carouselOffers(run.pool,2);assert.equal(none.length,0);
+
+ context.wildProgress={coins:0,owned:{Pikachu:{level:10}},copies:{}};
+ context.maximumBattleSpeed=()=>2;context.earnedCoins=n=>2*n;context.giveArenaItem=()=>{};context.saveWildProgress=()=>{};
+ assert.equal(game.tacticsCoinRate(),1050);
+ context.wildProgress.owned.Pikachu.level=50;assert.equal(game.tacticsCoinRate(),5130);
+ context.wildProgress.copies={Pikachu:[{level:100}]};
+ context.maximumBattleSpeed=()=>4;assert.equal(game.tacticsCoinRate(),17420);
+ game.start();const match=getRun();context.wildProgress.copies={};assert.equal(match.coinRate,17420);
+ assert(game.tacticsCoinRate()<match.coinRate);
+ game.creditTacticsRound(match,100);assert.equal(match.rewardSeconds,0);
+ match.round=8;game.creditTacticsRound(match,100);assert.equal(match.rewardSeconds,0);
+ match.round=6;game.creditTacticsRound(match,0);assert.equal(match.rewardSeconds,0);
+ game.creditTacticsRound(match,100);game.creditTacticsRound(match,100);assert.equal(match.rewardSeconds,29.5);
+ match.round=11;game.creditTacticsRound(match,99999);
+ assert(Math.abs(match.rewardSeconds-(29.5+25+game.combatTicks*game.combatStepMs/1000))<1e-8);
+ const fixed=[8000,6000,4500,3500,2000,1250,500,250],multipliers=[1.25,1.16,1.08,1,.92,.85,.78,.70];
+ for(let i=0;i<8;i++){
+  const finished={place:i+1,coinRate:match.coinRate,rewardSeconds:600};
+  const before=context.wildProgress.coins;game.awardPlacement(finished);game.awardPlacement(finished);
+  assert.equal(context.wildProgress.coins-before,2*(fixed[i]+Math.round(match.coinRate*10*multipliers[i])));
+  assert.match(finished.placementReward,/from rounds/);
+ }
+ console.log('PFT passed shared stock conservation across eight trainers, weighted shops, fusions, locks, carousel, elimination, sold-out prizes, composition upgrades and all eight placement payouts.');
+};

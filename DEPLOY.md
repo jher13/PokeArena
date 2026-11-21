@@ -1,3 +1,9 @@
+# Update to 0.22.94
+
+Extract these changed files over **0.22.93** and push them together. The hosted and local clients both load the new Tactics script. The existing version check waits for an active battle or auto-repeat session to finish. This update requires no database migration.
+
+Poke Fight Tactics trainers draft against a shared family pool and build around trait breakpoints, upgrades and team roles. Completed fights and final placement earn account coins. The rate uses the highest level in PC storage and the account’s unlocked Arena speed at the start of the match.
+
 # Update to 0.22.93
 
 Extract the changed files over **0.22.92** and push them together. The existing backend workflow runs the PC migration `20261121030000_pc_iv_budget.sql` and deploys the matching combat engine. The client version check waits for an active battle or auto-repeat session to finish.
