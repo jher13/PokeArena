@@ -127,7 +127,7 @@ async function hubChecks(){
  const sample={name:'Bulbasaur',number:1,generation:1,types:['Grass','Poison'],level:50,nature:'Adamant',personality:'Resilient',shiny:false,iv_total:186,ivs:profile.ivs,evs:profile.evs};
  const rows=[{selector:{name:'Bulbasaur',slot:0,fingerprint:'active'},pokemon:sample,profile},
   {selector:{name:'Bulbasaur',slot:1,fingerprint:'copy-two'},pokemon:{...sample,level:80,nature:'Modest',personality:'Mischievous',shiny:true,ivs:copyProfile.ivs,evs:copyProfile.evs,iv_total:145},profile:copyProfile},
-  ...Object.entries(gameDex).filter(([,value])=>value[0]>1&&value[0]<=32||value[0]===152).map(([name,value])=>({selector:{name,slot:0,fingerprint:'species-'+value[0]},
+  ...Object.entries(gameDex).filter(([,value])=>value[0]>1&&value[0]<=31||value[0]===150||value[0]===152).map(([name,value])=>({selector:{name,slot:0,fingerprint:'species-'+value[0]},
    pokemon:{...sample,name,number:value[0],generation:value[0]===152?2:1,types:value.slice(1,3).filter(Boolean)},profile}))];
  const calls=[],mutations=[];let listings=[];
  const ctx=vm.createContext({...d,localStorage:storage(),playerSaveKey:key=>key,window:{arenaMarketPrepare:async()=>{},arenaMarketRead:async(action,args)=>{calls.push({action,args});return action==='inventory'?{rows}:{rows:listings,total:listings.length};},
@@ -136,6 +136,7 @@ async function hubChecks(){
   pokemonPortrait:()=>new Node('canvas'),idlePokemonPortrait:()=>new Node('canvas'),spriteVariants:()=>({shiny:'shiny'}),
   dimensions:()=>[7,69],abilityFor:(_,p)=>p.abilityOverride,hiddenAbilityFor:()=>null,
   profileFor:()=>{throw Error('A Hub preview must never read or activate a local PC profile');},confirm:()=>true,console});
+ vm.runInContext(html.slice(html.indexOf('const legendarySpecies='),html.indexOf('function catchChance(')),ctx);
  vm.runInContext(html.match(/^const dexStats\s*=\s*.+;$/m)[0],ctx);
  vm.runInContext(html.slice(html.indexOf('const natureNames=['),html.indexOf('const profileStorage=')),ctx);
  vm.runInContext(html.slice(html.indexOf('function natureOf('),html.indexOf('function isAvailablePokemon(')),ctx);
@@ -155,6 +156,15 @@ async function hubChecks(){
  assert.equal(content.querySelector('.market-pc-grid').children.length,30);assert(control('Previous PC box').disabled);assert(!control('Next PC box').disabled);checks++;
  await control('Next PC box').onclick();assert.match(text(),/Box 2 \/ 2/);assert(control('Next PC box').disabled);assert.equal(content.querySelector('.market-pc-grid').children.length,3);checks++;
  await control('Previous PC box').onclick();assert(control('Previous PC box').disabled);checks++;
+ const sort=key=>{input('PC sort by').value=key;input('PC sort by').oninput();};
+ sort('legendary');assert.equal(content.querySelector('.market-pc-grid').children[0].attributes['aria-label'],'Inspect Mewtwo');checks++;
+ sort('shiny');await control('Inspect Bulbasaur').onclick();
+ assert.match(allText(content.querySelector('.market-pc-status')),/Copy 2 · Stored/);checks++;
+ input('PC sort order').value='desc';input('PC sort order').oninput();
+ assert.notEqual(content.querySelector('.market-pc-grid').children[0].attributes['aria-label'],'Inspect Bulbasaur');checks++;
+ await button('Reset PC filters').onclick();
+ // Select a different species first so choosing Bulbasaur starts from its Active entry.
+ await control('Inspect Ivysaur').onclick();
  await selectCopy();let status=content.querySelector('.market-pc-status');assert.match(allText(status),/Adamant/,text());assert.match(allText(status),/Good as Gold/);assert(status.querySelector('.individual-stats'));checks++;
  const activeChart=status.querySelector('.stat-chart').attributes['aria-label'];await control('Bulbasaur · Copy 2 · Lv. 80').onclick();status=content.querySelector('.market-pc-status');
  assert.match(allText(status),/Modest/);assert.match(allText(status),/Pressure/);assert.match(allText(status),/Copy 2 · Stored/);assert.match(allText(status),/Lv. 80/);assert.notEqual(status.querySelector('.stat-chart').attributes['aria-label'],activeChart);checks++;

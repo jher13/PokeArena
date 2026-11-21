@@ -409,37 +409,92 @@ function natureOf(profile) {
  const down=natureStatOrder[index%5];
  return {name:natureNames[index],up,down};
 }
-function personalityOf(profile) {
+function personalityIdOf(profile) {
+ if(Number.isInteger(profile.personalityId) && profile.personalityId>=0 && profile.personalityId<30)return profile.personalityId;
  const best=Math.max(...profile.ivs);
  const order=[0,1,2,3,5,4];
  const start=profile.pid%order.length;
  const index=Array.from({length:6},(_,i)=>order[(start+i)%6]).find(i=>profile.ivs[i]===best);
- return personalityTraits[index][best%5]+' · '+statLabels[index];
+ return index*5+best%5;
+}
+function personalityTrait(profile) {
+ const id=personalityIdOf(profile),stat=Math.floor(id/5);
+ return {name:personalityTraits[stat][id%5],stat};
+}
+function personalityOf(profile) {
+ const trait=personalityTrait(profile);
+ return trait.name+' · '+statLabels[trait.stat];
+}
+function personalityBonus(level) {
+ return Math.max(1,Math.min(10,Math.ceil(level/10)));
+}
+function individualBaseStats(name,profile) {
+ const base=dexStats[dex[name][0]-1];
+ return profile.shiny===true?base.map((value,i)=>name==='Shedinja' && i===0?1:value*1.25):base;
 }
 function calculatedStats(name,profile,level=50) {
- const base=dexStats[dex[name][0]-1];
+ const base=individualBaseStats(name,profile);
  const {up,down}=natureOf(profile);
+ const trait=personalityTrait(profile),bonus=personalityBonus(level);
  return base.map((value,index)=>{
+  const extra=index===trait.stat?bonus:0;
   if(name==='Shedinja' && index===0) return 1;
   const points=Math.floor((2*value+profile.ivs[index]+Math.floor(profile.evs[index]/4))*level/100);
-  if(index===0) return points+level+10;
+  if(index===0) return points+level+10+extra;
   const percent=up===down?100:index===up?110:index===down?90:100;
-  return Math.floor((points+5)*percent/100);
+  return Math.floor((points+5)*percent/100)+extra;
  });
+}
+const statDescriptions=[
+ 'Hit Points. Damage reduces HP. At zero HP, the Pokémon faints.',
+ 'Attack determines the power of physical moves and normal attacks.',
+ 'Defense reduces incoming physical damage.',
+ 'Speed increases movement speed and shortens recovery after skills. These bonuses cap at 210 Speed.',
+ 'Special Defense reduces incoming special damage.',
+ 'Special Attack determines the power of special moves.'
+];
+function pcHelp(node,description) {
+ node.setAttribute('aria-description',description);
+ node.tabIndex=0;
+ node.setAttribute('data-pc-help',description);
+ return node;
+}
+function statChartPanel(chart) {
+ const frame=element('div',null,'pc-stat-chart');frame.append(chart);
+ statLabels.forEach((name,i)=>{
+  const angle=i*Math.PI/3-Math.PI/2;
+  const hit=pcHelp(element('button',null,'pc-stat-hit'),statDescriptions[i]);
+  hit.type='button';hit.setAttribute('aria-label',name);
+  hit.style.left=((125+Math.cos(angle)*91)/250*100)+'%';
+  hit.style.top=((83+Math.sin(angle)*65)/168*100)+'%';
+  frame.append(hit);
+ });
+ return frame;
+}
+function individualSummary(name,profile,level) {
+ const nature=natureOf(profile),trait=personalityTrait(profile);
+ const modifier=nature.up===nature.down?'Neutral':'+'+statLabels[nature.up]+' / −'+statLabels[nature.down];
+ const personality=element('p','Personality: '+trait.name+' (+'+statLabels[trait.stat]+')');
+ pcHelp(personality,name==='Shedinja' && trait.stat===0?'Shedinja always has 1 HP, including with an HP personality.':'Adds '+personalityBonus(level)+' '+statLabels[trait.stat]+' at Lv. '+level+'. The bonus is +1 per ten levels, rounded up, and survives IV training.');
+ return [element('p','Nature: '+nature.name+' ('+modifier+')'),personality];
 }
 function individualTable(name,profile) {
  const table=element('table',null,'individual-stats');
  const header=element('thead');
  const columns=element('tr');
- for(const label of ['Stat','Base Stat','IV','EV']) columns.append(element('th',label));
+ for(const label of ['Stat','Base Stat','IV','EV']) {
+  const th=element('th',label);
+  if(label==='Base Stat' && profile.shiny)pcHelp(th,'Shiny base stats are 1.25× the species base stats, before IVs, EVs, level and nature. Shedinja always has 1 HP.');
+  columns.append(th);
+ }
  header.append(columns);
  const body=element('tbody');
- const base=dexStats[dex[name][0]-1];
+ const base=individualBaseStats(name,profile);
  const {up,down}=natureOf(profile);
  statLabels.forEach((label,i)=>{
   const row=element('tr');
   const color=up===down ? null : i===up?'raised':i===down?'lowered':null;
-  row.append(element('th',label,color),element('td',String(base[i])),
+  row.append(pcHelp(element('th',label,color),statDescriptions[i]),element('td',String(base[i])),
    element('td',String(profile.ivs[i])),element('td',String(profile.evs[i])));
   body.append(row);
  });
@@ -492,30 +547,91 @@ function moveDamageKind(move) {
  if(fixedMoveDamage(move,1)!==null)return 'fixed';
  return moveData[move]?.[1]===3?'special':'atk';
 }
-function damageMark(kind) {
- const info=damageMarks[kind],icon=element('span',info.glyph,'damage-mark mark-'+kind);
- icon.title=info.label;icon.setAttribute('role','img');icon.setAttribute('aria-label',info.label);
+// Source artwork and listed categories: https://pokemondb.net/move/all
+const categoryIcons={Physical:'./assets/move-physical.png',Special:'./assets/move-special.png',Status:'./assets/move-status.png'};
+const categoryImages={};
+function categoryForMove(move) {
+ return moveReferences[move]?.[2] ?? (move==='Normal Attack' || move==='Struggle'?'Physical':null);
+}
+function categoryIcon(category) {
+ const icon=element('img',null,'damage-mark');
+ icon.src=categoryIcons[category];icon.alt=category;icon.title=category;
+ icon.width=30;icon.height=20;
  return icon;
 }
-function skillTitle(tag,move,prefix='',suffix='',kind=moveDamageKind(move)) {
- const label=element(tag);
+function battleCategoryImage(category) {
+ if(!categoryIcons[category])return null;
+ if(!categoryImages[category]){
+  const image=new Image();image.src=categoryIcons[category];categoryImages[category]=image;
+ }
+ return categoryImages[category];
+}
+const guaranteedAccuracyMoves=new Set(["Aerial Ace","Aura Sphere","Burning Bulwark","Disarming Voice","Dragon Cheer","False Surrender","Feint Attack","Flower Trick","G-Max Befuddle","G-Max Cannonade","G-Max Centiferno","G-Max Chi Strike","G-Max Cuddle","G-Max Depletion","G-Max Drum Solo","G-Max Finale","G-Max Fireball","G-Max Foam Burst","G-Max Gold Rush","G-Max Gravitas","G-Max Hydrosnipe","G-Max Malodor","G-Max Meltdown","G-Max One Blow","G-Max Rapid Flow","G-Max Replenish","G-Max Resonance","G-Max Sandblast","G-Max Smite","G-Max Snooze","G-Max Steelsurge","G-Max Stonesurge","G-Max Stun Shock","G-Max Sweetness","G-Max Tartness","G-Max Terror","G-Max Vine Lash","G-Max Volcalith","G-Max Volt Crash","G-Max Wildfire","G-Max Wind Rage","Hyperspace Fury","Hyperspace Hole","Kowtow Cleave","Magical Leaf","Magnet Bomb","Pika Papow","Shadow Punch","Shock Wave","Spicy Extract","Swift","Tachyon Cutter","Trump Card","Veevee Volley","Vital Throw"]);
+function listedMoveAccuracy(move) {
+ const accuracy=moveReferences[move]?.[4];
+ if(typeof accuracy==='number')return accuracy+'%';
+ if(guaranteedAccuracyMoves.has(move))return '∞';
+ if(!moveReferences[move] && moveCatalog[move])return moveCatalog[move][2]+'%';
+ return '—';
+}
+function skillTitle(tag,move,prefix='',suffix='') {
+ const label=element(tag),category=categoryForMove(move);
  if(prefix)label.append(prefix);
- if(kind)label.append(damageMark(kind));
+ if(category)label.append(categoryIcon(category));
  label.append(move+suffix);
  return label;
 }
-function skillOptionText(move,suffix='',prefix='') {
- const info=damageMarks[moveDamageKind(move)];
- return info?prefix+info.glyph+' '+move+suffix+' · '+info.short:prefix+move+suffix;
+const pcMoveDescriptions=new Map();
+function pcMoveTitle(tag,move,prefix='') {
+ if(!pcMoveDescriptions.has(move)){
+  const accuracy=listedMoveAccuracy(move);
+  const note=accuracy==='∞'?' (always hits when in reach)':accuracy==='—'?' (no accuracy listed)':'';
+  pcMoveDescriptions.set(move,(moveReferenceNotes[move]?'Arena effect: ':'')+skillDescription(move)+' Accuracy: '+accuracy+note+'.');
+ }
+ return pcHelp(skillTitle(tag,move,prefix),pcMoveDescriptions.get(move));
+}
+function moveOption(move,suffix='',prefix='') {
+ const option=element('option'),category=categoryForMove(move);
+ if(category)option.append(categoryIcon(category));
+ option.append(prefix+move+suffix+(category?' · '+category:''));
+ option.value=move;
+ return option;
 }
 function moveLegend() {
  const list=element('div',null,'move-legend');
- list.setAttribute('aria-label','Damage stat symbols');
- for(const [kind,info] of Object.entries(damageMarks)) {
-  const key=element('span');key.title=info.label;key.append(damageMark(kind),info.short);list.append(key);
+ list.setAttribute('aria-label','Move categories');
+ for(const category of Object.keys(categoryIcons)) {
+  const key=element('span');key.append(categoryIcon(category),category);list.append(key);
  }
  return list;
 }
+function installPcHelp() {
+ const tip=element('div',null,'pc-help-tip');tip.id='pc-stat-move-help';tip.setAttribute('role','tooltip');
+ let active=null;
+ function close() {
+  if(!active)return;
+  active.removeAttribute('aria-describedby');active=null;tip.remove();
+ }
+ function show(node) {
+  if(!node || !node.isConnected){close();return;}
+  if(active===node)return;
+  close();active=node;tip.textContent=node.dataset.pcHelp;
+  (node.closest('dialog[open]') ?? document.body).append(tip);
+  node.setAttribute('aria-describedby',tip.id);
+  const box=node.getBoundingClientRect(),bounds=tip.getBoundingClientRect();
+  const left=Math.max(8,Math.min(innerWidth-bounds.width-8,box.left+box.width/2-bounds.width/2));
+  const top=box.top>=bounds.height+12?box.top-bounds.height-6:Math.min(innerHeight-bounds.height-8,box.bottom+6);
+  tip.style.left=left+'px';tip.style.top=Math.max(8,top)+'px';
+ }
+ const target=e=>e.target?.closest?.('[data-pc-help]');
+ for(const event of ['pointerover','focusin','click'])document.addEventListener(event,e=>show(target(e)));
+ for(const event of ['pointerout','focusout'])document.addEventListener(event,e=>{
+  if(active && active.contains(e.target) && !active.contains(e.relatedTarget))close();
+ });
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+ document.addEventListener('scroll',close,true);window.addEventListener('resize',close);
+}
+installPcHelp();
 function dexNumber(name) {
  return '#'+String(nationalDexId(name)).padStart(4,'0');
 }
@@ -536,7 +652,25 @@ function battleRosterIdentity(name,level) {
  identity.append(element('span',name,'battle-name'),element('span','Lv. '+level,'battle-level'),types);
  return identity;
 }
-function pokemonPortrait(name,className,fullSize=false,direction=6,variant=null) {
+const sparkleMotion=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):null;
+function drawShinySparkles(g,x,y,w,h,seconds,seed=0) {
+ const positions=[[.18,.28],[.80,.17],[.76,.72]];
+ g.save();
+ const alpha=g.globalAlpha;
+ for(let i=0;i<positions.length;i++) {
+  const phase=sparkleMotion?.matches?0.48:(seconds*.68+seed*.17+i/3)%1;
+  const glow=Math.max(0,Math.sin(Math.PI*phase))**3;
+  if(glow<.16)continue;
+  const [u,v]=positions[i],cx=Math.round(x+w*u),cy=Math.round(y+h*v);
+  const radius=Math.max(2,Math.round(Math.min(8,Math.min(w,h)*.115)*glow)),px=Math.max(1,Math.round(radius/3));
+  g.globalAlpha=alpha*(.4+.6*glow);
+  g.fillStyle='#793f25';g.fillRect(cx-px,cy-radius,px*2+1,radius*2+1);
+  g.fillStyle='#ffd55e';g.fillRect(cx-radius,cy-px,radius*2+1,px*2+1);g.fillRect(cx-px,cy-radius,px*2,radius*2);
+  g.fillStyle='#fffbe0';g.fillRect(cx,cy-radius,px,radius*2);g.fillRect(cx-radius+1,cy,radius*2-1,px);
+ }
+ g.restore();
+}
+function pokemonPortrait(name,className,fullSize=false,direction=6,variant=null,shiny=false) {
  const thumb=element('canvas',null,className);
  const fallback=getSprite(name);
  const authored=pmdReference(name,direction,variant);
@@ -549,7 +683,7 @@ function pokemonPortrait(name,className,fullSize=false,direction=6,variant=null)
  if(!fullSize) {thumb.style.width=width+'px';thumb.style.height=height+'px';}
  thumb.setAttribute('aria-hidden','true');
  const primary=authored ? pmdImage(authored.page) : fallback.image;
- const paintIcon=()=>{
+ const paintIcon=(now=0)=>{
   const ready=primary.naturalWidth;
   const source=ready ? sprite : fallback;
   const image=ready ? primary : fallback.image;
@@ -562,19 +696,29 @@ function pokemonPortrait(name,className,fullSize=false,direction=6,variant=null)
   const h=Math.round(source.height*scale);
   context.drawImage(image,source.sx,source.sy,source.width,source.height,
    Math.round((width-w)/2),Math.round((height-h)/2),w,h);
+  if(shiny)drawShinySparkles(context,0,0,width,height,now/1000,dex[name][0]);
  };
  paintIcon();
- if(!primary.naturalWidth) primary.addEventListener('load',paintIcon,{once:true});
- if(primary!==fallback.image && !fallback.image.naturalWidth) fallback.image.addEventListener('load',paintIcon,{once:true});
+ if(!primary.naturalWidth)primary.addEventListener('load',()=>paintIcon(),{once:true});
+ if(primary!==fallback.image && !fallback.image.naturalWidth)fallback.image.addEventListener('load',()=>paintIcon(),{once:true});
+ if(shiny){
+  thumb.dataset.shiny='true';
+  if(!sparkleMotion?.matches){
+   idlePortraits.set(thumb,{paintIcon});
+   idlePortraitFrame ??=requestAnimationFrame(paintIdlePortraits);
+  }
+ }
  return thumb;
 }
 const idlePortraits=new Map();
 let idlePortraitFrame=null;
 function paintIdlePortraits(now) {
- for(const [canvas,clip] of idlePortraits) {
+ for(const [canvas,animation] of idlePortraits) {
   if(!canvas.isConnected){idlePortraits.delete(canvas);continue;}
   const rect=canvas.getBoundingClientRect();
   if(!rect.width || !rect.height || rect.bottom<0 || rect.top>innerHeight)continue;
+  const {clip,paintIcon}=animation;
+  if(!clip){paintIcon(now);continue;}
   const frame=clip.frames.find(entry=>(now*0.06)%clip.duration<entry.end);
   if(!frame)continue;
   const image=pmdImage(frame.page);
@@ -588,26 +732,27 @@ function paintIdlePortraits(now) {
   const y=canvas.dataset.portraitAlign==='center'?Math.round((canvas.height-height)/2):canvas.height-height;
   context.drawImage(image,frame.sx,frame.sy,frame.width,frame.height,
    Math.round((canvas.width-width)/2),y,width,height);
+  if(canvas.dataset.shiny)drawShinySparkles(context,0,y,canvas.width,height,now/1000,animation.seed);
  }
  idlePortraitFrame=idlePortraits.size?requestAnimationFrame(paintIdlePortraits):null;
 }
-function idlePokemonPortrait(name,className,variant=null,fullSize=false,direction=0) {
- const canvas=pokemonPortrait(name,className,fullSize,direction,variant);
+function idlePokemonPortrait(name,className,variant=null,fullSize=false,direction=0,shiny=false) {
+ const canvas=pokemonPortrait(name,className,fullSize,direction,variant,shiny);
  const reduced=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
  const clip=pmdMotion({name,direction,spriteVariant:variant},'idle');
  if(clip?.duration && !reduced) {
-  idlePortraits.set(canvas,clip);
+  idlePortraits.set(canvas,{clip,seed:dex[name][0]});
   idlePortraitFrame ??= requestAnimationFrame(paintIdlePortraits);
  }
  return canvas;
 }
-function pokemonTile(name,label,pressed,select,owned=false) {
+function pokemonTile(name,label,pressed,select,owned=false,shiny=Boolean(ownedPokemon(name) && profileFor(name).shiny)) {
  const tile = element('button',null,'tile');
  tile.type='button';
- tile.title=name;
- tile.setAttribute('aria-label',label+' '+name);
+ tile.title=(shiny?'Shiny ':'')+name;
+ tile.setAttribute('aria-label',label+' '+tile.title);
  tile.setAttribute('aria-pressed',String(pressed));
- tile.append(idlePokemonPortrait(name,null,owned && profileFor(name).shiny?spriteVariants(name).shiny:null),element('small',dexNumber(name)));
+ tile.append(idlePokemonPortrait(name,null,shiny?spriteVariants(name).shiny:null,false,0,shiny),element('small',dexNumber(name)));
  if(owned) tile.append(element('span','✓','owned'));
  tile.onclick=select;
  return tile;
@@ -806,7 +951,7 @@ const mainPcFilters=bindPcBox(byId,()=>{
  boxPage=0;
  renderBoxes();
 });
-function pcCandidates(storage,query,generation,control=byId) {
+function pcCandidates(storage,query,generation,control=byId,includeCopies=true) {
  const numeric=query.replace(/^#/,'');
  const elementFilter=control('pc-element').value;
  const natureFilter=control('pc-nature').value;
@@ -833,7 +978,8 @@ function pcCandidates(storage,query,generation,control=byId) {
   const ivs=readStat(profile.ivs);
   const evs=readStat(profile.evs);
   if((natureFilter && nature!==natureFilter) || (personalityFilter && personality!==personalityFilter) || ivs<minIv || evs<minEv) continue;
-  matches.push({name,number,nature,personality,ivs,evs,favorite:favorite?0:1,level:ownedPokemon(name).level});
+  const shiny=profile.shiny===true || includeCopies && wildProgress.copies[name]?.some(copy=>copy.profile?.shiny===true);
+  matches.push({name,number,nature,personality,ivs,evs,shiny:shiny?0:1,legendary:isLegendaryEncounter(name)?0:1,favorite:favorite?0:1,level:ownedPokemon(name).level});
  }
  matches.sort((a,b)=>{
   const difference=typeof a[sort]==='number' ? a[sort]-b[sort] : a[sort].localeCompare(b[sort]);
@@ -841,8 +987,14 @@ function pcCandidates(storage,query,generation,control=byId) {
  });
  return matches.map(entry=>entry.name);
 }
-function filteredPcNames(storage,control=byId) {
- return pcCandidates(storage,control('box-search').value.trim().toLowerCase(),Number(control('box-generation').value),control);
+function filteredPcNames(storage,control=byId,includeCopies=true) {
+ return pcCandidates(storage,control('box-search').value.trim().toLowerCase(),Number(control('box-generation').value),control,includeCopies);
+}
+function pcPreviewCopy(name) {
+ if(byId('pc-sort').value!=='shiny')return null;
+ const preferShiny=byId('pc-order').value!=='desc';
+ if(Boolean(profileFor(name).shiny)===preferShiny)return null;
+ return wildProgress.copies[name]?.find(copy=>Boolean(copy.profile.shiny)===preferShiny) ?? null;
 }
 function renderBoxes() {
  const storage=dexNames.filter(name=>ownedPokemon(name) && (!team.includes(name) || wildProgress.copies[name]?.length));
@@ -859,9 +1011,9 @@ function renderBoxes() {
   enableBoxDrag(pokemonTile(name,'Inspect',inspected===name,()=>{
    inspected=name;
    renderBoxes();
-   renderDetail();
+   renderDetail(undefined,pcPreviewCopy(name));
    grid.children[index].focus();
-  }),name)));
+  },false,Boolean((pcPreviewCopy(name)?.profile ?? profileFor(name)).shiny)),name)));
  if(!page.length) grid.append(element('p',storage.length?'No Pokémon match these filters.':'Catch more Pokémon in Pokebattle to fill your PC.'));
 }
 function drawStats(chart,values) {
@@ -961,6 +1113,7 @@ function applyTrainingItem(profile,stat,{field,delta}) {
  if(field==='evs' && delta>0)return addEVs(profile,values.map((_,i)=>i===stat?delta:0))[stat];
  const next=clamp(values[stat]+delta,0,field==='ivs'?31:252);
  const change=next-values[stat];
+ if(field==='ivs' && change && Number.isInteger(profile.pid))profile.personalityId=personalityIdOf(profile);
  values[stat]=next;
  return change;
 }
@@ -999,7 +1152,7 @@ function vitaminControls(name,field,selection) {
   for(const stat of stats) {
    const option=element('option',statLabels[stat]+' · '+profile[rule.field][stat]);
    option.value=String(stat);
-   const trial={evs:[...profile.evs],ivs:[...profile.ivs]};
+   const trial={...profile,evs:[...profile.evs],ivs:[...profile.ivs]};
    option.disabled=!applyTrainingItem(trial,stat,rule);
    select.append(option);
   }
@@ -1048,7 +1201,8 @@ function battleAIControls(name) {
  const basic=element('div');
  section.append(basic);
  const setting=(label,values,current,apply,isMove=false)=>{
-  const group=isMove?skillTitle('label',label):element('label',label+' ');
+  const group=element('label',isMove?null:label+' ');
+  if(isMove)group.append(pcMoveTitle('span',label));
   const select=element('select');
   values.forEach((value,i)=>{
    const option=element('option',value);
@@ -1075,7 +1229,7 @@ function gambitSelect(label,values,current,change) {
  for(const value of values) {
   const isMove=label.endsWith(' Action') && Object.hasOwn(moveCatalog,value);
   if(isMove)select.classList.add('move-options');
-  const option=element('option',isMove?skillOptionText(value):gambitLabels[value] ?? (value || 'Select an action'));
+  const option=isMove?moveOption(value):element('option',gambitLabels[value] ?? (value || 'Select an action'));
   option.value=value;
   select.append(option);
  }
@@ -1190,7 +1344,7 @@ function pcCollectionControls(name,preferredCopy=null) {
   const tile=element('button',null,'tile');
   tile.type='button';
   tile.setAttribute('aria-label',name+' · '+label+' · Lv. '+copy.level);
-  tile.append(idlePokemonPortrait(name,null,copy.profile.shiny?spriteVariants(name).shiny:null),
+  tile.append(idlePokemonPortrait(name,null,copy.profile.shiny?spriteVariants(name).shiny:null,false,0,copy.profile.shiny),
    element('strong',label),element('small','Lv. '+copy.level));
   tile.onclick=()=>{
    selectCopy(slot-1);
@@ -1205,7 +1359,13 @@ function pcCollectionControls(name,preferredCopy=null) {
   details.textContent=natureOf(profile).name+' · IV '+profile.ivs.join('/');
   for(const action of duplicateActions)action.disabled=index<0;
  }
- grid.append(...tiles);
+ const slots=tiles.map((tile,slot)=>({tile,slot}));
+ if(byId('pc-sort').value==='shiny') {
+  const shiny=slot=>Number(Boolean((slot?copies[slot-1].profile:profileFor(name)).shiny));
+  const dir=byId('pc-order').value==='desc'?1:-1;
+  slots.sort((a,b)=>dir*(shiny(a.slot)-shiny(b.slot)) || a.slot-b.slot);
+ }
+ grid.append(...slots.map(row=>row.tile));
  if(copies.length) {
   const activate=element('button',onTeam?'Swap copy into battle team':'Make this copy active');
   activate.onclick=()=>{
@@ -1266,17 +1426,17 @@ function pcCollectionControls(name,preferredCopy=null) {
  selectCopy(preferredCopy?copies.indexOf(preferredCopy):-1);
  return section;
 }
-function renderDetail(trainingSelection) {
+function renderDetail(trainingSelection,copy=null) {
  const name=inspected ?? team[activeSlot] ?? team[0];
- renderPokemonDetail(name,null,null,trainingSelection);
- byId('pc-copies').replaceChildren(...(ownedPokemon(name)?[pcCollectionControls(name)]:[]));
+ renderPokemonDetail(name,copy,copy?(wildProgress.copies[name].indexOf(copy)+2):null,trainingSelection);
+ byId('pc-copies').replaceChildren(...(ownedPokemon(name)?[pcCollectionControls(name,copy)]:[]));
 }
 function renderPokemonDetail(name,copy,copyNumber,trainingSelection) {
  const [,primary,secondary]=dex[name];
  const panel=byId('pokemon-detail');
  const title=element('h3',null,'detail-title');
  const profile=copy?.profile ?? profileFor(name);
- title.append(idlePokemonPortrait(name,'portrait',profile.shiny?spriteVariants(name).shiny:null),element('span',name));
+ title.append(idlePokemonPortrait(name,'portrait',profile.shiny?spriteVariants(name).shiny:null,false,0,profile.shiny),element('span',name));
  if(!copy && ownedPokemon(name)){
   const favorite=wildProgress.favorites.includes(name);
   const toggle=element('button',favorite?'★':'☆','pc-favorite-toggle');
@@ -1306,17 +1466,14 @@ function renderPokemonDetail(name,copy,copyNumber,trainingSelection) {
   badges.append(badge);
  }
  const [height,weight]=dimensions(name);
- const nature=natureOf(profile);
  const owned=copy ?? ownedPokemon(name);
  const ability=abilityFor(name,profile);
- const effect=nature.up===nature.down ? ' · Neutral' :
-  ' · +'+statLabels[nature.up]+' / −'+statLabels[nature.down];
  if(copy)info.append(element('p','Copy '+copyNumber+' · Stored'));
  info.append(element('p',owned ? 'Lv. '+owned.level+(owned.level<100?' · '+owned.xp+'/'+experienceNeeded(owned.level)+' XP':' · Max level') : 'Unowned',owned?'team-owned':'team-unowned'),
 badges,element('p',height/10+' m · '+weight/10+' kg'),
-  element('p','Nature · '+nature.name+effect),element('p','Personality · '+personalityOf(profile)),
-  element('p',owned?'Current stats · Lv. '+owned.level:'Base stat chart'));
- if(ability) info.append(element('p',(hiddenAbilityFor(name,profile)?'Hidden Ability':'Ability')+' · '+ability));
+  ...individualSummary(name,profile,owned?.level ?? 50),
+  element('p',owned?'Current stats: Lv. '+owned.level:'Base stat chart'));
+ if(ability) info.append(element('p','Ability: '+ability+(hiddenAbilityFor(name,profile)?' (Hidden)':'')));
  const chartValues=owned?calculatedStats(name,profile,owned.level):dexStats[dex[name][0]-1];
  const chart=element('canvas',null,'stat-chart');
  chart.width=250;
@@ -1324,7 +1481,7 @@ badges,element('p',height/10+' m · '+weight/10+' kg'),
  chart.setAttribute('role','img');
  chart.setAttribute('aria-label',['HP','Attack','Defense','Speed','Special Defense','Special Attack']
   .map((label,i)=>label+' '+chartValues[i]).join(', '));
- summary.append(info,chart);
+ summary.append(info,statChartPanel(chart));
  body.append(summary,individualTable(name,profile),arenaEvolutionControls(name,copy));
  if(copy){
   const training=element('fieldset',null,'training-items');
@@ -2333,6 +2490,50 @@ const battleDamageScale=0.25;
 function skillHealingPercent(move,rules) {
  return Math.min(50,rules.healing || (move==='Aqua Ring'?20:0))*battleDamageScale;
 }
+// Main-series effects players might otherwise expect from these Arena adaptations.
+// The in-game description always comes from the rules used by the combat engine.
+const moveReferenceNotes={
+ 'Hyper Beam':'The user spends its next turn recovering after the beam.',
+ Hurricane:'The main-series hit can confuse its target.',
+ Earthquake:'The ground attack reaches adjacent battlers, including allies.',
+ Explosion:'The user faints and the explosion strikes nearby Pokémon.',
+ Recover:'The user restores half of its maximum HP.',
+ 'Bitter Blade':'The user heals for half of the damage it deals.',
+ 'Aqua Cutter':'The move has an elevated critical-hit rate.',
+ 'Esper Wing':'The user gains Speed and has an elevated critical-hit rate.',
+ 'Ivy Cudgel':'The mask determines the move type. Its critical-hit rate is elevated.',
+ 'Triple Arrows':'The strike has an elevated critical-hit rate and can lower Defense or cause flinching.',
+ 'Axe Kick':'The hit can cause confusion. A miss costs the user HP.',
+ 'Magical Torque':'The hit can confuse its target.',
+ 'Blazing Torque':'The hit can burn its target.',
+ 'Sandsear Storm':'The hit can burn its target.',
+ 'Combat Torque':'The hit can paralyze its target.',
+ 'Wildbolt Storm':'The hit can paralyze its target.',
+ 'Noxious Torque':'The hit can poison its target.',
+ 'Wicked Torque':'The hit can put its target to sleep.',
+ 'Bleakwind Storm':'The hit can lower the target’s Speed.',
+ 'Tri Attack':'One hit can inflict one of three conditions: paralysis, freeze or burn.',
+ 'Dire Claw':'One hit can inflict sleep, poison or paralysis.',
+ Chloroblast:'The attack costs the user HP.',
+ 'Body Press':'The user’s Defense supplies the attacking stat.',
+ 'Foul Play':'Damage uses the target’s Attack.',
+ Psystrike:'This special move is resisted using the target’s Defense.',
+ Psyshock:'This special move is resisted using the target’s Defense.',
+ 'Secret Sword':'This special move is resisted using the target’s Defense.',
+ 'Last Respects':'Each fainted party member increases the attack’s power.',
+ 'Final Gambit':'The user faints and deals damage equal to its remaining HP.',
+ 'Clanging Scales':'The user loses one Defense stage.',
+ 'Close Combat':'The user loses one stage of Defense and Special Defense.',
+ 'Dragon Ascent':'The user loses one stage of Defense and Special Defense.',
+ Overheat:'The user loses two Special Attack stages.',
+ 'Draco Meteor':'The user loses two Special Attack stages.',
+ 'Leaf Storm':'The user loses two Special Attack stages.',
+ 'Psycho Boost':'The user loses two Special Attack stages.',
+ 'Fleur Cannon':'The user loses two Special Attack stages.',
+ 'Hammer Arm':'The user loses one Speed stage.',
+ 'Ice Hammer':'The user loses one Speed stage.',
+ Superpower:'The user loses one stage of Attack and Defense.',
+};
 const conditionalPowerNotes={
  Brine:'Doubles base power against targets at half HP or less.',
  Hex:'Doubles base power against targets with a status condition.',
@@ -2367,8 +2568,8 @@ function skillDescription(move) {
  const target=rules.scope==='ally' ? ([13,15].includes(rules.target)?(allyOnlyBuffMoves.has(move)?'all other living allies':partyBuffMoves.has(move) || rules.changes.some(([,change])=>change>0)?'all living allies':'all active allies'):
   [3,5].includes(rules.target)?(allyOnlyBuffMoves.has(move)?'a living ally, including reserves':'a low-HP active ally'):'the user') :
   rules.scope==='area' ? (selfArea?'enemies around the user':'enemies around the target') : 'one enemy';
- const notes=[status?'Targets '+target+'.':
-  'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage to '+target+'.'];
+ const damage=fixedMoveDamage(move,1)!==null?'fixed':skillCategory(rules).toLowerCase();
+ const notes=[status?'Targets '+target+'.':'Deals '+damage+' '+type+' damage to '+target+'.'];
  if(arenaSkillFieldMoves[move])notes.push(arenaFieldInfo[arenaSkillFieldMoves[move]].description);
  if(move==='Reflect' || move==='Light Screen')notes.push('Protects your side for 14 seconds, halving '+(move==='Reflect'?'physical':'special')+' damage.');
  if(['Brick Break','Psychic Fangs','Raging Bull'].includes(move))notes.push('Clears enemy screens on hit.');
@@ -2380,13 +2581,19 @@ function skillDescription(move) {
   landing:'Leaps to a marked landing area.',
   vortex:'Creates a vortex that roams the arena for 3 battle seconds and can hit every Pokémon once, including the user and its allies.',
  };
- if(shape)notes[0]=(status?type+' status move.': 'Deals '+skillCategory(rules).toLowerCase()+' '+type+' damage.')+' '+geometryNotes[shape];
+ if(shape)notes[0]=(status?type+' status move.': 'Deals '+damage+' '+type+' damage.')+' '+geometryNotes[shape];
  if(rules.scope!=='ally' && (shape || radius))notes.push('The warning lasts '+warning+' battle seconds.');
  if(move==='Hyper Beam')notes.push('Charges for 2 battle seconds and deals double damage in a 50% wider beam.');
  if(move==='Earthquake')notes.push('Three rings strike outward, 0.5 battle seconds apart. The inner ring deals full damage, the middle deals 50% damage, and the outer deals 25% damage.');
  if(conditionalPowerNotes[move])notes.push(conditionalPowerNotes[move]);
+ if(guaranteedAccuracyMoves.has(move))notes.push('Skips the accuracy and evasion roll when the target is in the attack’s path.');
  const [criticalStage,flinchChance]=moveExtras[move] ?? [];
- if(!status && criticalStage)notes.push('Increased critical-hit chance.');
+ if(!status && criticalStage)notes.push(criticalStage>=3?'Scores a critical hit unless the target blocks critical hits.':'Increased critical-hit chance.');
+ if(!status && variableHitMoves.has(move))notes.push('Strikes two to five times. Skill Link guarantees five hits.');
+ if(!status && fixedHitMoves[move])notes.push('Attempts '+fixedHitMoves[move]+' hits.'+(separateAccuracyMoves.has(move)?' Each hit checks accuracy until one misses.':''));
+ if(!status && priority>0)notes.push('Its priority shortens the user’s recovery between actions.');
+ if(['Thunder','Hurricane'].includes(move))notes.push(move==='Hurricane'?'Once the vortex reaches a target, the Arena skips its accuracy roll.':'Hits through accuracy changes in rain. In sun, base accuracy falls to 50%.');
+ if(move==='Blizzard')notes.push('Hits through accuracy changes in snow.');
  if(!status && flinchChance)notes.push(flinchChance+'% base chance to flinch the target for 0.5 battle seconds.');
  if(Object.hasOwn(additionalStatusMoves,move))notes.length=0;
  if(status && rules.scope==='ally' && (rules.healing || move==='Aqua Ring'))
@@ -2397,7 +2604,9 @@ function skillDescription(move) {
  for(const [stat,change] of rules.changes) {
   if(!status && !rules.statChance) continue;
   const recipient=rules.scope==='ally'?'the recipient':!status && change>0?'the user':'the target';
-  notes.push((status?'':rules.statChance+'% chance to ')+(change>0?'Raise':'Lower')+' '+recipient+'’s '+
+  const verb=change>0?'raise':'lower';
+  const effect=status || rules.statChance===100?verb[0].toUpperCase()+verb.slice(1)+'s':rules.statChance+'% chance to '+verb;
+  notes.push(effect+' '+recipient+'’s '+
    (moveStatNames[stat] ?? 'stat')+' by '+Math.abs(change)+' stage'+(Math.abs(change)===1?'':'s')+'.');
  }
  if(rules.scope!=='ally' && skillConditions[rules.ailment] && (status || rules.ailmentChance)) {
@@ -2406,7 +2615,7 @@ function skillDescription(move) {
  const blast=sacrificeProfiles.get(move);
  if(blast)notes.push('Below 40% HP, has a 50% chance to begin charging when selected. Below 10% HP, activation is guaranteed when usable. Slows and pulls opponents inside the blast area while charging for '+warning+
   ' seconds, with '+blast.radius+'× blast radius and '+blast.damage+'× damage. The user faints after the blast.');
- if(!status && drain) notes.push('Restores '+Math.round(drain*100)+'% of damage dealt as HP.');
+ if(!status && drain>0) notes.push('Restores '+Math.round(drain*100)+'% of damage dealt as HP.');
  if(!status && recoil) notes.push('User takes recoil equal to '+Math.round(recoil*100)+'% of damage dealt.');
  if(weatherMoves[move]) notes.push('Sets '+weatherMoves[move].toLowerCase()+' weather for 25 battle seconds.');
  if(terrainMoves[move]) notes.push('Sets '+terrainMoves[move].toLowerCase()+' terrain for 25 battle seconds.');
@@ -2436,13 +2645,13 @@ function renderSkillsetDetail(move) {
  const panel=byId('skillset-detail');
  panel.replaceChildren();
  if(!move || !isVisibleArenaMove(move)) {panel.append(element('p','No matching moves.'));return;}
- const [,type,category,power,accuracy]=moveReferences[move];
+ const [slug,type,category,power]=moveReferences[move];
  const rules=moveRules(move);
  const item=skillItem(move);
  const stats=element('dl',null,'skillset-stats');
  const values=[
   ['Type',type],['Category',category ?? 'Varies'],['Arena scaling',damageMarks[moveDamageKind(move)].short],['Listed power',String(power ?? '—')],
-  ['Listed accuracy',accuracy===null?'—':accuracy+'%'],
+  ['Listed accuracy',listedMoveAccuracy(move)],
   ['Arena cooldown',rules.cooldown.toFixed(1)+' s'],['Priority',String(moveCatalog[move][3])],
   ['Arena range',rules.scope==='ally'?'Support':arenaMoveGeometry(move,rules).range+' px'],['Area radius',!skillShape(move) || skillShape(move)==='landing' ? (arenaMoveGeometry(move,rules).radius || '—') : '—'],
   ['Shop price',item.price+' coins']
@@ -2454,6 +2663,10 @@ function renderSkillsetDetail(move) {
  }
  panel.append(skillTitle('h3',move),element('p',skillDescription(move),'skillset-description'),stats,
   element('p',item.kind+' · Single use · '+(wildProgress.skills[move] ?? 0)+' owned','skillset-meta'));
+ if(moveReferenceNotes[move])panel.append(element('p','Main-series effect: '+moveReferenceNotes[move],'skillset-meta'));
+ const reference=element('a','Pokémon Database move entry');
+ reference.href='https://pokemondb.net/move/'+slug;reference.target='_blank';reference.rel='noopener';
+ panel.append(reference);
 }
 function renderSkillset() {
  const query=byId('skillset-search').value.trim().toLowerCase();
@@ -2711,7 +2924,7 @@ function renderLearnableSkills(name) {
    const levelInfo=levels[move]===undefined?'':levels[move]<=level?'Level '+levels[move]+' · unlocked':'Unlocks at Lv. '+levels[move];
    const detail=element('small',[levelInfo,status].filter(Boolean).join(' · '));
    const title=element('div');
-   title.append(skillTitle('strong',move),' ',badge);
+   title.append(pcMoveTitle('strong',move),' ',badge);
    row.append(title,detail);
    return row;
   }));
@@ -2732,7 +2945,7 @@ function renderSkillSlots(name,copy=null) {
  const slots=moves.length<4 && (available.length || levelSkills.length)?[...moves,null]:moves;
  slots.forEach((move,slot)=>{
   const card=element('div',null,'skill-teach');
-  card.append(move?skillTitle('strong',move,(slot+1)+'. '):element('strong',(slot+1)+'. Empty move slot'));
+  card.append(move?pcMoveTitle('strong',move,(slot+1)+'. '):element('strong',(slot+1)+'. Empty move slot'));
   if(move)card.append(element('small',moveCatalog[move][0]+' · '+moveRules(move).cooldown.toFixed(1)+'s cooldown'));
   if(levelSkills.length) {
    const select=element('select',null,'move-options');
@@ -2740,7 +2953,7 @@ function renderSkillSlots(name,copy=null) {
    const blank=element('option','Choose unlocked level-up move');
    blank.value='';select.append(blank);
    for(const [skill,level] of levelSkills) {
-    const option=element('option',skillOptionText(skill,' · Lv. '+level));
+    const option=moveOption(skill,' · Lv. '+level);
     option.value=skill;select.append(option);
    }
    const equip=element('button','Equip free');
@@ -2763,7 +2976,7 @@ function renderSkillSlots(name,copy=null) {
    select.append(blank);
    for(const optionMove of available) {
     const item=skillItem(optionMove);
-    const option=element('option',skillOptionText(optionMove,' ×'+wildProgress.skills[optionMove],item.kind+' · '));
+    const option=moveOption(optionMove,' ×'+wildProgress.skills[optionMove],item.kind+' · ');
     option.value=optionMove;
     select.append(option);
    }
@@ -2893,7 +3106,7 @@ function evolveArenaIndividual(context,rule) {
    if(copy.held && copy.held!==rule.item && !evolutionStones.includes(copy.held) && freeHeldCopies(copy.held,rule.name)>0)wildProgress.held[rule.name]=copy.held;
    incoming=null;
   }
-  registerPokemon(rule.name);evolutionScenes.push([name,rule.name]);message=name+' evolved into '+rule.name+'!';
+  registerPokemon(rule.name);evolutionScenes.push([name,rule.name,profile.shiny===true]);message=name+' evolved into '+rule.name+'!';
  }
  message+=arenaShedinjaBonus(name,level,original,rule.name);
  playerStorage.setItem(profileStorage,JSON.stringify(profiles));saveTeam();saveWildProgress();
@@ -3001,7 +3214,7 @@ function evolveOwnedPokemon(name,evolved,stone=null) {
  }
  registerPokemon(name);registerPokemon(evolved);
  playerStorage.setItem(profileStorage,JSON.stringify(profiles));saveTeam();saveWildProgress();
- evolutionScenes.push([name,evolved]);
+ evolutionScenes.push([name,evolved,profile.shiny===true]);
  return name+' evolved into '+evolved+'!';
 }
 function evolveStoneHolders() {
@@ -3016,10 +3229,11 @@ function evolveStoneHolders() {
 function playEvolutionScenes(done=()=>{}) {
  const scene=evolutionScenes.shift();
  if(!scene){done();return;}
- const [oldName,newName]=scene;
+ const [oldName,newName,shiny]=scene;
  const dialog=element('dialog',null,'evolution-dialog');
  const stage=element('div',null,'evolution-stage');
- stage.append(pokemonPortrait(oldName,'evolution-old',true,0),pokemonPortrait(newName,'evolution-new',true,0));
+ const portrait=(name,css)=>pokemonPortrait(name,css,true,0,shiny?spriteVariants(name).shiny:null,shiny);
+ stage.append(portrait(oldName,'evolution-old'),portrait(newName,'evolution-new'));
  const title=element('h2',oldName+' is evolving!');
  const finish=element('button','Continue');
  finish.disabled=true;
@@ -3428,7 +3642,7 @@ function tryCatch(index) {
  },duration);
 }
 function captureArtwork(name,capture,shiny=false) {
- const portrait=()=>pokemonPortrait(name,null,false,0,shiny?spriteVariants(name).shiny:null);
+ const portrait=()=>pokemonPortrait(name,null,false,0,shiny?spriteVariants(name).shiny:null,shiny);
  const art=element('div',null,'wild-victory-art');
  if(!capture) {
   art.append(portrait());
@@ -4281,7 +4495,7 @@ function renderCatalogDetail(name) {
   const preview=label=>{
    const variant=options.get(label);
    for(const button of picker.children)button.setAttribute('aria-pressed',String(button.textContent===label));
-   art.replaceChildren(idlePokemonPortrait(name,'dex-preview',variant,true));
+   art.replaceChildren(idlePokemonPortrait(name,'dex-preview',variant,true,0,label.includes('Shiny')));
    credit.hidden=!variant;
    if(variant)credit.href='./assets/variant-atlases/credits.txt';
   };
@@ -4696,7 +4910,8 @@ function animateHomeSprite(name) {
  stopHomeSprite();
  const container=byId('feature-sprite');
  const variant=profileFor(name).shiny?spriteVariants(name).shiny:null;
- const art=pokemonPortrait(name,'feature-lead',true,0,variant);
+ const shiny=profileFor(name).shiny===true;
+ const art=pokemonPortrait(name,'feature-lead',true,0,variant,shiny);
  container.replaceChildren(art);
  const facing={name,direction:0,spriteVariant:variant};
  const idle=pmdMotion(facing,'idle');
@@ -4722,12 +4937,13 @@ function animateHomeSprite(name) {
   const clip=attack && tick>=idleTicks?attack:idle;
   const time=clip===attack?tick-idleTicks:tick%(idle?.duration ?? 1);
   const frame=clip?.frames.find(frame=>time<frame.end) ?? pmdReference(name,0,variant);
-  if(frame && frame!==previous) {
+  if(frame && (frame!==previous || shiny)) {
    const image=pmdImage(frame.page);
    if(image.naturalWidth) {
     context.clearRect(0,0,width,height);
     context.drawImage(image,frame.sx,frame.sy,frame.width,frame.height,
      Math.round((width-frame.width)/2),height-frame.height,frame.width,frame.height);
+    if(shiny)drawShinySparkles(context,0,0,width,height,now/1000,dex[name][0]);
     if(!previous)container.replaceChildren(animated);
     previous=frame;
    }
@@ -5297,7 +5513,7 @@ function updateActivePanels(onlineFields) {
    if(abilityEffects.has(actor.ability)) heading.append(element('small',actor.ability));
    if(actor.heldItem) heading.append(element('small',actor.heldItem));
    panel.hp=element('span',null,'active-hp');
-   header.append(pokemonPortrait(actor.name),heading,panel.hp);
+   header.append(pokemonPortrait(actor.name,null,false,0,actorSpriteVariant(actor),actor.shiny ?? actor.profile?.shiny),heading,panel.hp);
    const list=element('div',null,'cooldown-list');
    panel.moves=actor.moves.map(move=>{
     const row=element('div',null,'cooldown-row');
@@ -5387,7 +5603,7 @@ function renderBattleRosters() {
    hp.max=actor.max;
    hp.setAttribute('aria-label',actor.name+' HP');
    const identity=battleRosterIdentity(actor.name,actor.level);
-   card.append(pokemonPortrait(actor.name),identity,hp);
+   card.append(pokemonPortrait(actor.name,null,false,0,actorSpriteVariant(actor),actor.shiny ?? actor.profile?.shiny),identity,hp);
    const xp=friendly && !rogueRun ? element('progress',null,'battle-xp') : null;
    const exhaustion=makeExhaustionBar(actor);
    card.append(exhaustion);
@@ -5542,7 +5758,7 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
  const speedFactor=clamp(0.65+stats[3]/200,0.65,1.7);
  return {name,teamPlan:friendly && !runMember?normalizeTeamPlan(wildProgress.battlePlan):'Balanced',carryName:friendly && !runMember?wildProgress.battleCarry:'',masterGymCombatant:Boolean(master),gymRole:!friendly?selectedGym?.plan?.team[gymSlot]?.[1]:null,type:primary,level,hp,max:hp,ai:master?master.ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
   !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness',position:selectedGym.plan?.team[gymSlot]?.[2]}):null,
-  heldItem:master?master.heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor*(master?0.5:1),moves,profile,stats,
+  heldItem:master?master.heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor*(master?0.5:1),moves,profile,stats,shiny:profile.shiny===true?true:undefined,
   moveCooldowns:moves.map(skill=>moveRules(skill).cooldown*(master?0.5:1)),moveTimers:moves.map(()=>0),
   stages:[0,0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
@@ -5958,7 +6174,7 @@ function button(label,action,description) {
 let normalAttacksEnabled=true;
 function updateNormalAttackToggle(enabled,change) {
  const button=byId('basic-attacks');
- button.replaceChildren(damageMark('atk'),'Normal Attack: '+(enabled?'On':'Off'));
+ button.replaceChildren(categoryIcon('Physical'),'Normal Attack: '+(enabled?'On':'Off'));
  button.setAttribute('aria-pressed',String(enabled));
  button.onclick=()=>change(!enabled);
 }
@@ -9357,6 +9573,7 @@ function drawUnit(actor,showStatus=false) {
   ctx.fillStyle = frozen?'#69b9ef':moveColors[type] ?? '#dcebc9';
   ctx.fillRect(x-10,y-10,20,20);
  }
+ if(actor.shiny ?? actor.profile?.shiny)drawShinySparkles(ctx,x-width/2,ground-height,width,height,time,dex[name][0]);
  if(box)statusArt.draw(ctx,box,loopTime,true,mirrored);
  ctx.textAlign = 'center';
  if(!actor.raidForm?.startsWith('Mega ')) {
@@ -9721,7 +9938,7 @@ function drawMoveBubbles(actors) {
  ctx.textBaseline = 'middle';
  for (const actor of actors) {
   if (!actor.moveLabel || actor.labelTime <= 0 || actor.hp <= 0) continue;
-  const mark=damageMarks[moveDamageKind(actor.moveLabel)];
+  const mark=battleCategoryImage(categoryForMove(actor.moveLabel));
   const width = ctx.measureText(actor.moveLabel).width+22+(mark?18:0);
   const x = clamp(actor.x-width/2,12,948-width);
   const sprite = battleArt(actor.name);
@@ -9746,9 +9963,7 @@ function drawMoveBubbles(actors) {
   ctx.fill();
   ctx.fillStyle='#101827';
   ctx.strokeStyle='#ffffffb8';ctx.lineWidth=2;ctx.lineJoin='round';
-  if(mark){
-   ctx.save();ctx.font='16px ArenaMarks, sans-serif';ctx.fillText(mark.glyph,x+16,y+14);ctx.restore();
-  }
+  if(mark?.naturalWidth)ctx.drawImage(mark,x+5,y+7,21,14);
   const labelX=x+width/2+(mark?9:0);
   ctx.strokeText(actor.moveLabel,labelX,y+14);
   ctx.fillText(actor.moveLabel,labelX,y+14);
@@ -10236,6 +10451,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.91',changes:['Shinies sparkle and gain 25% species base stats. PC storage can sort shinies and Legendary/Mythical Pokémon first.','Personalities grant a permanent favored-stat bonus of up to 10 points. Hover or focus a PC move or stat for its Arena description. Move categories use Pokémon Database icons.']},
  {version:'0.22.90',changes:['Messages now has World, Guild, Friend and Trade Chat. Open an online trainer’s profile to trade PC Pokémon directly. Both players review and confirm their offers.']},
  {version:'0.22.89',changes:['Room invites show online friends and guild members. The list refreshes while open and checks the recipient again before sending.']},
  {version:'0.22.88',changes:['PC storage remembers your search, filters, and sort order across the PC, co-op raid team selection, Trading Hub, and trainer-card favorites.']},
@@ -10587,9 +10803,9 @@ function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,c
   const traitOrder=[0,1,2,3,5,4];
   let pid=natureNames.indexOf(raid.nature);
   while(traitOrder[pid%traitOrder.length]!==raid.trait)pid+=natureNames.length;
-  profile={ivs:Array(6).fill(31),evs:[...raid.evs],pid,abilityOverride:raid.ability};
+  profile={ivs:Array(6).fill(31),evs:[...raid.evs],pid,shiny:Boolean(raid.master),abilityOverride:raid.ability};
  }
- const savedLevel=progress.owned?.[name]?.level;
+ const savedLevel=copy?.level ?? progress.owned?.[name]?.level;
  const level=levelOverride ?? bossLevel ?? (Number.isInteger(savedLevel)?clamp(savedLevel,1,100):name===starter.name?1:5);
  const fallback={ivs:Array(6).fill(bossLevel?23:0),evs:Array(6).fill(0),pid:0};
  savedMoves=JSON.parse(entries['pokemon-arena-moves'] ?? '{}') ?? {};
@@ -10850,7 +11066,7 @@ export function onlineView(state,side,mode) {
    hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil,dashRecharge,defendRecharge,defendUntil,raidForm,raidSecondary,shiny,masterRaidPhase,abilityStance,abilityForm,abilityElapsed,abilityNotice,abilityNoticeUntil,disguiseBroken,disguiseBrokenAt,illusionName,substituteHP,iceFaceBroken,puppetUntil}=actor;
   return {name,type,singleType,copiedSecondary,addedType,side,onlineId,hp,max,level:mode==='free_fight'?100:level,ability,abilitySuppressed,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
-   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil,dashRecharge,defendRecharge,defendUntil,raidForm,raidSecondary,shiny,masterRaidPhase,abilityStance,abilityForm,abilityElapsed,abilityNotice,abilityNoticeUntil,disguiseBroken,disguiseBrokenAt,illusionName,substituteHP,iceFaceBroken,puppetUntil};
+   hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil,dashRecharge,defendRecharge,defendUntil,raidForm,raidSecondary,shiny:shiny ?? Boolean(actor.profile?.shiny),masterRaidPhase,abilityStance,abilityForm,abilityElapsed,abilityNotice,abilityNoticeUntil,disguiseBroken,disguiseBrokenAt,illusionName,substituteHP,iceFaceBroken,puppetUntil};
  });
  const ids=new Set(visible.map(actor=>actor.onlineId));
  const fields=state.fields.map(slots=>slots.map(slot=>{

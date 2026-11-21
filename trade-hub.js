@@ -24,7 +24,7 @@
  function identity(meta){return meta.name+' · Lv. '+meta.level+' · '+meta.nature+' · '+meta.personality;}
  function pokemonPanel(meta){
   const card=node('div',null,'market-pokemon');
-  const art=pokemonPortrait(meta.name,null,false,0,meta.shiny?spriteVariants(meta.name).shiny:null);
+  const art=pokemonPortrait(meta.name,null,false,0,meta.shiny?spriteVariants(meta.name).shiny:null,meta.shiny);
   const text=node('div');text.append(node('strong',(meta.shiny?'★ ':'')+meta.name),node('small','#'+meta.number+' · Gen '+meta.generation+(meta.level?' · Lv. '+meta.level:'')));
   const tags=node('div',null,'market-tags');
   for(const type of meta.types ?? []){const chip=node('span',type,'market-tag');chip.style.setProperty('--tag-color',moveColors[type] ?? '#a5bcae');tags.append(chip);}
@@ -47,7 +47,7 @@
   if(!row){panel.append(node('h3','Pokémon status','detail-title'),node('p','Select a Pokémon, then choose Active or a copy to preview its stats.','market-pc-empty'));return panel;}
   const meta=row.pokemon,profile=row.profile,name=meta.name;
   const title=node('h3',null,'detail-title');
-  title.append(idlePokemonPortrait(name,'portrait',meta.shiny?spriteVariants(name).shiny:null),node('span',name));
+  title.append(idlePokemonPortrait(name,'portrait',meta.shiny?spriteVariants(name).shiny:null,false,0,meta.shiny),node('span',name));
   if(wildProgress.favorites?.includes(name)){
    const favorite=node('span','★','market-pc-favorite');favorite.setAttribute('aria-label','Favorite Pokémon');title.append(favorite);
   }
@@ -55,16 +55,14 @@
   const body=node('div',null,'detail-body'),summary=node('div',null,'detail-summary'),info=node('div');
   const badges=node('div',null,'badges');
   for(const type of meta.types){const badge=node('span',type,'badge');badge.style.background=moveColors[type]??'#dbe5f4';badges.append(badge);}
-  const nature=natureOf(profile),effect=nature.up===nature.down?' · Neutral':' · +'+statLabels[nature.up]+' / −'+statLabels[nature.down];
   const [height,weight]=dimensions(name),ability=abilityFor(name,profile);
   info.append(node('p',sourceLabel(row)+(row.selector.slot===0?'':' · Stored'),'market-pc-source'),
    node('p','Lv. '+meta.level+(meta.level>=100?' · Max level':'')),
-   badges,node('p',height/10+' m · '+weight/10+' kg'),node('p','Nature · '+nature.name+effect),
-   node('p','Personality · '+personalityOf(profile)),node('p','Current stats · Lv. '+meta.level));
-  if(ability)info.append(node('p',(hiddenAbilityFor(name,profile)?'Hidden Ability':'Ability')+' · '+ability));
+   badges,node('p',height/10+' m · '+weight/10+' kg'),...individualSummary(name,profile,meta.level),node('p','Current stats: Lv. '+meta.level));
+  if(ability)info.append(node('p','Ability: '+ability+(hiddenAbilityFor(name,profile)?' (Hidden)':'')));
   const chart=node('canvas',null,'stat-chart'),values=calculatedStats(name,profile,meta.level);chart.width=250;chart.height=168;
   chart.setAttribute('role','img');chart.setAttribute('aria-label',statLabels.map((label,i)=>label+' '+values[i]).join(', '));
-  summary.append(info,chart);body.append(summary,individualTable(name,profile));panel.append(title,body);drawStats(chart,values);
+  summary.append(info,statChartPanel(chart));body.append(summary,individualTable(name,profile));panel.append(title,body);drawStats(chart,values);
   return panel;
  }
  function picker(rows,onPick){
@@ -81,7 +79,7 @@
    ['appearance','PC appearance',[['','Any appearance'],['true','Shiny'],['false','Standard']]],
    ['source','PC copies',[['','Active & copies'],['active','Active only'],['stored','Stored copies only']]],
    ['stat','PC stat',[['','All stats (total)'],...statLabels.map((label,i)=>[String(i),label])]],
-   ['sort','PC sort by',[['number','Pokédex number'],['favorite','Favorites first'],['name','Name'],['level','Level'],['ivs','IVs'],['evs','EVs'],['nature','Nature'],['personality','Personality']]],
+   ['sort','PC sort by',[['number','Pokédex number'],['favorite','Favorites first'],['shiny','Shiny first'],['legendary','Legendary/Mythical first'],['name','Name'],['level','Level'],['ivs','IVs'],['evs','EVs'],['nature','Nature'],['personality','Personality']]],
    ['order','PC sort order',[['asc','Ascending'],['desc','Descending']]],
    ['favorites','PC favorites',[['','All Pokémon'],['only','Favorites only']]]];
   let page=0,selected=null;
@@ -99,6 +97,8 @@
   const valueFor=(row,key)=>{
    const meta=row.pokemon,stat=controls.stat.value;
    if(key==='ivs'||key==='evs'){const values=meta[key];return stat===''?values.reduce((sum,n)=>sum+n,0):values[Number(stat)];}
+   if(key==='shiny')return meta.shiny?0:1;
+   if(key==='legendary')return isLegendaryEncounter(meta.name)?0:1;
    return key==='favorite'?(wildProgress.favorites?.includes(meta.name)?0:1):meta[key];
   };
   function render(){
@@ -118,7 +118,13 @@
    const groups=new Map();for(const row of matches){const name=row.pokemon.name;if(!groups.has(name))groups.set(name,[]);groups.get(name).push(row);}
    const direction=controls.order.value==='desc'?-1:1,sort=controls.sort.value;
    const compare=(a,b)=>{const av=valueFor(a,sort),bv=valueFor(b,sort);return direction*(typeof av==='number'?av-bv:String(av).localeCompare(String(bv)))||a.pokemon.number-b.pokemon.number||a.selector.slot-b.selector.slot;};
-   const names=[...groups.values()].map(group=>group.toSorted(compare)).toSorted((a,b)=>compare(a[0],b[0]));
+   const names=[...groups.values()].map(group=>group.toSorted(compare)).toSorted((a,b)=>{
+    if(sort==='shiny'){
+     const anyShiny=group=>Number(group.some(row=>row.pokemon.shiny));
+     return direction*(anyShiny(b)-anyShiny(a)) || a[0].pokemon.number-b[0].pokemon.number;
+    }
+    return compare(a[0],b[0]);
+   });
    const pages=Math.max(1,Math.ceil(names.length/30));page=Math.max(0,Math.min(page,pages-1));
    previous.disabled=page===0;next.disabled=page>=pages-1;pageLabel.textContent=names.length?'Box '+(page+1)+' / '+pages:'No boxes';
    count.textContent=names.length+' Pokémon · '+matches.length+' copies';
@@ -127,7 +133,7 @@
     const row=group.find(row=>row===selected)??group[0],meta=row.pokemon;
     const tile=button('',()=>choose(row));tile.classList.add('tile');tile.title=meta.name;
     tile.setAttribute('aria-label','Inspect '+meta.name);tile.setAttribute('aria-pressed',String(selected?.pokemon.name===meta.name));
-    tile.append(idlePokemonPortrait(meta.name,null,meta.shiny?spriteVariants(meta.name).shiny:null),node('small','#'+String(meta.number).padStart(4,'0')));
+    tile.append(idlePokemonPortrait(meta.name,null,meta.shiny?spriteVariants(meta.name).shiny:null,false,0,meta.shiny),node('small','#'+String(meta.number).padStart(4,'0')));
     if(group.length>1)tile.append(node('span','×'+group.length,'market-pc-copy-count'));return tile;
    }));
    if(!names.length)grid.append(node('p',rows.length?'No Pokémon match these filters.':'No Pokémon are available in your PC.','market-pc-empty'));
@@ -136,9 +142,9 @@
     const group=groups.get(selected.pokemon.name),total=rows.filter(row=>row.pokemon.name===selected.pokemon.name).length;
     copies.append(node('p',selected.pokemon.name+' · '+total+' total'+(group.length<total?' · '+group.length+' matching':''),'pc-copy-summary'));
     const tiles=node('div',null,'tile-grid pc-copy-grid');
-    for(const row of group.toSorted((a,b)=>a.selector.slot-b.selector.slot)){
+    for(const row of group.toSorted(sort==='shiny'?compare:(a,b)=>a.selector.slot-b.selector.slot)){
      const tile=button('',()=>choose(row,true));tile.classList.add('tile');tile.setAttribute('aria-label',row.pokemon.name+' · '+sourceLabel(row)+' · Lv. '+row.pokemon.level);
-     tile.setAttribute('aria-pressed',String(row===selected));tile.append(idlePokemonPortrait(row.pokemon.name,null,row.pokemon.shiny?spriteVariants(row.pokemon.name).shiny:null),node('strong',sourceLabel(row)),node('small','Lv. '+row.pokemon.level));tiles.append(tile);
+     tile.setAttribute('aria-pressed',String(row===selected));tile.append(idlePokemonPortrait(row.pokemon.name,null,row.pokemon.shiny?spriteVariants(row.pokemon.name).shiny:null,false,0,row.pokemon.shiny),node('strong',sourceLabel(row)),node('small','Lv. '+row.pokemon.level));tiles.append(tile);
     }
     copies.append(tiles,node('p',selected.pokemon.nature+' · IV '+selected.pokemon.ivs.join('/'),'pc-copy-details'));
     selection.textContent='Selected: '+selected.pokemon.name+' · '+sourceLabel(selected);

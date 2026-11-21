@@ -8,7 +8,11 @@ const moves={Mewtwo:['Psystrike','Aura Sphere','Ice Beam','Recover'],Kyogre:['Or
  Lugia:['Aeroblast','Psychic','Recover','Calm Mind'],'Ho-Oh':['Sacred Fire','Brave Bird','Roost','Earthquake']};
 const entries={
  'pokemon-arena-team':JSON.stringify(names),'pokemon-arena-moves':JSON.stringify(moves),
- 'pokemon-arena-profiles':JSON.stringify(Object.fromEntries(names.map(name=>[dex[name][0],{pid:15,ivs:Array(6).fill(31),evs:['Groudon','Rayquaza','Ho-Oh'].includes(name)?[4,252,0,252,0,0]:[4,0,0,252,0,252],abilityOverride:'Pressure'}]))),
+ 'pokemon-arena-profiles':JSON.stringify(Object.fromEntries(names.map(name=>{
+  const physical=['Groudon','Rayquaza','Ho-Oh'].includes(name);
+  return [dex[name][0],{pid:physical?2:10,personalityId:physical?5:25,ivs:Array(6).fill(31),
+   evs:physical?[4,252,0,252,0,0]:[4,0,0,252,0,252],abilityOverride:'Pressure'}];
+ }))),
  'pokemon-arena-wild-progress':JSON.stringify({owned:Object.fromEntries(names.map(name=>[name,{level:100,xp:0}])),held:Object.fromEntries(names.map(name=>[name,'Leftovers'])),items:{Leftovers:6},
   ai:Object.fromEntries(names.map(name=>[name,{style:'Aggressive',position:'Auto'}])),battlePlan:'Burst'}),
 };

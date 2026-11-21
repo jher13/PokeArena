@@ -1,6 +1,6 @@
 {
   "name": "pokearena",
-  "version": "0.22.90",
+  "version": "0.22.91",
   "private": true,
   "type": "module",
   "scripts": {

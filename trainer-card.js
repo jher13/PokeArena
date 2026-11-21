@@ -82,7 +82,7 @@
   return row;
  }
  function portrait(name,shiny=false,cls='',variant=null){
-  const art=idlePokemonPortrait(name,cls,variant??(shiny?spriteVariants(name).shiny:null),true);
+  const art=idlePokemonPortrait(name,cls,variant??(shiny?spriteVariants(name).shiny:null),true,0,shiny);
   art.setAttribute('aria-hidden','true');return art;
  }
  function trainerSprite(look){

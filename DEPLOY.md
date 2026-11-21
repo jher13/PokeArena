@@ -1,3 +1,7 @@
+# Update to 0.22.91
+
+Extract the changed files over **0.22.90** and push them together. The backend workflow applies `20261121010000_permanent_personalities.sql` and deploys the matching combat engine. Pokémon Database supplies the three move category images and the listed accuracy values. The client bundles the icons for offline use.
+
 # Update to 0.22.90
 
 Extract these files over **0.22.89** and push them together to `main`. The existing deployment workflow applies `20261120030000_chat_and_direct_trades.sql` for the four Messages channels and private Pokémon trades. Players can start a trade from an online profile and resume it from Notifications or Trade Chat.

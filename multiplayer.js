@@ -259,7 +259,8 @@
    (match.format===6?'Press Ready to send out your full team.':'Choose '+match.format+' lead Pokémon from your team, then press Ready.')+(match.opponentLocked?' The other player is ready.':'');
   byId('player-roster').replaceChildren(element('h2','Your team'),...team.map(name=>{
    const card=element('button',null,'battle-slot');
-   card.append(pokemonPortrait(name),battleRosterIdentity(name,match.mode==='free_fight'?100:ownedPokemon(name)?.level ?? 5));
+   const shiny=profileFor(name).shiny===true;
+   card.append(pokemonPortrait(name,null,false,0,shiny?spriteVariants(name).shiny:null,shiny),battleRosterIdentity(name,match.mode==='free_fight'?100:ownedPokemon(name)?.level ?? 5));
    card.disabled=match.locked || match.format===6;
    card.setAttribute('aria-pressed',String(picks.includes(name)));
    card.onclick=()=>togglePick(name);
@@ -424,16 +425,16 @@
     const own=actor.side===active.side;
     const index=ownSlots.findIndex(slot=>slot.actor===actor || slot.transition?.incoming===actor);
     let row=rosterRows.get(actor.onlineId);
-    if(!row || row.form!==actor.name) {
+    if(!row || row.form!==actor.name || row.shiny!==Boolean(actor.shiny)) {
      const card=element('button',null,'battle-slot');
      const identity=battleRosterIdentity(actor.name,actor.level);
      if(actor.raidForm)identity.querySelector('.battle-name').textContent=actor.raidForm;
      const hp=element('progress');hp.max=actor.max;hp.setAttribute('aria-label',actor.name+' HP');
      const stages=element('span',null,'battle-stage-icons');
      const exhaustion=makeExhaustionBar(actor);
-     card.append(pokemonPortrait(actor.name),identity,hp,exhaustion,stages);
+     card.append(pokemonPortrait(actor.name,null,false,0,actorSpriteVariant(actor),actor.shiny),identity,hp,exhaustion,stages);
      if(row)row.card.replaceWith(card);else container.append(card);
-     row={card,hp,stages,exhaustion,form:actor.name};rosterRows.set(actor.onlineId,row);
+     row={card,hp,stages,exhaustion,form:actor.name,shiny:Boolean(actor.shiny)};rosterRows.set(actor.onlineId,row);
     }
     row.hp.value=actor.hp;
     updateStageIcons(row.stages,actor);
@@ -775,7 +776,7 @@
      else feedback.textContent=status.textContent || 'The raid room is busy. Try again.';
     } finally {submitting=false;use.disabled=!chosen;}
    };
-   function renderPicker(names=filteredPcNames(eligible,control)) {
+   function renderPicker(names=filteredPcNames(eligible,control,false)) {
     if(!names.includes(chosen)) {
      chosen=names[0] ?? '';
      preview();
@@ -800,7 +801,7 @@
    bindPcBox(control,()=>{page=0;renderPicker();});
    control('box-prev').onclick=()=>{page--;renderPicker();};
    control('box-next').onclick=()=>{page++;renderPicker();};
-   const names=filteredPcNames(eligible,control);
+   const names=filteredPcNames(eligible,control,false);
    chosen=names.includes(initial)?initial:names[0] ?? '';
    page=Math.max(0,Math.floor(names.indexOf(chosen)/boxSize));
    renderPicker(names);
@@ -843,7 +844,10 @@
     const pad=element('div',null,'raid-seat-pad');
     const shown=index===match.ownSlot?fighter:seat?.pokemon;
     const level=shown && (seat?.pokemon===shown && seat.level || ownedPokemon(shown)?.level);
-    if(shown)pad.append(idlePokemonPortrait(shown,null,(index===match.ownSlot || seat?.substitute) && profileFor(shown).shiny?spriteVariants(shown).shiny:null,true));
+    if(shown) {
+     const shiny=Boolean((index===match.ownSlot || seat?.substitute) && profileFor(shown).shiny);
+     pad.append(idlePokemonPortrait(shown,null,shiny?spriteVariants(shown).shiny:null,true,0,shiny));
+    }
     tile.append(pad,element('strong',seat?.name ?? 'Open seat'),
      element('small',shown ? shown+(level?' · Lv. '+level:'')+(seat?.ready?' · Ready':' · Not ready') : seat?'Not ready':''));
     if(kickMode && match.side==='host' && seat?.uid && index!==match.ownSlot)

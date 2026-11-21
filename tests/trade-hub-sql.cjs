@@ -42,6 +42,13 @@ let db;
  await db.exec(migration);
  await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261118020000_regional_progression.sql'),'utf8'));
  await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261118030000_complete_pokedex.sql'),'utf8'));checks++;
+ await db.exec(fs.readFileSync(path.join(root,'supabase/migrations/20261121010000_permanent_personalities.sql'),'utf8'));
+ const traits=[['Hearty','Sleepy','Easygoing','Messy','Relaxed'],['Proud','Energetic','Hotheaded','Competitive','Feisty'],['Steady','Resilient','Persistent','Enduring','Determined'],['Swift','Alert','Impulsive','Playful','Skittish'],['Resolute','Vain','Defiant','Driven','Stubborn'],['Curious','Mischievous','Clever','Thoughtful','Picky']];
+ const metadata=async p=>(await db.query("select arena_private.market_metadata($1::jsonb)->>'personality' trait",[{name:'Bulbasaur',level:50,profile:p}])).rows[0].trait;
+ assert.equal(await metadata(profile(0)),'Sleepy');
+ for(let i=0;i<30;i++)assert.equal(await metadata({...profile(0),personalityId:i}),traits[Math.floor(i/5)][i%5]);
+ for(const invalid of [-1,30,2.5,'1',null])assert.equal((await db.query('select arena_private.profile_valid($1::jsonb) ok',[{...profile(0),personalityId:invalid}])).rows[0].ok,false);
+ checks+=36;
  for(let i=0;i<3;i++){
   await db.query('insert into auth.users values($1)',[ids[i]]);
   await db.query('insert into arena_private.players values($1,$2)',[ids[i],['Nifty','Brock','Misty'][i]]);

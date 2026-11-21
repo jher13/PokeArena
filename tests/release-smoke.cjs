@@ -701,6 +701,6 @@ async function verifyRaidTransform(){
 }
 Promise.all([verifyPendingRecovery(),verifyLoanerGear(),verifyOpenArenaChase(),verifyMasterRaids(),verifyRaidTransform(),verifyRaidRetry()]).then(()=>{
  console.log('Manual Capture, full-bench fusion, pending-save recovery, and server loaner gear checks passed.');
- for(const file of ['ability-adaptations.cjs','remaining-abilities.cjs','update-and-trade-client.cjs','arena-evolutions.cjs','arena-tactics.cjs','arena-maps.cjs','arena-move-effects.cjs','arena-move-audio.cjs','arena-status-effects.cjs','regional-progression-client.cjs','regional-contracts.cjs','roster-expansion.cjs','online-combat-turns.mjs'])
+ for(const file of ['shiny-pc.cjs','ability-adaptations.cjs','remaining-abilities.cjs','update-and-trade-client.cjs','arena-evolutions.cjs','arena-tactics.cjs','arena-maps.cjs','arena-move-effects.cjs','arena-move-audio.cjs','arena-status-effects.cjs','regional-progression-client.cjs','regional-contracts.cjs','roster-expansion.cjs','online-combat-turns.mjs'])
   require('node:child_process').execFileSync(process.execPath,[path.join(__dirname,file)],{stdio:'inherit'});
 }).catch(error=>{console.error(error);process.exitCode=1;});
