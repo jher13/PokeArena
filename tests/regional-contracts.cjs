@@ -10,7 +10,8 @@ const entries={
  'pokemon-arena-team':JSON.stringify(names),'pokemon-arena-moves':JSON.stringify(moves),
  'pokemon-arena-profiles':JSON.stringify(Object.fromEntries(names.map(name=>{
   const physical=['Groudon','Rayquaza','Ho-Oh'].includes(name);
-  return [dex[name][0],{pid:physical?2:10,personalityId:physical?5:25,ivs:Array(6).fill(31),
+  // Maximize HP, Speed and the attacking stat within the player IV budget, with a tier-five offensive personality.
+  return [dex[name][0],{pid:physical?2:10,personalityId:physical?9:29,ivs:physical?[31,31,0,31,0,0]:[31,0,0,31,0,31],
    evs:physical?[4,252,0,252,0,0]:[4,0,0,252,0,252],abilityOverride:'Pressure'}];
  }))),
  'pokemon-arena-wild-progress':JSON.stringify({owned:Object.fromEntries(names.map(name=>[name,{level:100,xp:0}])),held:Object.fromEntries(names.map(name=>[name,'Leftovers'])),items:{Leftovers:6},

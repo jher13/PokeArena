@@ -5,10 +5,13 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const additions=`
-export {individualBaseStats,calculatedStats,personalityTrait,personalityBonus,applyTrainingItem,listedMoveAccuracy,categoryForMove,skillDescription,drawShinySparkles,onlineActor,unit};
+export {cappedOwnedProfile,validProfile,personalityIdOf,breedProfile,battleSpeedFactor,addCaughtPokemon,individualBaseStats,calculatedStats,personalityTrait,personalityBonus,applyTrainingItem,listedMoveAccuracy,categoryForMove,skillDescription,drawShinySparkles,onlineActor,unit};
 export function sourceRows(){
  return Object.keys(moveCatalog).filter(name=>name!=='Normal Attack' && name!=='Struggle')
   .sort().map(name=>[name,categoryForMove(name),listedMoveAccuracy(name)]);
+}
+export function caughtProfile(name){
+ return {active:profiles[dex[name][0]],copies:wildProgress.copies[name]};
 }
 export function sortBox(sort,order,includeCopies){
  const list=['Bulbasaur','Pikachu','Mewtwo','Mew','Caterpie'];
@@ -58,6 +61,58 @@ export function sortBox(sort,order,includeCopies){
  for(let i=0;i<6;i++)for(let j=legacy.ivs[i];j<31;j++)game.applyTrainingItem(legacy,i,{field:'ivs',delta:1});
  assert.deepEqual(game.personalityTrait(JSON.parse(JSON.stringify(legacy))),original);
  assert.equal(legacy.personalityId,25);
+ const total=p=>p.ivs.reduce((sum,value)=>sum+value,0);
+ assert.equal(total(legacy),93);
+ const budget={...profile,ivs:[31,31,30,0,0,0]};
+ assert.equal(game.applyTrainingItem(budget,3,{field:'ivs',delta:10}),1);
+ assert.equal(game.applyTrainingItem(budget,4,{field:'ivs',delta:1}),0);
+ assert.equal(game.applyTrainingItem(budget,0,{field:'ivs',delta:-1}),-1);
+ assert.equal(game.applyTrainingItem(budget,4,{field:'ivs',delta:1}),1);
+ assert.deepEqual(budget.ivs,[30,31,30,1,1,0]);
+ for(const ivs of [[0,0,0,0,0,0],[31,31,30,0,0,0],[31,31,31,0,0,0]]) {
+  const p={...profile,ivs};assert.strictEqual(game.cappedOwnedProfile(p),p);
+ }
+ const spreads=new Set();
+ for(const pid of [...Array(2048).keys(),2147483646,2147483647,4294967295]){
+  const p={pid,ivs:[31,30,29,28,27,26],evs:[4,0,0,252,0,252],shiny:true,abilityOverride:'Pressure'};
+  if(pid%2)p.personalityId=17;
+  const old=structuredClone(p);assert(!game.validProfile(p));
+  const fixed=game.cappedOwnedProfile(p);assert.deepEqual(p,old);
+  assert.equal(total(fixed),93);assert(game.validProfile(fixed));
+  assert.deepEqual(fixed,{...p,ivs:fixed.ivs,personalityId:game.personalityIdOf(p)});
+  assert.strictEqual(game.cappedOwnedProfile(fixed),fixed);
+  assert.deepEqual(game.cappedOwnedProfile(structuredClone(p)),fixed);spreads.add(fixed.ivs.join(','));
+ }
+ assert(spreads.size>2000);
+ const imported={...shiny,ivs:Array(6).fill(31)},converted=game.cappedOwnedProfile(imported);
+ game.addCaughtPokemon('Volcanion',50,imported);game.addCaughtPokemon('Volcanion',40,{...imported,pid:19});
+ const captures=game.caughtProfile('Volcanion');assert.deepEqual(captures.active,converted);
+ assert.deepEqual(captures.copies[0].profile,game.cappedOwnedProfile({...imported,pid:19}));
+ for(const side of ['host','guest','raid:guest']){
+  const actor=game.onlineActor('Mewtwo',{},side,0,undefined,100,null,{profile:imported,moves:['Psystrike']});
+  assert.deepEqual(actor.profile,converted);
+ }
+ const npc=game.onlineActor('Mewtwo',{},'guest',0,undefined,100,null,{profile:imported,moves:['Psystrike']},null,false);
+ assert.deepEqual(npc.profile,imported);
+ const parent={...profile,ivs:[31,31,31,0,0,0]},other={...profile,ivs:[0,0,0,31,31,31]};
+ for(let i=0;i<500;i++){
+  const child=game.breedProfile(parent,other);
+  assert(game.validProfile(child));assert(child.ivs.filter((iv,stat)=>iv===parent.ivs[stat] || iv===other.ivs[stat]).length>=3);
+ }
+ const pace=game.battleSpeedFactor;
+ for(const v of [0,100,209,210])assert.equal(pace(v),Math.min(1.7,0.65+v/200));
+ for(const [v,expected] of [[270,1.85],[330,1.9]])assert(Math.abs(pace(v)-expected)<1e-12);
+ assert(pace(1500)>pace(330) && pace(1500)<2);
+ assert(pace(270)-pace(210)>pace(330)-pace(270));
+ const slow=game.unit('Mewtwo',0,0,true,75,{profile,moves:['Recover']});
+ const fast=game.unit('Mewtwo',0,0,true,100,{profile,moves:['Recover']});
+ const ratio=pace(fast.stats[3])/pace(slow.stats[3]);
+ assert(fast.stats[3]>210 && fast.pace>slow.pace);
+ assert(Math.abs(fast.pace/slow.pace-ratio)<1e-12 && Math.abs(slow.cooldown/fast.cooldown-ratio)<1e-12);
+ assert.deepEqual(fast.moveCooldowns,slow.moveCooldowns);
+ const onlineFast=game.onlineActor('Mewtwo',{},'host',0,undefined,100,null,{profile,moves:['Recover']});
+ assert.equal(onlineFast.pace,fast.pace);assert.equal(onlineFast.cooldown,fast.cooldown);
+
  assert.deepEqual(game.sortBox('shiny','asc',true).slice(0,2),['Caterpie','Mewtwo']);
  assert.deepEqual(game.sortBox('shiny','desc',true).slice(-2),['Caterpie','Mewtwo']);
  assert.deepEqual(game.sortBox('shiny','asc',false).slice(0,2),['Caterpie','Bulbasaur']);
@@ -84,5 +139,5 @@ export function sortBox(sort,order,includeCopies){
   const file=fs.readFileSync(path.join(root,'assets','move-'+name+'.png'));
   assert.equal(file.subarray(1,4).toString(),'PNG');assert.equal(file.readUInt32BE(16),60);assert.equal(file.readUInt32BE(20),40);
  }
- console.log('Shiny and personality stats, legacy IV training, PC sort order, animated sparkles and 846 move categories, accuracy values and descriptions passed.');
+ console.log('Full IV budget, 2,051 migration rolls, captures, hatching, Speed scaling, shiny and personality stats, legacy IV training, PC sort order, animated sparkles and 846 move categories, accuracy values and descriptions passed.');
 })().catch(error=>{console.error(String(error),error.stack?.split('\n').filter(line=>!line.includes('data:text')).slice(-6).join('\n'));process.exitCode=1;});

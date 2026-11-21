@@ -61,21 +61,23 @@ function pcPreferenceChecks(){
  const local=storage();
  function open(profile){
   const d=dom(),ctx=vm.createContext({...d,localStorage:local,playerSaveKey:key=>profile+'/'+key});
-  vm.runInContext(pcFilterCode,ctx);
+  vm.runInContext(html.match(/^const maxTotalIVs=.+;$/m)[0]+'\n'+pcFilterCode,ctx);
   ctx.bindPcBox(d.byId,()=>{});
   return d.byId;
  }
  const main=open('one');
  const change=(control,id,value)=>{const input=control(id);input.value=value;(input.oninput??input.onchange)();};
- const settings={'box-search':'#0026','box-generation':'1','pc-element':'Electric','pc-nature':'Timid','pc-personality':'Mischievous','pc-favorites':'only','pc-sort':'level','pc-order':'desc','pc-min-iv':'150','pc-min-ev':'400'};
+ const settings={'box-search':'#0026','box-generation':'1','pc-element':'Electric','pc-nature':'Timid','pc-personality':'Mischievous','pc-favorites':'only','pc-sort':'level','pc-order':'desc','pc-min-iv':'90','pc-min-ev':'400'};
  for(const [id,value] of Object.entries(settings))change(main,id,value);
+ change(main,'pc-min-iv','150');assert.equal(open('one')('pc-min-iv').value,'93');checks++;
+ change(main,'pc-min-iv','90');
  const raid=open('one');
  for(const [id,value] of Object.entries(settings))assert.equal(raid(id).value,value,id);
  change(raid,'pc-stat','0');
  const restored=open('one');assert.equal(restored('pc-stat').value,'0');assert.equal(restored('pc-min-iv').value,'31');assert.equal(restored('pc-min-ev').value,'252');checks++;
  assert.equal(open('two')('pc-sort').value,'number');assert.equal(open('two')('box-search').value,'');checks++;
  restored('pc-reset').onclick();
- assert.equal(open('one')('pc-order').value,'asc');assert.equal(open('one')('pc-favorites').value,'');assert.equal(open('one')('pc-min-iv').max,186);checks++;
+ assert.equal(open('one')('pc-order').value,'asc');assert.equal(open('one')('pc-favorites').value,'');assert.equal(open('one')('pc-min-iv').max,93);checks++;
  local.setItem('two/pokemon-arena-pc-filters','{broken');
  assert.equal(open('two')('box-generation').value,'0');checks++;
 }
@@ -99,6 +101,9 @@ async function cloudChecks(){
   phase:'home',automaticBattleLoopActive:()=>false,team:['Bulbasaur'],profiles:{1:{pid:1}},loadouts:{Bulbasaur:['Tackle']},savedMoves:{Bulbasaur:['Tackle']},
   wildProgress:{owned:{Bulbasaur:{level:1,xp:0}},coins:10000,autoRepeat:true},registeredPokemon:new Set(['Bulbasaur']),inspected:'Bulbasaur',activeSlot:0,
   gymRematchRecords:{},onlineSaveId:null,openMenu(){},console});
+ for(const key of ['maxTotalIVs','profileStorage','progressKey'])vm.runInContext(html.match(new RegExp('^const '+key+'=.+;$','m'))[0],ctx);
+ vm.runInContext(html.slice(html.indexOf('function validProfileData('),html.indexOf('function profileFor(')),ctx);
+ vm.runInContext(html.slice(html.indexOf('function personalityIdOf('),html.indexOf('function personalityTrait(')),ctx);
  vm.runInContext(html.slice(html.indexOf('function applyArenaMarketMemory('),html.indexOf('\nfor(const name of team) wildProgress.owned',html.indexOf('function applyArenaMarketMemory('))),ctx);
  vm.runInContext(read('cloud.js').replace('installAccountGate();',''),ctx);
  ctx.testClient=client;vm.runInContext("cloudAccount='user-one';cloudRevision='r0';cloudClient=async()=>testClient;",ctx);
@@ -139,11 +144,11 @@ async function cloudChecks(){
 async function hubChecks(){
  const d=dom();d.byId('home-dialog').append(d.byId('home-dialog-content'));
  const gameDex=JSON.parse(html.match(/^const dex\s*=\s*(.+);$/m)[1]);
- const profile={pid:2,ivs:Array(6).fill(31),evs:Array(6).fill(0),abilityOverride:'Good as Gold'};
- const copyProfile={pid:10,ivs:[20,30,17,22,25,31],evs:[4,0,0,0,4,252],abilityOverride:'Pressure',shiny:true};
- const sample={name:'Bulbasaur',number:1,generation:1,types:['Grass','Poison'],level:50,nature:'Adamant',personality:'Resilient',shiny:false,iv_total:186,ivs:profile.ivs,evs:profile.evs};
+ const profile={pid:2,personalityId:11,ivs:[15,16,31,10,10,11],evs:Array(6).fill(0),abilityOverride:'Good as Gold'};
+ const copyProfile={pid:10,personalityId:26,ivs:[10,20,8,10,13,31],evs:[4,0,0,0,4,252],abilityOverride:'Pressure',shiny:true};
+ const sample={name:'Bulbasaur',number:1,generation:1,types:['Grass','Poison'],level:50,nature:'Adamant',personality:'Resilient',shiny:false,iv_total:93,ivs:profile.ivs,evs:profile.evs};
  const rows=[{selector:{name:'Bulbasaur',slot:0,fingerprint:'active'},pokemon:sample,profile},
-  {selector:{name:'Bulbasaur',slot:1,fingerprint:'copy-two'},pokemon:{...sample,level:80,nature:'Modest',personality:'Mischievous',shiny:true,ivs:copyProfile.ivs,evs:copyProfile.evs,iv_total:145},profile:copyProfile},
+  {selector:{name:'Bulbasaur',slot:1,fingerprint:'copy-two'},pokemon:{...sample,level:80,nature:'Modest',personality:'Mischievous',shiny:true,ivs:copyProfile.ivs,evs:copyProfile.evs,iv_total:92},profile:copyProfile},
   ...Object.entries(gameDex).filter(([,value])=>value[0]>1&&value[0]<=31||value[0]===150||value[0]===152).map(([name,value])=>({selector:{name,slot:0,fingerprint:'species-'+value[0]},
    pokemon:{...sample,name,number:value[0],generation:value[0]===152?2:1,types:value.slice(1,3).filter(Boolean)},profile}))];
  const calls=[],mutations=[];let listings=[];
@@ -187,7 +192,7 @@ async function hubChecks(){
  const activeChart=status.querySelector('.stat-chart').attributes['aria-label'];await control('Bulbasaur · Copy 2 · Lv. 80').onclick();status=content.querySelector('.market-pc-status');
  const descriptionOf=prefix=>status.all().find(n=>n.textContent.startsWith(prefix)).attributes['data-pc-help'];
  assert.equal(descriptionOf('Ability: Pressure'),ctx.arenaAbilityDescriptions.Pressure);
- assert.equal(descriptionOf('Personality: Mischievous (++Sp. Atk)'), '(+2 bonus Sp. Atk per 10 levels.)');checks++;
+ assert.equal(descriptionOf('Personality: Mischievous (++Sp. Atk)'), '+2 bonus Sp. Atk per 10 levels.');checks++;
  assert.match(allText(status),/Modest/);assert.match(allText(status),/Pressure/);assert.match(allText(status),/Copy 2 · Stored/);assert.match(allText(status),/Lv. 80/);assert.notEqual(status.querySelector('.stat-chart').attributes['aria-label'],activeChart);checks++;
  assert.equal(status.querySelector('.stat-chart').attributes['aria-label'],['HP','Attack','Defense','Speed','Sp. Def','Sp. Atk'].map((name,i)=>name+' '+ctx.calculatedStats('Bulbasaur',copyProfile,80)[i]).join(', '));checks++;
  assert.equal(mutations.length,0,'Previewing a copy must not mutate or activate it');assert.equal(profile.pid,2);checks++;

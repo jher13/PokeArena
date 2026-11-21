@@ -31,7 +31,7 @@
   text.append(tags,node('small',(meta.nature ?? 'Any nature')+' · '+(meta.personality ?? 'Any personality')));
   card.append(art,text);
   if(Array.isArray(meta.ivs)){
-   const details=node('details',null,'market-stats');details.append(node('summary','IV '+meta.iv_total+'/186 · View IVs and EVs'));
+   const details=node('details',null,'market-stats');details.append(node('summary','IV '+meta.iv_total+'/'+maxTotalIVs+' · View IVs and EVs'));
    for(let i=0;i<6;i++)details.append(node('div',statLabels[i]+': IV '+meta.ivs[i]+' · EV '+(meta.evs?.[i] ?? 0)));
    card.append(details);
   }
@@ -84,7 +84,7 @@
    ['favorites','PC favorites',[['','All Pokémon'],['only','Favorites only']]]];
   let page=0,selected=null;
   for(const [key,label,values] of options){const f=select(label,values,key==='sort'?'number':key==='order'?'asc':'');controls[key]=f.input;filterGrid.append(f.wrapper);}
-  for(const [key,label,max] of [['iv','PC minimum IV',186],['ev','PC minimum EV',510]]){
+  for(const [key,label,max] of [['iv','PC minimum IV',maxTotalIVs],['ev','PC minimum EV',510]]){
    const f=field(label,'number');f.input.min=0;f.input.max=max;f.input.step=1;controls[key]=f.input;filterGrid.append(f.wrapper);
   }
   const previous=node('button','‹'),next=node('button','›');previous.type=next.type='button';

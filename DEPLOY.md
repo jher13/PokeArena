@@ -1,3 +1,9 @@
+# Update to 0.22.93
+
+Extract the changed files over **0.22.92** and push them together. The existing backend workflow runs the PC migration `20261121030000_pc_iv_budget.sql` and deploys the matching combat engine. The client version check waits for an active battle or auto-repeat session to finish.
+
+All active Pokémon and stored copies with more than 93 IVs receive six new IVs totaling 93. Each IV stays between 0 and 31. A Pokémon’s existing personality, nature, EVs, and identity carry over. The local client and the database use the same roll for an individual, including Pokémon held for trade. Opening a PC box or signing in again preserves the result. At 93 total, an IV Reducer frees points for training another stat.
+
 # Update to 0.22.92
 
 Extract the changed files over **0.22.91** and push them together. The backend workflow applies `20261121020000_chat_read_state.sql` for account-wide unread counts and mute preferences. It also deploys the combat engine with the five personality tiers. The version check picks up the new client after an active battle or auto-repeat session ends.

@@ -28,6 +28,7 @@ const ctx=vm.createContext({console,structuredClone,Math,window:{},phase:'menu',
  showPassBattleNotice(){},playEvolutionScenes(){},inspected:null,
  ballTypes:[{name:'Poké Ball'}],evolutionStones:[...new Set(Object.values(readData('stoneEvolutions')).flatMap(Object.keys))]});
 vm.runInContext(html.slice(html.indexOf('const natureNames=['),html.indexOf('const profileStorage=')),ctx);
+vm.runInContext(html.slice(html.indexOf('function validProfileData('),html.indexOf('function profileFor(')),ctx);
 vm.runInContext(html.slice(html.indexOf('function natureOf('),html.indexOf('function isAvailablePokemon(')),ctx);
 vm.runInContext(html.slice(html.indexOf('function isAvailablePokemon('),html.indexOf('const dexNames =')),ctx);
 vm.runInContext(html.slice(html.indexOf('function legalMoves('),html.indexOf('function saveTeam(')),ctx);

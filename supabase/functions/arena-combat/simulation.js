@@ -11,7 +11,7 @@ function onlineRandom() {
  onlineRandomState=(Math.imul(1664525,onlineRandomState)+1013904223)>>>0;
  return onlineRandomState/4294967296;
 }
-function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,copy=null,pvpRoster=null) {
+function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,copy=null,pvpRoster=null,pcOwned=side!=='boss') {
  if(!isAvailablePokemon(name)) throw Error('A Pokémon in this team is unavailable.');
  const progress=JSON.parse(entries['pokemon-arena-wild-progress'] ?? '{}') ?? {};
  const starter=JSON.parse(entries['pokemon-arena-starter'] ?? '{}') ?? {};
@@ -29,7 +29,8 @@ function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,c
  savedMoves=JSON.parse(entries['pokemon-arena-moves'] ?? '{}') ?? {};
  delete loadouts[name];
  const moves=raid?legalLoadout(name,raid.moves,raid.master?16:8):bossLevel?wildMoves(name):copy?legalLoadout(name,copy.moves ?? []):movesFor(name);
- const actor=unit(name,0,0,side!=='boss',level,{profile:validProfile(profile)?profile:fallback,moves});
+ if(pcOwned)profile=cappedOwnedProfile(profile);
+ const actor=unit(name,0,0,side!=='boss',level,{profile:validProfileData(profile)?profile:fallback,moves});
  const held=progress.held?.[name];
  const equipped=Object.entries(progress.held ?? {}).filter(([,item])=>item===held).map(([holder])=>holder);
  actor.heldItem=pvpRoster?pvpLoanerFor(name,pvpRoster,progress.pvpLoaners):
@@ -55,7 +56,7 @@ function initializeOnline(match) {
  const levelOverride=match.mode==='free_fight'?100:undefined;
  const pvp=['ranked','unranked','free_fight'].includes(match.mode);
  const host=(match.host_pick ?? []).map((name,i)=>onlineActor(name,match.host_entries,'host',i,undefined,levelOverride,null,null,pvp?match.host_pick:null));
- const guest=(match.guest_pick ?? []).map((name,i)=>onlineActor(name,match.guest_entries,'guest',i,undefined,levelOverride,null,null,pvp?match.guest_pick:null));
+ const guest=(match.guest_pick ?? []).map((name,i)=>onlineActor(name,match.guest_entries,'guest',i,undefined,levelOverride,null,null,pvp?match.guest_pick:null,match.mode!=='campaign'));
  const coop=isCoopMode(match.mode);
  const raidTeam=match.raid_seats?.flatMap((seat,index)=>{
   if(!seat?.pokemon)return [];

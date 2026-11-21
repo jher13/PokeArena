@@ -377,10 +377,11 @@ const personalityTraits=[
  ['Resolute','Vain','Defiant','Driven','Stubborn'],
  ['Curious','Mischievous','Clever','Thoughtful','Picky']
 ];
+const maxTotalIVs=93;
 const profileStorage='pokemon-arena-profiles';
 let profiles={};
 try {
- const saved=JSON.parse(playerStorage.getItem(profileStorage));
+ const saved=decodePCEntry(profileStorage,playerStorage.getItem(profileStorage));
  if(saved && typeof saved==='object' && !Array.isArray(saved)) profiles=saved;
 } catch {}
 function rollProfile() {
@@ -388,17 +389,70 @@ function rollProfile() {
  const evs=Array(6).fill(0);
  return {ivs,evs,pid:Math.floor(onlineRandom()*0x100000000)};
 }
-function validProfile(profile) {
+function breedProfile(parent,other) {
+ const child=rollProfile(),remaining=[0,1,2,3,4,5];
+ for(let i=0;i<3;i++){
+  const [stat]=remaining.splice(Math.floor(onlineRandom()*remaining.length),1);
+  child.ivs[stat]=(onlineRandom()<0.5?parent:other).ivs[stat];
+ }
+ // Keep all three inherited values. Only trim the randomly rolled stats if the hatch exceeds the budget.
+ let excess=child.ivs.reduce((sum,value)=>sum+value,0)-maxTotalIVs;
+ while(excess>0){
+  const [stat]=remaining.splice(Math.floor(onlineRandom()*remaining.length),1);
+  const trim=Math.min(excess,child.ivs[stat]);
+  child.ivs[stat]-=trim;excess-=trim;
+ }
+ return child;
+}
+function validProfileData(profile) {
  return profile && Number.isInteger(profile.pid) && profile.pid>=0 && profile.pid<0x100000000 &&
   [['ivs',31],['evs',252]].every(([key,max])=>Array.isArray(profile[key]) && profile[key].length===6 &&
    profile[key].every(value=>Number.isInteger(value) && value>=0 && value<=max)) &&
   profile.evs.reduce((sum,value)=>sum+value,0)<=510;
 }
+function validProfile(profile) {
+ return validProfileData(profile) && profile.ivs.reduce((sum,value)=>sum+value,0)<=maxTotalIVs;
+}
+function cappedOwnedProfile(profile) {
+ if(!validProfileData(profile) || profile.ivs.reduce((sum,value)=>sum+value,0)<=maxTotalIVs)return profile;
+ // The same individual must get the same roll offline, in cloud saves and while held for trade.
+ // Draw five independent IVs, keeping a roll only when the remaining points fit the sixth stat.
+ let seed=profile.pid%2147483646+1;
+ for(;;){
+  const ivs=[];
+  let left=maxTotalIVs;
+  for(let i=0;i<5;i++){
+   seed=seed*48271%2147483647;
+   const iv=seed%32;ivs.push(iv);left-=iv;
+  }
+  if(left>=0 && left<=31)return {...profile,personalityId:personalityIdOf(profile),ivs:[...ivs,left]};
+ }
+}
+function decodePCEntry(key,raw) {
+ const saved=JSON.parse(raw);
+ let changed=false;
+ function cap(owner,slot){
+  const before=owner[slot],after=cappedOwnedProfile(before);
+  if(after!==before){owner[slot]=after;changed=true;}
+ }
+ if(key===profileStorage){
+  for(const id of Object.keys(saved??{}))cap(saved,id);
+ }else{
+  for(const group of Object.values(saved?.copies??{})){
+   if(Array.isArray(group))for(const copy of group)if(copy?.profile)cap(copy,'profile');
+  }
+ }
+ if(changed){
+  // playerStorage reports write failures. Keep the same migrated Pokémon in memory for this session.
+  try{playerStorage.setItem(key,JSON.stringify(saved));}catch{}
+ }
+ return saved;
+}
 function profileFor(name) {
  const id=dex[name][0];
  if(name===starterSave?.name && !validProfile(profiles[id])) profiles[id]={ivs:Array(6).fill(0),evs:Array(6).fill(0),pid:0};
  if(!validProfile(profiles[id])) {
-  profiles[id]=rollProfile();
+  profiles[id]=cappedOwnedProfile(rollProfile());
   try {playerStorage.setItem(profileStorage,JSON.stringify(profiles));} catch {}
  }
  return profiles[id];
@@ -449,7 +503,7 @@ const statDescriptions=[
  'Hit Points. Damage reduces HP. At zero HP, the Pokémon faints.',
  'Attack determines the power of physical moves and normal attacks.',
  'Defense reduces incoming physical damage.',
- 'Speed increases movement speed and shortens recovery after skills. These bonuses cap at 210 Speed.',
+ 'Speed increases movement speed and shortens recovery after skills. Each point above 210 gives a smaller bonus.',
  'Special Defense reduces incoming special damage.',
  'Special Attack determines the power of special moves.'
 ];
@@ -483,7 +537,7 @@ function individualSummary(profile) {
  const modifier=nature.up===nature.down?'Neutral':'+'+statLabels[nature.up]+' / −'+statLabels[nature.down];
  const label=statLabels[trait.stat];
  const personality=element('p','Personality: '+trait.name+' ('+'+'.repeat(trait.tier)+label+')');
- pcHelp(personality,'(+'+trait.tier+' bonus '+label+' per 10 levels.)');
+ pcHelp(personality,'+'+trait.tier+' bonus '+label+' per 10 levels.');
  return [element('p','Nature: '+nature.name+' ('+modifier+')'),personality];
 }
 function individualTable(name,profile) {
@@ -600,8 +654,13 @@ function pcMoveTitle(tag,move,prefix='') {
 }
 function moveOption(move,suffix='',prefix='') {
  const option=element('option'),category=categoryForMove(move);
- if(category)option.append(categoryIcon(category));
- option.append(prefix+move+suffix+(category?' · '+category:''));
+ const label=prefix+move+suffix;
+ if(category){
+  if(globalThis.CSS?.supports('appearance','base-select'))option.append(categoryIcon(category));
+  else option.append(({Physical:damageMarks.atk,Special:damageMarks.special,Status:damageMarks.status})[category].glyph+' ');
+  option.setAttribute('aria-label',label+', '+category);
+ }
+ option.append(label);
  option.value=move;
  return option;
 }
@@ -889,7 +948,7 @@ function bindPcFilters(inputs,onChange) {
  const fields=Object.entries(inputs);
  function statLimits() {
   const single=inputs.stat.value!=='';
-  for(const [key,max] of [['iv',single?31:186],['ev',single?252:510]]) {
+  for(const [key,max] of [['iv',single?31:maxTotalIVs],['ev',single?252:510]]) {
    const input=inputs[key];input.max=max;
    if(input.value!=='') {
     const amount=Math.trunc(Number(input.value));
@@ -1118,6 +1177,7 @@ function capsuleControl(name) {
 function applyTrainingItem(profile,stat,{field,delta}) {
  const values=profile[field];
  if(field==='evs' && delta>0)return addEVs(profile,values.map((_,i)=>i===stat?delta:0))[stat];
+ if(field==='ivs' && delta>0)delta=Math.min(delta,Math.max(0,maxTotalIVs-values.reduce((sum,n)=>sum+n,0)));
  const next=clamp(values[stat]+delta,0,field==='ivs'?31:252);
  const change=next-values[stat];
  if(field==='ivs' && change && Number.isInteger(profile.pid))profile.personalityId=personalityIdOf(profile);
@@ -1141,11 +1201,9 @@ function vitaminControls(name,field,selection) {
  const group=element('fieldset',null,'training-items');
  group.append(element('legend',field==='evs'?'EV training':'IV training'));
  const profile=profileFor(name);
- if(field==='evs'){
-  const total=profile.evs.reduce((sum,value)=>sum+value,0);
-  group.append(element('small',total+' / 510 EVs','training-total'));
-  group.append(battleEVToggle(profile));
- }
+ const total=profile[field].reduce((sum,value)=>sum+value,0);
+ group.append(element('small',total+(field==='ivs'?' / '+maxTotalIVs+' IVs':' / 510 EVs'),'training-total'));
+ if(field==='evs')group.append(battleEVToggle(profile));
  let rows=0;
  for(const [item,rule] of Object.entries(trainingItems)) {
   if(rule.field!==field)continue;
@@ -1400,13 +1458,7 @@ function pcCollectionControls(name,preferredCopy=null) {
     const other=copies[selected]?.profile;
     if(!other)return;
     const parent=profileFor(name);
-    const child=rollProfile();
-    child.evs.fill(0);
-    const stats=[0,1,2,3,4,5];
-    for(let i=0;i<3;i++){
-     const [stat]=stats.splice(Math.floor(onlineRandom()*stats.length),1);
-     child.ivs[stat]=(onlineRandom()<0.5?parent:other).ivs[stat];
-    }
+    const child=breedProfile(parent,other);
     let id=dex[name][0];
     while(evolutionData[id]?.[0])id=evolutionData[id][0];
     const base=speciesById[id];
@@ -1896,7 +1948,7 @@ function pvpLoanerFor(name,roster,choices){
 }
 const wildProgress={battlePlan:'Balanced',battleCarry:'',favorites:[],pvpLoaners:{},autoCaptureRare:true,autoCaptureRareBall:6,autoCaptureRareFallback:-1,autoCaptureBall:0,autoCaptureFallback:'standard',reservePremiumBalls:true,battlePass:{xp:0,claimed:[]},capsules:0,vitamins:{},copies:{},ai:{},owned:{},registered:[],coins:0,megaRaidRewards:[],items:{},held:{},skills:{},balls:[12,1,3,1,1,0,1,0,0],wins:0,autoCapture:false,autoRepeat:false,autoReserve:false,speed:1};
 try {
- const saved=JSON.parse(playerStorage.getItem(progressKey));
+ const saved=decodePCEntry(progressKey,playerStorage.getItem(progressKey));
  if(saved?.trainerCard && typeof saved.trainerCard==='object' && !Array.isArray(saved.trainerCard))wildProgress.trainerCard=saved.trainerCard;
  if(saved?.trainerRecords && typeof saved.trainerRecords==='object' && !Array.isArray(saved.trainerRecords))wildProgress.trainerRecords=saved.trainerRecords;
  if(saved?.campaign && typeof saved.campaign==='object' && !Array.isArray(saved.campaign))wildProgress.campaign=saved.campaign;
@@ -2153,6 +2205,7 @@ function normalizeBattleAI(ai) {
  };
 }
 function addCaughtPokemon(name,level,profile=rollProfile()) {
+ profile=cappedOwnedProfile(profile);
  if(ownedPokemon(name)) {
   (wildProgress.copies[name] ??=[]).push({level,xp:0,profile});
  } else {
@@ -2165,9 +2218,9 @@ function addCaughtPokemon(name,level,profile=rollProfile()) {
 function ownedPokemon(name) {return wildProgress.owned[name];}
 function applyArenaMarketMemory(save) {
  const entries=save.entries;
- const progress=JSON.parse(entries['pokemon-arena-wild-progress'] ?? '{}');
+ const progress=decodePCEntry(progressKey,entries[progressKey] ?? '{}');
  const roster=JSON.parse(entries['pokemon-arena-team'] ?? '[]');
- const nextProfiles=JSON.parse(entries['pokemon-arena-profiles'] ?? '{}');
+ const nextProfiles=decodePCEntry(profileStorage,entries[profileStorage] ?? '{}');
  const nextMoves=JSON.parse(entries['pokemon-arena-moves'] ?? '{}');
  if(!roster.length || !progress.owned || roster.some(name=>!progress.owned[name]))throw Error('The Hub returned an invalid PC roster.');
  team.splice(0,team.length,...roster);
@@ -5737,6 +5790,11 @@ function finishArenaEntry(actor) {
  actor.recallMovesReadyAt=clock+(actor.recalledWithMove?recallMoveReentryCooldown:recallMoveEntryDelay);
  actor.recalledWithMove=false;
 }
+function battleSpeedFactor(speed) {
+ if(speed<210)return 0.65+Math.max(0,speed)/200;
+ const extra=speed-210;
+ return 1.7+0.3*extra/(60+extra);
+}
 function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):5,runMember=null,gymSlot) {
  const [,primary,,,,baseSpeed]=dex[name];
  const defaults=species[name];
@@ -5765,7 +5823,7 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
   }
  }
  const hp=stats[0];
- const speedFactor=clamp(0.65+stats[3]/200,0.65,1.7);
+ const speedFactor=battleSpeedFactor(stats[3]);
  return {name,teamPlan:friendly && !runMember?normalizeTeamPlan(wildProgress.battlePlan):'Balanced',carryName:friendly && !runMember?wildProgress.battleCarry:'',masterGymCombatant:Boolean(master),gymRole:!friendly?selectedGym?.plan?.team[gymSlot]?.[1]:null,type:primary,level,hp,max:hp,ai:master?master.ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
   !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness',position:selectedGym.plan?.team[gymSlot]?.[2]}):null,
   heldItem:master?master.heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor*(master?0.5:1),moves,profile,stats,shiny:profile.shiny===true?true:undefined,
@@ -10461,6 +10519,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.93',changes:['PC Pokémon can have 93 total IVs and up to 31 per stat. Every existing active Pokémon and stored copy above 93 gets a one-time random 93-point spread.','Speed above 210 now improves movement and skill recovery with diminishing returns. Move menus use category icons, and personality tooltips use plain text.']},
  {version:'0.22.92',changes:['Messages shows unread chat counts and includes a mute switch. Settings offers cloud save, load and re-sync.','Personalities now give 1–5 points to their favored stat per ten levels. PC stat labels are visible, move selectors fit on one line, and abilities show their Arena effects on hover.']},
  {version:'0.22.91',changes:['Shinies sparkle and gain 25% species base stats. PC storage can sort shinies and Legendary/Mythical Pokémon first.','Personalities grant a permanent favored-stat bonus of up to 10 points. Hover or focus a PC move or stat for its Arena description. Move categories use Pokémon Database icons.']},
  {version:'0.22.90',changes:['Messages now has World, Guild, Friend and Trade Chat. Open an online trainer’s profile to trade PC Pokémon directly. Both players review and confirm their offers.']},
@@ -10804,7 +10863,7 @@ function onlineRandom() {
  onlineRandomState=(Math.imul(1664525,onlineRandomState)+1013904223)>>>0;
  return onlineRandomState/4294967296;
 }
-function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,copy=null,pvpRoster=null) {
+function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,copy=null,pvpRoster=null,pcOwned=side!=='boss') {
  if(!isAvailablePokemon(name)) throw Error('A Pokémon in this team is unavailable.');
  const progress=JSON.parse(entries['pokemon-arena-wild-progress'] ?? '{}') ?? {};
  const starter=JSON.parse(entries['pokemon-arena-starter'] ?? '{}') ?? {};
@@ -10822,7 +10881,8 @@ function onlineActor(name,entries,side,index,bossLevel,levelOverride,raid=null,c
  savedMoves=JSON.parse(entries['pokemon-arena-moves'] ?? '{}') ?? {};
  delete loadouts[name];
  const moves=raid?legalLoadout(name,raid.moves,raid.master?16:8):bossLevel?wildMoves(name):copy?legalLoadout(name,copy.moves ?? []):movesFor(name);
- const actor=unit(name,0,0,side!=='boss',level,{profile:validProfile(profile)?profile:fallback,moves});
+ if(pcOwned)profile=cappedOwnedProfile(profile);
+ const actor=unit(name,0,0,side!=='boss',level,{profile:validProfileData(profile)?profile:fallback,moves});
  const held=progress.held?.[name];
  const equipped=Object.entries(progress.held ?? {}).filter(([,item])=>item===held).map(([holder])=>holder);
  actor.heldItem=pvpRoster?pvpLoanerFor(name,pvpRoster,progress.pvpLoaners):
@@ -10848,7 +10908,7 @@ function initializeOnline(match) {
  const levelOverride=match.mode==='free_fight'?100:undefined;
  const pvp=['ranked','unranked','free_fight'].includes(match.mode);
  const host=(match.host_pick ?? []).map((name,i)=>onlineActor(name,match.host_entries,'host',i,undefined,levelOverride,null,null,pvp?match.host_pick:null));
- const guest=(match.guest_pick ?? []).map((name,i)=>onlineActor(name,match.guest_entries,'guest',i,undefined,levelOverride,null,null,pvp?match.guest_pick:null));
+ const guest=(match.guest_pick ?? []).map((name,i)=>onlineActor(name,match.guest_entries,'guest',i,undefined,levelOverride,null,null,pvp?match.guest_pick:null,match.mode!=='campaign'));
  const coop=isCoopMode(match.mode);
  const raidTeam=match.raid_seats?.flatMap((seat,index)=>{
   if(!seat?.pokemon)return [];
