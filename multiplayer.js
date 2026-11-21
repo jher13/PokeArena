@@ -1364,9 +1364,11 @@
  }
  async function notifications() {
   const data=await readNotifications();
+  const direct=await window.ArenaSocial?.inbox().catch(()=>[]);
   if(data.trades?.some(notice=>!notice.read_at))await window.arenaMarketMarkRead(data.trades.filter(notice=>!notice.read_at).map(notice=>notice.id));
   updateNotificationUnread(data,true);
-  show('Notifications',...(data.trades ?? []).map(notice=>{const entry=element('article',null,'market-notice');entry.append(element('strong',notice.title),element('p',notice.message));return entry;}),
+  show('Notifications',...(direct??[]).map(room=>button('Open trade with '+room.partner,()=>window.ArenaSocial.openTrade(room.id))),
+   ...(data.trades ?? []).map(notice=>{const entry=element('article',null,'market-notice');entry.append(element('strong',notice.title),element('p',notice.message));return entry;}),
    ...(data.tradePending>0?[button('Receive completed trades',async()=>{await window.arenaMarketMutate('claim');await notifications();})]:[]),
    ...((data.trades?.length || data.tradePending)?[button('Open Trading Hub',()=>window.openTradingHub())]:[]),...data.friends.map(name=>element('div',name+' sent a friend request.')),
    ...data.friends.map(name=>button('Accept '+name,async()=>{await rpc('friend_request',{name});await notifications();})),
@@ -1374,8 +1376,12 @@
     if(invite.raid){showRaidSeats(await raidRpc('join',{code:invite.code}));return;}
     active=await rpc('join',{code:invite.code});showMatch(isCoop(invite.mode)?'Co-op':'PvP');
    })),
-   ...(!data.friends.length&&!data.invites.length&&!data.trades?.length?[element('p','No new notifications.')]:[]));
+   ...(!data.friends.length&&!data.invites.length&&!data.trades?.length&&!direct?.length?[element('p','No new notifications.')]:[]));
  }
+ byId('toolbar-messages').onclick=()=>{
+  if(!cloudAccount){show('Messages',element('p','Sign in to chat with other trainers.'));return;}
+  return open('Messages',()=>window.ArenaSocial.messages());
+ };
  byId('toolbar-notices').onclick=()=>open('Notifications',notifications);
  setInterval(async()=>{
   if(phase!=='home' || !cloudAccount || cloudAccount===leavingAccount)return;

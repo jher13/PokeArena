@@ -62,6 +62,7 @@ const network={rows,profile:null,fail:false,marketOpens:0,requests:[],
    if(this.fail)throw Error('Offline');
    return {data:args.operation==='list'?{count:this.rows.length,players:this.rows}:{count:this.rows.length}};
   }
+  if(method==='arena_direct_trade')return {data:args.action==='inbox'?{rooms:[]}:{available:this.rows.some(row=>!row.self && row.name===args.args.name)}};
   if(method==='arena_trainer_card')return {data:args.trainer_name?this.profile:{online:{name:'Nifty',raids:[]}}};
   throw Error(method);
  },auth:{getUser:async()=>({data:{user:{id:'viewer'}}})}
@@ -105,15 +106,16 @@ async function navigationChecks(A, net) {
  A.equal(find(dlg(),'Missions').getAttribute('aria-pressed'),'true');A.equal(find(dlg(),'Regional rewards').getAttribute('aria-pressed'),'true');
  await click(dlg(),'Close');phase='home';
  const lobby=byId('home-dialog'),content=byId('home-dialog-content');lobby.append(byId('home-dialog-title'),content);
+ await byId('toolbar-messages').onclick();A.match(content.textContent,/Sign in/);
  await byId('home-online').onclick();A.match(content.textContent,/Sign in/);
  cloudAccount=account;sessionStorage.setItem('arena-online-user',account);await window.resumeArenaPresence();
  window.openTradingHub=async()=>{net.marketOpens++;};await byId('home-hub').onclick();A.equal(net.marketOpens,1);
  await byId('home-online').onclick();A.equal(byId('home-dialog-title').textContent,'Online');A.equal(byId('home-online-count').textContent,'2');
  const profileLinks=()=>content.querySelectorAll('button').filter(b=>b.textContent==='View profile');
  A.deepEqual(profileLinks().map(b=>b.dataset.trainer),['Nifty','Rival']);A.match(content.textContent,/Nifty \(you\)/);
- await profileLinks()[0].onclick();A.equal(dlg().querySelector('.tc-bio').querySelector('h2').textContent,'Nifty');await click(dlg(),'Close');
+ await profileLinks()[0].onclick();A.equal(find(dlg(),'Trade').hidden,true);A.equal(dlg().querySelector('.tc-bio').querySelector('h2').textContent,'Nifty');await click(dlg(),'Close');
  net.profile={profile:{publicOnly:true,name:'Rival',style:{},laurel:true},online:{wins:2,losses:1,rating:1012,coop:4}};
- await profileLinks()[1].onclick();A.equal(dlg().querySelector('.tc-nav').hidden,true);A.ok(dlg().querySelector('.tc-avatar').classList.contains('tc-frame-laurel'));A.match(dlg().textContent,/1012|1,012/);
+ await profileLinks()[1].onclick();A.equal(find(dlg(),'Trade').hidden,false);A.equal(dlg().querySelector('.tc-nav').hidden,true);A.ok(dlg().querySelector('.tc-avatar').classList.contains('tc-frame-laurel'));A.match(dlg().textContent,/1012|1,012/);
  A.equal(dlg().querySelector('.tc-edit'),null);await click(dlg(),'Close');A.equal(lobby.open,true);
  net.profile={profile:{name:'Rival',style:{},standard:badgeIds,master:[],laurel:true,featured:[{name:'Pikachu',level:44},null,null],
   regionCounts:Array(9).fill(0),shinyLegends:[],records:{}},online:{raids:[]}};
@@ -124,6 +126,8 @@ async function navigationChecks(A, net) {
  net.rows=net.rows.filter(r=>r.self);await click(content,'Refresh');A.equal(profileLinks().length,1);
  net.fail=true;await click(content,'Refresh');A.equal(profileLinks().length,0);A.match(content.textContent,/Try refreshing/);A.equal(byId('home-online-count').hidden,true);
  net.fail=false;await click(content,'Refresh');A.equal(profileLinks().length,1);
+ await window.ArenaTrainerCard.open('Rival');A.equal(find(dlg(),'Trade').hidden,true);await click(dlg(),'Close');
+ await socialNavigationChecks(A,net);
  await inviteNavigationChecks(A,net);
  const started=new Promise(resolve=>net.onNotifications=resolve);let finishHeartbeat;
  net.pendingNotifications=new Promise(resolve=>finishHeartbeat=resolve);
@@ -131,6 +135,71 @@ async function navigationChecks(A, net) {
  const leaving=window.leaveArenaPresence(net);await Promise.resolve();
  A.notEqual(net.requests.at(-1),'leave');finishHeartbeat();await Promise.all([polling,leaving]);
  A.equal(net.requests.at(-1),'leave');A.equal(byId('home-online-count').hidden,true);
+}
+async function socialNavigationChecks(A,net){
+ const content=byId('home-dialog-content'),card=byId('trainer-card-dialog');
+ const find=(root,label)=>root.querySelectorAll('button').find(b=>b.textContent===label);
+ const click=async(root,label)=>{const b=find(root,label);A.ok(b,label);A.ok(!b.disabled,label);await b.onclick();};
+ const original=net.rpc,originalPC=window.ArenaTradePC,originalMutate=window.arenaMarketMutate;
+ let unlocked=true,pendingGuild,failOnce=true,requests=[],posts=[],trade,receipts=0;
+ net.rpc=async function(method,params){
+  if(method==='arena_chat'){
+   const {channel_name,peer_name,body_text,client_id}=params;
+   if(channel_name==='guild' && pendingGuild)await pendingGuild;
+   if(body_text){
+    requests.push(params);
+    if(!posts.some(m=>m.id===client_id))posts.push({id:client_id,channel_name,peer_name,body:body_text,name:'Nifty',mine:true,sent_at:new Date().toISOString()});
+    if(failOnce){failOnce=false;throw Error('Connection interrupted');}
+   }
+   return {data:{messages:posts.filter(m=>m.channel_name===channel_name && m.peer_name===peer_name),
+    friends:['Rival'],scope:channel_name==='guild'&&unlocked?'Kanto':null,can_send:channel_name!=='guild'||unlocked}};
+  }
+  if(method==='arena_direct_trade'){
+   if(params.action==='availability')return {data:{available:params.args.name==='Rival'}};
+   if(params.action==='inbox')return {data:{rooms:trade?[trade]:[]}};
+   if(params.action==='invite')trade={id:'direct',status:'invited',incoming:false,partner:'Rival',version:0};
+   if(params.action==='cancel')trade={...trade,status:'cancelled',version:1};
+   if(params.action==='accept')trade={...trade,status:'open',mine:null,theirs:null,ready:false,partner_ready:false};
+   if(params.action==='confirm')trade={...trade,status:'completed',pending_delivery:true};
+   return {data:trade};
+  }
+  return original.call(this,method,params);
+ };
+ try{
+  await byId('toolbar-messages').onclick();
+  A.deepEqual(content.querySelectorAll('button').filter(b=>b.getAttribute('role')==='tab').map(b=>b.textContent),
+   ['World Chat','Guild Chat','Friend Chat','Trade Chat']);
+  const input=content.querySelector('input');input.value='<img src=x>';input.oninput();
+  const submit=()=>content.querySelector('form').onsubmit({preventDefault(){}});
+  await submit();A.match(content.textContent,/Connection interrupted/);await submit();
+  A.equal(requests[0].client_id,requests[1].client_id);A.match(content.querySelector('ol').textContent,/<img src=x>/);
+  A.equal(content.querySelector('ol').querySelector('img'),null);
+  let resume;pendingGuild=new Promise(resolve=>{resume=resolve;});
+  const delayed=click(content,'Guild Chat');await click(content,'Friend Chat');resume();await delayed;pendingGuild=null;
+  A.match(content.textContent,/accepted friends/);const select=content.querySelector('select');select.value='Rival';await select.onchange();
+  A.match(content.textContent,/Private conversation with Rival/);A.equal(content.querySelector('ol').textContent,'No messages yet.');
+  unlocked=false;await click(content,'Guild Chat');A.match(content.textContent,/Join a guild/);A.equal(content.querySelector('input').disabled,true);
+  await click(content,'Trade Chat');await window.ArenaTrainerCard.open('Rival');
+  await click(card,'Trade');A.equal(card.open,false);A.equal(byId('home-dialog-title').textContent,'Trade with Rival');
+  A.match(content.textContent,/Waiting for Rival/);
+  await click(content,'Cancel invitation');A.match(content.textContent,/canceled/);
+  await click(content,'Back to Trade Chat');A.equal(find(content,'Trade Chat').getAttribute('aria-selected'),'true');
+  trade={id:'direct',status:'invited',incoming:true,partner:'Rival',version:0};
+  await byId('toolbar-notices').onclick();await click(content,'Open trade with Rival');A.ok(find(content,'Accept trade'));A.ok(find(content,'Decline'));
+  await click(content,'Accept trade');
+  // The partner posts an offer while our box loads. Our PC selection must stay available.
+  window.ArenaTradePC={inventory:async()=>{
+   trade={...trade,version:trade.version+1,theirs:{name:'Eevee'},partner_ready:true};return [{selector:{name:'Pikachu',slot:0}}];
+  },picker:(rows,onPick)=>{const b=element('button','Pick Pikachu');b.onclick=()=>onPick(rows[0]);return b;},
+  pokemonPanel:mon=>element('p',mon.name)};
+  window.arenaMarketMutate=async(action,args,service)=>{
+   if(action==='offer'){A.equal(service,'direct');A.equal(args.version,1);trade={...trade,mine:{name:'Pikachu'},version:2};}
+   else{A.equal(action,'claim');receipts++;trade={...trade,pending_delivery:false};}
+  };
+  await click(content,'Choose Pokémon');await click(content,'Pick Pikachu');await click(content,'Offer selected Pokémon');
+  A.match(content.textContent,/Eevee/);await click(content,'Confirm trade');
+  A.equal(receipts,1);A.match(content.textContent,/Trade completed. You received Eevee/);A.ok(find(content,'Received in PC'));
+ }finally{net.rpc=original;window.ArenaTradePC=originalPC;window.arenaMarketMutate=originalMutate;}
 }
 async function inviteNavigationChecks(A,net){
  const content=byId('home-dialog-content'),room=byId('raid-lobby');
@@ -194,6 +263,8 @@ async function inviteNavigationChecks(A,net){
   assert(markup.includes('--arena-kalos-laurel:url("'+assetRoot+'campaign-laurel.svg'));
   assert(markup.includes('#home.has-kalos-laurel #feature-sprite::before,.tc-frame-laurel::before'));
   assert(markup.includes(assetRoot+'gym-badges.png'));
+  for(const asset of ['social.js','social.css','trade-hub.js','multiplayer.js','trainer-card.js','cloud.js'])
+   assert(markup.includes(assetRoot.replace('assets/','')+asset+'?v='));
  }
  for(const rule of ['.tc-card-frame{','.tc-frame-corner{','.tc-buddy>canvas{grid-area:1/1'])assert(read('trainer-card.css').includes(rule));
  const settingsGrid=new Element('div');settingsGrid.className='battle-settings-grid';document.getElementById('battle-settings').append(settingsGrid);
@@ -203,10 +274,10 @@ async function inviteNavigationChecks(A,net){
  engine=engine.replace('const sessionStorage=localStorage;','const sessionStorage=globalThis.profileTest.store;');
  engine=engine.replace('const location=undefined;',"const location={protocol:'file:',search:''};");
  engine=engine.replace('const Image=class {};','const Image=class {addEventListener(){}};');
- const source=[engine,'let cloudAccount=null;const dirty=false;const cloudClient=async()=>globalThis.profileTest.network;',read('campaign-progression.js'),read('trainer-card.js'),read('multiplayer.js'),inviteNavigationChecks.toString(),'export '+navigationChecks.toString()].join('\n');
+ const source=[engine,'let cloudAccount=null;const dirty=false;const cloudClient=async()=>globalThis.profileTest.network;',read('campaign-progression.js'),read('trainer-card.js'),read('multiplayer.js'),read('social.js'),socialNavigationChecks.toString(),inviteNavigationChecks.toString(),'export '+navigationChecks.toString()].join('\n');
  const mod=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  await mod.navigationChecks(assert,network);
- console.log('Passed profile navigation, cosmetics, 68 badge icons, Mission shortcuts, online directory and live PvP/co-op invite checks.');
+ console.log('Passed profile navigation, cosmetics, 68 badge icons, Mission shortcuts, online directory, live PvP/co-op invites, chat navigation and profile trades.');
 })().catch(error=>{
  console.error(error.name,error.message);
  console.error(error.stack.split('\n').slice(1,4).map(l=>l.replace(/data:text\/javascript;base64,[\w+/=]+/g,'arena-client')).join('\n'));

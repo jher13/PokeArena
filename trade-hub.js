@@ -293,5 +293,6 @@
   try{await window.arenaMarketPrepare();if(token!==state.token || !dialog.open)return;state.inventory=null;await render();}
   catch(error){content.replaceChildren(node('p',error.message),button('Retry Hub sync',()=>window.openTradingHub()));}
  };
+ window.ArenaTradePC={picker,pokemonPanel,inventory:()=>inventory(true)};
  window.arenaMarketMatchesWanted=matchesWanted;
 })();

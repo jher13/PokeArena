@@ -1,3 +1,7 @@
+# Update to 0.22.90
+
+Extract these files over **0.22.89** and push them together to `main`. The existing deployment workflow applies `20261120030000_chat_and_direct_trades.sql` for the four Messages channels and private Pokémon trades. Players can start a trade from an online profile and resume it from Notifications or Trade Chat.
+
 # Update to 0.22.89
 
 Extract over **0.22.88** and push the changed files to `main`. The client uses the existing Online directory to filter room invites. The backend workflow applies `20261120020000_online_room_invites.sql` so both PvP and co-op also check the recipient's presence when saving an invitation.

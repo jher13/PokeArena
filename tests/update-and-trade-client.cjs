@@ -111,6 +111,12 @@ async function cloudChecks(){
  vm.runInContext('dirty=false',ctx);const retryId=marketCalls.at(-1).args.request_id;await ctx.window.arenaMarketRecover();assert.equal(marketCalls.at(-1).args.request_id,retryId);assert(!ctx.window.isArenaMarketBusy());checks++;
  heldResolve=true;const pending=ctx.window.arenaMarketMutate('claim');await tick();assert(ctx.window.isArenaMarketBusy());await assert.rejects(()=>ctx.window.arenaMarketMutate('claim'),/still syncing/);const resolve=heldResolve;heldResolve=null;resolve();await pending;checks++;
  ctx.phase='gyms';failures=2;await assert.rejects(()=>ctx.window.arenaCampaignMutate('claim_region',{region:'Kanto'}),/Offline/);assert(ctx.window.isArenaMarketBusy());const campaignRetry=marketCalls.at(-1).args.request_id;ctx.phase='menu';await ctx.window.arenaMarketRecover();assert.equal(marketCalls.at(-1).rpc,'arena_campaign');assert.equal(marketCalls.at(-1).args.request_id,campaignRetry);assert(!ctx.window.isArenaMarketBusy());checks++;
+ ctx.phase='home';failures=2;
+ await assert.rejects(()=>ctx.window.arenaMarketMutate('offer',{id:'room',version:2},'direct'),/Offline/);
+ const directRetry=marketCalls.at(-1).args.request_id;
+ await ctx.window.arenaMarketRecover();
+ assert.equal(marketCalls.at(-1).rpc,'arena_direct_trade');assert.equal(marketCalls.at(-1).args.request_id,directRetry);
+ assert(!ctx.window.isArenaMarketBusy());checks++;
  const before=marketCalls.length;ctx.phase='battle';await ctx.window.arenaMarketNotifications();await tick();assert.equal(marketCalls.length,before+1,'Do not claim offline deliveries during battle');checks++;
 }
 async function hubChecks(){

@@ -123,7 +123,7 @@
   });
   box.append(grid);return box;
  }
- let root,body,nav,activeTab='Profile',model,entries,mine,revision=0,editing=false,networkNote='',missionLanding,missionNotice='';
+ let root,body,nav,tradeButton,activeTab='Profile',model,entries,mine,revision=0,editing=false,networkNote='',missionLanding,missionNotice='';
  function tabBar(){
   nav.replaceChildren();nav.hidden=Boolean(model?.publicOnly);
   if(nav.hidden)return;
@@ -327,12 +327,18 @@
  function mount(){
   if(root)return;root=node('dialog');root.id='trainer-card-dialog';root.setAttribute('aria-labelledby','trainer-card-title');
   const heading=node('div',null,'tc-heading'),title=node('h2','Player Profile');title.id='trainer-card-title';
-  heading.append(title,button('Close',()=>{if(!window.ArenaCampaign?.isBusy())root.close();}));nav=node('nav',null,'tc-nav');nav.setAttribute('aria-label','Trainer profile sections');
+  tradeButton=button('Trade',()=>{
+   if(!mine && model){root.close();return window.ArenaSocial.startTrade(model.name);}
+  });
+  tradeButton.hidden=true;
+  const actions=node('div',null,'tc-profile-actions');heading.append(title,actions);
+  actions.append(tradeButton,button('Close',()=>{if(!window.ArenaCampaign?.isBusy())root.close();}));nav=node('nav',null,'tc-nav');nav.setAttribute('aria-label','Trainer profile sections');
   body=node('div',null,'tc-body');root.append(heading,nav,body);document.body.append(root);root.addEventListener('close',()=>{if(!root.open){revision++;window.ArenaCampaign?.unmountMissions();}});
   root.addEventListener('cancel',e=>{if(window.ArenaCampaign?.isBusy())e.preventDefault();});
  }
  async function open(trainerName=null,destination='Profile',section,notice=''){
   mount();const token=++revision;mine=trainerName===null;editing=false;activeTab=mine?destination:'Profile';networkNote='';model=null;missionLanding=section;missionNotice=notice;
+  tradeButton.hidden=true;
   if(mine)refreshLocal();else{tabBar();body.replaceChildren(node('p','Loading trainer card…'));}
   root.scrollTop=0;if(!root.open)root.showModal();
   if(!sessionStorage.getItem('arena-online-user')){
@@ -344,8 +350,11 @@
    if(token!==revision||!root.open)return;if(error)throw error;
    if(!mine){if(!data?.profile){body.replaceChildren(node('p','This trainer is offline or their profile is unavailable.'));return;}model=data.profile;}
    model.online=data?.online??null;
-   if(!mine)render();
-   else{
+   if(!mine){
+    render();
+    const available=await window.ArenaSocial?.canTrade(trainerName).catch(()=>false);
+    if(token===revision && root.open)tradeButton.hidden=!available;
+   }else{
     if(model.online?.name)model.name=model.online.name;
     if(activeTab==='Profile'){
      const heading=body.querySelector('.tc-bio')?.querySelector('h2');if(heading)heading.textContent=model.name;

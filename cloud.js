@@ -484,7 +484,7 @@ async function waitForArenaSave(){
 }
 async function marketRpc(action,args={},service='market') {
  if(!cloudAccount)throw Error('Sign in to use the Trading Hub.');
- const {data,error}=await (await cloudClient()).rpc(service==='campaign'?'arena_campaign':'arena_market',{action,args});
+ const {data,error}=await (await cloudClient()).rpc(service==='direct'?'arena_direct_trade':service==='campaign'?'arena_campaign':'arena_market',{action,args});
  if(error){error.marketRpcRejected=Boolean(error.code);throw error;}
  if(data?.status && data.status!=='ok'){
   const failure=new Error(data.message ?? 'Your PC changed. Sync or reload before trading.');failure.marketStatus=data.status;throw failure;
@@ -535,7 +535,7 @@ window.arenaMarketMutate=async(action,args={},service='market')=>{
   if(dirty)await flushArenaSave();
   if(dirty)throw Error('Sync your PC before trading.');
   saving=true;
-  operation={action,...(service==='campaign'?{service}:{}),args:{...args,expected_revision:cloudRevision,request_id:crypto.randomUUID()}};
+  operation={action,...(service==='market'?{}:{service}),args:{...args,expected_revision:cloudRevision,request_id:crypto.randomUUID()}};
   setPendingMarketOperation(operation);
   const result=await sendMarketOperation(operation);
   applyArenaMarketSnapshot(result);setPendingMarketOperation(null);return result;

@@ -1,0 +1,27 @@
+#home-dialog:has(.social-chat){width:min(670px,94vw)}
+.social-chat{display:grid;gap:12px}
+.social-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding-bottom:10px;border-bottom:1px solid #b5c8b9}
+#home-dialog .social-tabs button{margin:0;line-height:1.2}
+#home-dialog .social-tabs button[aria-selected="true"]{background:#365e4b;border-color:#365e4b;box-shadow:inset 0 -3px #f7c468}
+.social-panel{display:grid;gap:8px;min-width:0}
+.social-scope,.direct-state{margin:0;font-size:.9rem}
+.social-peer{display:flex;align-items:center;gap:8px}
+.social-log{list-style:none;overflow:auto;overscroll-behavior:contain;height:clamp(160px,37vh,360px);margin:0;padding:2px 12px;background:#fff;border:1px solid #b5c8b9;border-radius:8px;color:#20362b}
+.social-log li{padding:8px 0;border-bottom:1px solid #e0e9e1;text-align:left;overflow-wrap:anywhere}
+.social-log li:last-child{border:0}
+.social-log li>span{white-space:pre-wrap}
+.social-author{display:flex;align-items:baseline;gap:10px}
+#home-dialog.collection-dialog .social-author button{margin:0;border:0;background:transparent;color:#285944;font-weight:700;padding:0;text-decoration:underline;text-underline-offset:.15em}
+.social-author time,.social-empty{font-size:.8rem;color:#526757}
+.social-compose{display:flex;align-items:stretch;gap:7px}
+#home-dialog .social-compose input,#home-dialog .social-compose button{margin:0}
+.social-compose input{flex:1;min-width:0;padding:8px}
+.social-status{margin:0;font-size:.85rem;overflow-wrap:anywhere}.social-status:empty,.social-scope:empty{display:none}
+.direct-trade{display:grid;gap:12px}
+.direct-offers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.direct-offers:empty{display:none}
+.direct-offer{display:grid;align-content:start;gap:6px;border:1px solid #b5c8b9;border-radius:8px;padding:12px;background:#eaf3e7;overflow-wrap:anywhere}
+.direct-offer h3,.direct-offer p{margin:0}
+.direct-confirmed{color:#24583d}
+.tc-profile-actions{display:flex;align-items:center;gap:.5rem}.tc-profile-actions button[hidden]{display:none}
+@media(max-width:520px){.social-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.direct-offers{grid-template-columns:1fr}}

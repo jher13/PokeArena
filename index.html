@@ -937,6 +937,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 @media(max-width:460px){.arena-evolution-route{grid-template-columns:1fr}.arena-evolution-route button{grid-column:1;grid-row:auto;justify-self:start}}
 
 </style>
+<link rel="stylesheet" href="./social.css?v=0.22.90">
 <link rel="stylesheet" href="./trainer-card.css?v=0.22.73">
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -11401,7 +11402,6 @@ byId('home-friendlist').onclick=()=>openHomeDialog('Friendlist',element('p','Ava
 byId('home-guilds').onclick=()=>openHomeDialog('Guilds',element('p','Available when online play is added.'));
 byId('home-leaderboard').onclick=()=>openHomeDialog('Leaderboard',element('p','Available when online play is added.'));
 
-byId('toolbar-messages').onclick=()=>openHomeDialog('Messages',element('p','No messages.'));
 byId('toolbar-notices').onclick=()=>openHomeDialog('Notifications',
  element('p',maximumBattleSpeed()+'× battle speed available.'),
  element('p',progressText()));
@@ -11434,6 +11434,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.90',changes:['Messages now has World, Guild, Friend and Trade Chat. Open an online trainer’s profile to trade PC Pokémon directly. Both players review and confirm their offers.']},
  {version:'0.22.89',changes:['Room invites show online friends and guild members. The list refreshes while open and checks the recipient again before sending.']},
  {version:'0.22.88',changes:['PC storage remembers your search, filters, and sort order across the PC, co-op raid team selection, Trading Hub, and trainer-card favorites.']},
  {version:'0.22.87',changes:['Online battles process moves faster and recover missed battle time. PvP results show server timing and gaps between battle updates.']},
@@ -11761,9 +11762,9 @@ phase='login';
 showScreen('login');
 byId('login').hidden=true;
 requestAnimationFrame(frame);
-</script><p id="pass-battle-notice" role="status" hidden></p><p id="arena-sync-error" role="alert" hidden></p><script src="./cloud.js?v=0.22.71"></script><script>
+</script><p id="pass-battle-notice" role="status" hidden></p><p id="arena-sync-error" role="alert" hidden></p><script src="./cloud.js?v=0.22.90"></script><script>
 byId('home-events').onclick=()=>{phase='events';showScreen('events');selectedPassReward=null;renderBattlePass();};
 byId('events-back').onclick=openMenu;
 </script>
-<script src="./tactics.js?v=0.22.70"></script><script src="./multiplayer.js?v=0.22.89"></script>
-<script src="./trade-hub.js?v=0.22.88"></script><script src="./campaign-progression.js?v=0.22.82"></script><script src="./trainer-card.js?v=0.22.88"></script></html>
+<script src="./tactics.js?v=0.22.70"></script><script src="./multiplayer.js?v=0.22.90"></script>
+<script src="./trade-hub.js?v=0.22.90"></script><script src="./campaign-progression.js?v=0.22.82"></script><script src="./trainer-card.js?v=0.22.90"></script><script src="./social.js?v=0.22.90"></script></html>

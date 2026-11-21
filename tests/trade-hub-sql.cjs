@@ -172,5 +172,6 @@ let db;
  const evolvedWrite=(await db.query('select public.arena_write_save($1,$2) data',[evolutionDocument,evolutionSave.stamp])).rows[0].data;
  assert.equal(evolvedWrite.status,'ok');assert((await inventory(0)).some(row=>row.selector.name==='Charmeleon'&&row.profile.trade_id===originalTradeId&&row.profile.evolutionProgress.wins===3));checks++;
  console.log(checks+' PostgreSQL trade checks passed: escrow, bids/refunds, Buy now, request matching, offline delivery, replay, filters and ownership guards.');
+ await require('./social-sql.cjs')(db,save);
  await db.close();
 })().catch(async error=>{console.error(error.message);if(db)try{console.error((await db.query('select reason,details from arena_private.market_security_events order by id desc limit 3')).rows);await db.close();}catch{};if(error.where)console.error(error.where);if(error.detail)console.error(error.detail);process.exitCode=1;});
