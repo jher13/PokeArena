@@ -1,3 +1,7 @@
+# Update to 0.22.101
+
+Extract the changed files over 0.22.100 at the repository root. The existing backend workflow applies `20261122020000_guard_champion_stage.sql` and deploys the matching `arena-combat` function. Publish the Pages client from the same commit. Existing weekly runs keep their locked team, stage, HP and remaining heal.
+
 # Update to 0.22.100
 
 Extract the changed files at the repository root over 0.22.99, preserving the directories. Deploy the Pages client, the `20261122010000_champion_and_friend_challenges.sql` migration and the `arena-combat` function with the existing workflows. Gauntlet verification and saved-team challenges use the matching combat engine. Run `npm ci` and `npm test` to verify the release locally.

@@ -94,7 +94,10 @@ Deno.serve(async request => {
       const run = await db('arena_journey_read',{player_id:user.id,run_id:body.run_id});
       if (!run) return reply({error:'This challenge is unavailable.'},404);
       if (body.journey === 'prepare') {
-        if (run.kind !== 'champion' || run.status !== 'playing') return reply({error:'Choose a weekly battle first.'},409);
+        if (!Number.isInteger(body.stage) || body.stage<0 || body.stage>2) return reply({error:'Choose a weekly battle first.'},400);
+        if (run.kind!=='champion') return reply({error:'Choose a weekly gauntlet first.'},400);
+        if (run.stage!==body.stage || run.status!=='playing') return reply({status:run.status,stage:run.stage});
+        if (run.state) return reply({verifying:true,stage:run.stage});
         return reply({match:journeyMatch(run),version:campaignEngineVersion});
       }
       if (run.status !== 'playing') return reply({status:run.status,stage:run.stage});
@@ -106,7 +109,8 @@ Deno.serve(async request => {
       if(run.kind==='spar' && committed && !winner && run.revision===0 && typeof EdgeRuntime!=='undefined'){
         EdgeRuntime.waitUntil(finishSparInBackground(user.id,run.id).catch(()=>{}));
       }
-      return reply(committed && winner?{complete:true,winner}:{pending:true});
+      if (!committed) return reply({pending:true,contended:true});
+      return reply(winner?{complete:true,winner}:{pending:true,seconds:Math.floor(next.state.clock)});
     }
     if (body?.campaign) {
       if (!['prepare','verify'].includes(body.campaign) || typeof body.run_id!=='string' || !uuid.test(body.run_id)) return reply({ error: 'Invalid contract.' }, 400);

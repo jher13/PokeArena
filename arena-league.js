@@ -39,6 +39,12 @@
   if(signed())return rpc('status');
   return {...localSeason(),laurel:local().laurel===true,defense:false};
  }
+ // Only remember which battle has finished playing. The server determines its outcome.
+ const resultStorageKey=()=>'arena-champion-result:'+sessionStorage.getItem('arena-online-user');
+ const battleKey=run=>run.id+'/'+run.stage;
+ function needsResultSync(run){
+  try{return localStorage.getItem(resultStorageKey())===battleKey(run);}catch{return false;}
+ }
  function saveSeason(next,reward=null,laurel=false){
   const copy=structuredClone(wildProgress),j=((copy.campaign??={}).journey??={});j.season=next;if(laurel)j.laurel=true;
   if(reward==='Rare Candy')copy.vitamins['Rare Candy']=(copy.vitamins['Rare Candy']??0)+1;
@@ -47,10 +53,20 @@
   Object.assign(wildProgress,copy);
  }
  function choose(host,label,fn){host.append(control(label,guarded(host,fn)));}
- async function open(message=''){
-  const root=frame('Champion Gauntlet');root.append(element('p','Loading this week’s opponents…'));
+ async function open(message='',snapshot=null){
+  const root=frame('Champion Gauntlet');
+  if(signed() && window.arenaGauntletPrizePending()){
+   root.append(element('p','Your weekly prize is waiting for confirmation.'));
+   choose(root,'Retry prize sync',async()=>{
+    try{const receipt=await window.arenaMarketRecover();
+     await open(receipt?.reward?receipt.reward+' added to your bag.':'');}
+    catch(error){if(window.arenaGauntletPrizePending())throw error;await open(error.message);}
+   });
+   return;
+  }
+  root.append(element('p','Loading this week’s opponents…'));
   try{
-   const [data,lib]=await Promise.all([state(),engine()]);if(view!==root||!root.isConnected)return;
+   const [data,lib]=await Promise.all([snapshot??state(),engine()]);if(view!==root||!root.isConnected)return;
    const run=data.run,course=lib.championCourse(data.week);root.replaceChildren(element('strong','Week of '+data.week+' · UTC'));
    if(message)root.append(element('p',message,'journey-feedback'));
    root.append(element('p','Lock six Pokémon for three battles. HP carries between fights. One team heal restores every member, including fainted Pokémon.'));
@@ -64,7 +80,9 @@
     root.append(element('strong',(run.prestige?'Prestige':'Champion')+' team · '+(run.healed?'Heal spent':'Heal available')));
     const roster=element('ul',null,'champion-team');
     run.team.forEach((name,i)=>roster.append(element('li',name+' · '+(run.hp?Math.ceil(run.hp[i])+' HP':'Full HP'))));root.append(roster);
-    choose(root,(run.status==='playing'?'Resume':'Start')+' battle '+(run.stage+1),()=>fight(run,lib));
+    if(signed() && run.status==='playing' && needsResultSync(run))
+     choose(root,'Sync battle '+(run.stage+1)+' result',()=>syncResult(run));
+    else choose(root,(run.status==='playing'?'Resume':'Start')+' battle '+(run.stage+1),()=>fight(run,lib));
     if(run.stage>0 && !run.healed && run.status==='ready')choose(root,'Use the team heal',async()=>{
      if(signed())await rpc('heal',{id:run.id});else saveSeason({...localSeason(),run:{...run,healed:true,hp:null}});
      await open('Team restored.');});
@@ -73,8 +91,12 @@
      await open();}));root.replaceChildren(element('p','Retire this locked team and give up its current streak?'),confirm,control('Keep playing',()=>open()));});
    }else if(run?.status==='won' && !data.prize){
     for(const reward of ['Rare Candy','Ability Capsule'])choose(root,'Claim '+reward,async()=>{
-     if(signed())await window.arenaMarketMutate('claim',{id:run.id,reward},'journey');
-     else if(!localSeason().prize && localSeason().run?.status==='won')saveSeason({...localSeason(),prize:reward},reward);
+     if(signed()){
+      try{const receipt=await window.arenaMarketMutate('claim',{id:run.id,reward},'journey');
+       return open(receipt.reward+' added to your bag.');}
+      catch(error){if(window.arenaGauntletPrizePending())return open();throw error;}
+     }
+     if(!localSeason().prize && localSeason().run?.status==='won')saveSeason({...localSeason(),prize:reward},reward);
      await open(reward+' added to your bag.');});
    }else{
     if(run?.status==='lost')root.append(element('p','Your previous team fell in battle '+(run.stage+1)+'.'));
@@ -85,10 +107,10 @@
     }
     root.append(element('p','Prestige unlocks at '+gymTeams.length+' Master badges. A Prestige clear earns the Champion Laurel for your trainer card.'));
    }
-  }catch(e){showError(root,e);}
+  }catch(e){showError(root,e);choose(root,'Retry loading gauntlet',()=>open());}
  }
  async function start(prestige){
-  if(signed()){await window.arenaMarketPrepare('campaign');await rpc('start',{prestige});}
+  if(signed()){await window.arenaMarketPrepare('journey');await rpc('start',{prestige});}
   else{
    const s=localSeason();saveSeason({...s,run:{id:crypto.randomUUID(),kind:'champion',week:s.week,team:[...team],entries:pinnedEntries(),stage:0,healed:false,hp:null,status:'ready',prestige}});
   }
@@ -97,26 +119,59 @@
  async function fight(run,lib){
   let match;
   if(signed()){
-   await rpc('fight',{id:run.id});const packet=await window.arenaJourneyBattle(run.id,'prepare',run.stage);
+   const root=view,packet=await window.arenaJourneyBattle(run.id,'prepare',run.stage);
+   if(view!==root || !root.isConnected || !byId('home-dialog').open)return;
+   if(packet.verifying)return syncResult(run);
+   if(packet.status)return open();
    if(packet.version!==lib.campaignEngineVersion)throw Error('The combat server is updating. Resume once both versions match.');
    match=packet.match;
   }else{saveSeason({...localSeason(),run:{...run,status:'playing'}});match=lib.journeyMatch(run);}
   byId('home-dialog').close();unlockSkillSound();
   window.ArenaCampaign.playSavedBattle({match,exhibition:true,label:(run.prestige?'Prestige':'Champion')+' Gauntlet · Battle '+(run.stage+1)+' of 3',exit:()=>open(),complete:async out=>{
+   if(signed())return syncResult(run);
    const root=frame('Champion Gauntlet');root.append(element('p','Recording the result…'));
    const settle=async()=>{
     const won=out.result==='host' && out.state.enemies.every(p=>p.hp<=0);
-    if(signed())await window.arenaJourneyBattle(run.id,'verify',run.stage);
-    else{
-     const s=localSeason();if(s.run?.id===run.id && s.run.stage===run.stage && s.run.status==='playing'){
-      const stage=run.stage+(won?1:0),status=won?(stage===3?'won':'ready'):'lost';
-      saveSeason({...s,run:{...run,stage,status,hp:out.state.allies.map(p=>p.hp)}},null,run.prestige && status==='won');
-     }
+    const s=localSeason();if(s.run?.id===run.id && s.run.stage===run.stage && s.run.status==='playing'){
+     const stage=run.stage+(won?1:0),status=won?(stage===3?'won':'ready'):'lost';
+     saveSeason({...s,run:{...run,stage,status,hp:out.state.allies.map(p=>p.hp)}},null,run.prestige && status==='won');
     }
     await open(won?'Battle '+(run.stage+1)+' won.':'Your team was defeated.');
    };
    try{await settle();}catch(e){showError(root,e);choose(root,'Retry result sync',settle);}
   }},lib);
+ }
+ async function syncResult(run){
+  const root=frame('Champion Gauntlet'),number=run.stage+1;
+  const progress=element('p','Syncing battle '+number+' result…');progress.setAttribute('role','status');root.append(progress);
+  const visible=()=>view===root && root.isConnected && byId('home-dialog').open;
+  const key=resultStorageKey(),value=battleKey(run);
+  try{localStorage.setItem(key,value);}catch{} // A server checkpoint also allows recovery.
+  root.dataset.busy='1';
+  try{
+   let failure;
+   try{await window.arenaJourneyBattle(run.id,'verify',run.stage,seconds=>{
+    progress.textContent='Syncing battle '+number+' · '+seconds+' seconds of combat verified.';
+   });}catch(error){failure=error;}
+   // Read even after a lost response. The last checkpoint may already have committed.
+   const data=await state(),current=data.run;
+   if(current?.id===run.id && current.stage===run.stage && current.status==='playing')
+    throw failure??Error('The result is still pending on the server.');
+   try{if(localStorage.getItem(key)===value)localStorage.removeItem(key);}catch{}
+   if(!visible())return;
+   let message='Showing the current weekly gauntlet.';
+   if(current?.id===run.id){
+    if(current.stage>run.stage)message='Battle '+number+' won.';
+    else if(current.status==='lost')message='Your team was defeated in battle '+number+'.';
+    else if(current.status==='retired')message='This run was retired.';
+   }
+   await open(message,data);
+  }catch(error){
+   if(visible()){
+    progress.textContent='Battle '+number+' result is awaiting sync.';
+    showError(root,error);choose(root,'Retry result sync',()=>syncResult(run));
+   }
+  }finally{delete root.dataset.busy;}
  }
  function showSpar(name,replyTo=null){
   if(!signed())return;

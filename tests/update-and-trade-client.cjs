@@ -8,7 +8,7 @@ const html=read('index.html');
 let checks=0;
 class Node {
  constructor(tag='div',text='',cls=''){this.tagName=tag;this.textContent=text??'';this.children=[];this.attributes={};this.classes=new Set((cls??'').split(' ').filter(Boolean));this.style={setProperty(){}};this.value='';this.open=false;this.events={};
-  this.classList={add:(...xs)=>xs.forEach(x=>this.classes.add(x)),remove:(...xs)=>xs.forEach(x=>this.classes.delete(x)),toggle:(x,yes)=>yes?this.classes.add(x):this.classes.delete(x)};
+  this.dataset={};this.classList={add:(...xs)=>xs.forEach(x=>this.classes.add(x)),remove:(...xs)=>xs.forEach(x=>this.classes.delete(x)),toggle:(x,yes)=>yes?this.classes.add(x):this.classes.delete(x)};
  }
  append(...xs){for(const x of xs){if(x instanceof Node)x.parent=this;this.children.push(x);}}
  prepend(...xs){this.children.unshift(...xs);}
@@ -23,6 +23,8 @@ class Node {
  remove(){if(this.parent)this.parent.children=this.parent.children.filter(x=>x!==this);}
  matches(selector){if(selector.startsWith('[')){const parts=selector.match(/^\[([^=]+)="([^"]+)"\]$/);return parts&&this.attributes[parts[1]]===parts[2];}return selector.startsWith('.')?this.classes.has(selector.split(/[\[ ]/)[0].slice(1))&&(!selector.includes('[open]')||this.open):selector.startsWith('dialog')?this.tagName==='dialog'&&(!selector.includes('[open]')||this.open):this.tagName===selector;}
  all(){return this.children.filter(x=>x instanceof Node).flatMap(x=>[x,...x.all()]);}
+ get isConnected(){return this.tagName==='body' || Boolean(this.parent?.children.includes(this) && this.parent.isConnected);}
+ querySelectorAll(selector){return this.all().filter(x=>selector==='button:not([data-locked])'?x.tagName==='button' && !x.dataset.locked:x.matches(selector));}
  querySelector(selector){return this.all().find(x=>x.matches(selector))??null;}
 }
 function dom(){
@@ -139,7 +141,60 @@ async function cloudChecks(){
  readSnapshot=async()=>({data:{save_data:save,updated_at:'r3'}});
  await ctx.syncArenaCloud('sync');assert.equal(reloads,1);
  assert.equal(vm.runInContext('cloudRevision',ctx),'r3');checks++;
+ await checkGauntlet(ctx,d,client,save);
  vm.runInContext('cloudAccount=null',ctx);assert.equal(cloudButtons().length,0);checks++;
+}
+async function checkGauntlet(ctx,d,client,save){
+ const version=JSON.parse(read('version.json')).version;
+ Object.assign(ctx,{URL,AbortController,updateLogEntries:[{version}],gymTeams:[1],clearedGyms:[1],masterGymClears:new Set(),unlockSkillSound(){}});
+ const names=['Charmander','Bulbasaur','Squirtle','Ditto','Abra','Mew'];ctx.team=[...names];
+ ctx.document.currentScript={src:require('node:url').pathToFileURL(path.join(root,'arena-league.js')).href};
+ ctx.sessionStorage.setItem('arena-online-user','user-one');
+ const loadUI=()=>vm.runInContext(read('arena-league.js'),ctx,{importModuleDynamically:vm.constants.USE_MAIN_CONTEXT_DEFAULT_LOADER});
+ const content=d.byId('home-dialog-content'),find=label=>content.all().find(n=>n.tagName==='button' && n.textContent===label);
+ const click=async label=>{const b=find(label);assert(b,label+' missing: '+content.all().map(n=>n.textContent).join(' '));await b.onclick();};
+ let run=null,prize=null,claimFailures=0,verify='offline',battle,plays=0;
+ const claimIds=new Set();
+ client.rpc=async(name,{action,args,expected_stage})=>{
+  if(name==='arena_journey_begin_fight'){if(run.stage===expected_stage && run.status==='ready')run.status='playing';return {data:{...run}};}
+  assert.equal(name,'arena_journey');
+  if(action==='status')return {data:{week:'2026-11-16',run:run && {...run},prize}};
+  if(action==='start'){run={id:'saved-run',kind:'champion',team:names,stage:0,status:'ready'};return {data:{...run}};}
+  if(action==='heal'){run.healed=true;run.hp=null;return {data:{...run}};}
+  assert.equal(action,'claim');
+  claimIds.add(args.request_id);prize??=args.reward;
+  if(claimFailures-->0)throw Error('Prize response lost');
+  return {data:{status:'ok',reward:prize,save_data:save,updated_at:'r4'}};
+ };
+ client.functions={invoke:async(_name,{body})=>{
+  if(body.journey==='prepare')return {data:{match:{},version}};
+  assert.equal(run.stage,body.stage);
+  if(verify==='offline')throw Error('Connection interrupted');
+  run.stage++;run.status=run.stage===3?'won':'ready';run.hp=[4,3,2,1,0,0];
+  if(verify==='lost-response')throw Error('Result response lost after commit');
+  return {data:{complete:true,winner:'host'}};
+ }};
+ ctx.window.ArenaCampaign={playSavedBattle:b=>{battle=b;plays++;}};
+ loadUI();await ctx.window.ArenaLeague.open();await click('Lock team · Champion');await click('Start battle 1');
+ const clientLoss={result:'guest',state:{enemies:[{hp:10}]}};
+ await battle.complete(clientLoss);assert(find('Retry result sync'));assert(!ctx.window.ArenaLeague.isBusy());
+ loadUI();await ctx.window.ArenaLeague.open();assert(!find('Resume battle 1'));
+ verify='lost-response';await click('Sync battle 1 result');
+ assert.equal(plays,1);assert(content.all().some(n=>n.textContent==='Battle 1 won.'));assert(find('Start battle 2'));checks++;
+ await click('Use the team heal');assert(!find('Use the team heal'));assert(run.healed);checks++;
+ run.status='playing';await ctx.window.ArenaLeague.open();await click('Resume battle 2');
+ verify='ok';await battle.complete(clientLoss);await click('Start battle 3');await battle.complete(clientLoss);assert.equal(plays,3);checks++;
+ claimFailures=2;await click('Claim Rare Candy');assert(find('Retry prize sync'));assert(ctx.window.arenaGauntletPrizePending());
+ loadUI();await ctx.window.ArenaLeague.open();await click('Retry prize sync');
+ assert(content.all().some(n=>n.textContent==='Weekly prize received · Rare Candy'));assert(!ctx.window.isArenaMarketBusy());assert.equal(claimIds.size,1);checks++;
+ // UI polling writes local notification receipts, even when the roster has no changes.
+ vm.runInContext(html.slice(html.indexOf('const playerStorage={'),html.indexOf('const profileSelect=')),ctx);
+ for(let i=0;i<3;i++)vm.runInContext("playerStorage.setItem('pokemon-arena-read-notifications','[]');",ctx);
+ assert.equal(vm.runInContext('dirty',ctx),false);assert.equal(ctx.localStorage.getItem('arena-pending-save:user-one'),null);
+ vm.runInContext("playerStorage.setItem('pokemon-arena-gym-badges/clean-records','{\"first\":true}');",ctx);
+ assert.equal(vm.runInContext('dirty',ctx),true);vm.runInContext('clearTimeout(saveTimer);dirty=false;updatePendingSave();',ctx);
+ vm.runInContext("playerStorage.setItem('pokemon-arena-gym-badges/clean-records','{\"first\":true}');",ctx);
+ assert.equal(vm.runInContext('dirty',ctx),false);checks++;
 }
 async function hubChecks(){
  const d=dom();d.byId('home-dialog').append(d.byId('home-dialog-content'));

@@ -1326,9 +1326,13 @@ function playerSaveKey(key) {
 const playerStorage={
  getItem:key=>localStorage.getItem(playerSaveKey(key)),
  setItem:(key,value)=>{
-  try {localStorage.setItem(playerSaveKey(key),value);}
+  try {
+   const storageKey=playerSaveKey(key);
+   if(localStorage.getItem(storageKey)===String(value))return;
+   localStorage.setItem(storageKey,value);
+  }
   catch(error){window.reportLocalSaveError?.(error);throw error;}
-  window.queueArenaSave?.();
+  window.queueArenaSave?.(key);
  }
 };
 const profileSelect=byId('profile-select');
@@ -11939,6 +11943,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.101',changes:['Fixed Champion Gauntlet sync when locking a team or resuming a battle. Finished fights can retry their result sync without replaying.','Weekly prize recovery now shows the item received. Idle notification checks no longer queue cloud saves.']},
  {version:'0.22.100',changes:['Follow the Road to Brock, practice a lost gym battle and pin build goals in PC.','Face three weekly Champion opponents with a locked team. Prestige clears earn a trainer-card laurel.','Direct your Pokémon against Charizard’s flame vents, challenge a friend’s saved defense and earn a guild raid banner.']},
  {version:'0.22.99',changes:['Multi-hit cooldowns now account for the full attack. Heavy moves such as Overheat lower the user’s stats once after connecting. Binding moves and low-HP finishers gain distinct roles.','Sleep lasts at most five seconds. Screens, contact shields, Leech Seed and Octolock have gaps between uses. Perish Song, Destiny Bond and Pain Split now respect raid bosses.','Physical power abilities now reward different builds. Water Bubble, Poison Heal, Rough Skin and Iron Barbs have lower peaks. Weak Armor, Iron Fist, Healer and the four starter abilities gained stronger uses.','Expert Belt, Big Root, Rocky Helmet, Covert Cloak, Light Clay and Scope Lens are available in the Item Shop, PvP loaner gear and Roguelit expeditions.','PFT recoil scales with damage dealt. Spark can refund its caster, and a weaker shield can no longer refresh a stronger shield.']},
  {version:'0.22.98',changes:['Roguelit uses the wallet coin icon for payouts, shows each recruit’s level, types and moves on separate lines, and displays expedition team sprites on a clear background.','Poke Fight Tactics now visits a Pokémon League stadium and a Poké Ball draft plaza.']},
@@ -12277,9 +12282,9 @@ phase='login';
 showScreen('login');
 byId('login').hidden=true;
 requestAnimationFrame(frame);
-</script><p id="pass-battle-notice" role="status" hidden></p><p id="arena-sync-error" role="alert" hidden></p><script src="../cloud.js?v=0.22.100"></script><script>
+</script><p id="pass-battle-notice" role="status" hidden></p><p id="arena-sync-error" role="alert" hidden></p><script src="../cloud.js?v=0.22.101"></script><script>
 byId('home-events').onclick=()=>{phase='events';showScreen('events');selectedPassReward=null;renderBattlePass();};
 byId('events-back').onclick=openMenu;
 </script>
 <script src="../roguelit.js?v=0.22.99"></script><script src="../tactics.js?v=0.22.99"></script><script src="../multiplayer.js?v=0.22.100"></script>
-<script src="../trade-hub.js?v=0.22.93"></script><script src="../campaign-progression.js?v=0.22.100"></script><script src="../trainer-card.js?v=0.22.100"></script><script src="../social.js?v=0.22.92"></script><script src="../arena-journey.js?v=0.22.100"></script><script src="../arena-league.js?v=0.22.100"></script></html>
+<script src="../trade-hub.js?v=0.22.93"></script><script src="../campaign-progression.js?v=0.22.100"></script><script src="../trainer-card.js?v=0.22.100"></script><script src="../social.js?v=0.22.92"></script><script src="../arena-journey.js?v=0.22.100"></script><script src="../arena-league.js?v=0.22.101"></script></html>
