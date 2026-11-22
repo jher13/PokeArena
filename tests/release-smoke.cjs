@@ -90,11 +90,12 @@ for(const file of ['index.html','local-test/PokeArena_Local_Test.html']){
 for(const file of ['cloud.js','multiplayer.js','tactics.js','roguelit.js'])new vm.Script(read(file),{filename:file});
 const data=html.split('\n').filter(line=>/^const (dex|dexStats|typeChart)\s*=/.test(line)).join('\n');
 class Node {
- constructor(tag,text,classes=''){this.tagName=tag;this.textContent=text;this.className=classes;this.children=[];this.style={setProperty(){}};this.dataset={};}
+ constructor(tag,text,classes=''){this.tagName=tag;this.textContent=text;this.className=classes;this.children=[];this.style={setProperty(name,value){this[name]=value;}};this.dataset={};this.attrs={};}
  append(...children){this.children.push(...children);}
  prepend(...children){this.children.unshift(...children);}
  replaceChildren(...children){this.children=children;}
- setAttribute(){}
+ setAttribute(key,value){this.attrs[key]=value;}
+ getAttribute(key){return this.attrs[key];}
  addEventListener(){}
  get classList(){return {add(){},toggle(){}};}
  get firstElementChild(){return this.children[0];}
@@ -109,7 +110,7 @@ const context=vm.createContext({
  readRogueProgress:()=>({}),playerStorage:{getItem:key=>modePrefs.get(key) ?? null,setItem:(key,value)=>modePrefs.set(key,value)},
  byId,element,window:{},phase:'home',wildProgress:{owned:{},copies:{}},maximumBattleSpeed:()=>2,earnedCoins:coins=>coins,showScreen(){},setInterval(){},clearInterval(){},
  experienceCandyName:new Function(candyCode+'return experienceCandyName;')(),
- collectionPixelArt:()=>element('span'),idlePokemonPortrait:()=>element('canvas'),getSprite:()=>({image:{}}),
+ bagItemIcon:name=>element('canvas',name),collectionPixelArt:()=>element('span'),idlePokemonPortrait:()=>element('canvas'),getSprite:()=>({image:{}}),
  types:{},moveColors:{},pmdDirection:()=>0,pmdMotion:()=>null,checkGameVersion(){},structuredClone,openMenu(){},
  drawRogueChoices:(list,n)=>list.slice(0,n),
  Math:Object.assign(Object.create(Math),{random})
@@ -121,7 +122,7 @@ context.bankTacticsPrize=bundle=>{
 };
 context.button=(label,onclick,disabled)=>Object.assign(element('button',label),{onclick,disabled});
 const source=read('tactics.js');
-const auditExports='globalThis.audit={creditBoardChallenge,goldInterest,cupSchedule,boardChallenges,sideSupplyPicker,sideSupplyFocus,drawPoolCard,roll,releaseShop,buy,field,teamSize,planAI,beginChoices,result,tacticsCoinRate,creditTacticsRound,makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
+const auditExports='globalThis.audit={equipFromInventory,renderCarousel,creditBoardChallenge,goldInterest,cupSchedule,boardChallenges,sideSupplyPicker,sideSupplyFocus,drawPoolCard,roll,releaseShop,buy,field,teamSize,planAI,beginChoices,result,tacticsCoinRate,creditTacticsRound,makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
 const accountCoinRate=html.slice(html.indexOf('function arenaAccountCoinRate()'),html.indexOf('function maximumBattleSpeed()'));
 new vm.Script(data+'\n'+accountCoinRate+'\n'+source.replace(/\}\)\(\);\s*$/,auditExports+'})();'),{filename:'tactics.js'}).runInContext(context);
 const a=context.audit;

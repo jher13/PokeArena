@@ -1004,11 +1004,43 @@
   }
   return icon;
  }
- function equipFromInventory(player,unit,index){
-  if(run.busy || !player.units.includes(unit) || !player.items[index])return;
-  if(equip(player,unit,player.items[index])){
-   player.items.splice(index,1);render();
+ function canManageGear(player){
+  return run && !run.finished && !run.choice && player===run.trainers[0] &&
+   (run.busy?run.playerFight?.a===player && run.viewingTrainer===player:!run.scout);
+ }
+ function equipFromInventory(player,unit,index,expectedItem=player.items[index]){
+  if(!canManageGear(player) || !player.units.includes(unit) || !expectedItem || player.items[index]!==expectedItem)return false;
+  const match=run.playerFight;
+  const active=run.busy && match.sign===null && unit.position!==null;
+  const previousItems=active?[...(unit.items ?? [])]:null;
+  const previousTraits=active?traits(field(player)):null;
+  if(!equip(player,unit,expectedItem))return false;
+  player.items.splice(index,1);
+  if(active)updateBattleGear(match,unit,previousItems,previousTraits);
+  if(run.busy)run.spectate(player,true);else render();
+  return true;
+ }
+ function chooseGearTarget(player,index,item){
+  if(!canManageGear(player) || player.items[index]!==item)return;
+  const current=run,round=run.round;
+  const dialog=element('dialog',null,'tactics-inspect tactics-gear-dialog');
+  dialog.setAttribute('aria-label','Equip '+item);
+  dialog.append(element('h2','Equip '+item));
+  const targets=element('div',null,'tactics-gear-targets');
+  const benched=player.units.filter(mon=>mon.position===null);
+  for(const unit of [...field(player),...benched]){
+   const fighter=run.playerFight.units.find(mon=>!mon.opponent && rosterMembers.get(mon)===unit);
+   const slot=unit.position?'Field '+(unit.position.x+1)+', '+(unit.position.y+1):'Bench '+(benched.indexOf(unit)+1);
+   const legal=equip(player,{...unit,items:[...(unit.items ?? [])]},item);
+   const target=button(unit.name+' · '+slot+((fighter && fighter.hp<=0) || run.playerFight.sign!==null?' · Next fight':''),()=>{
+    dialog.close();
+    if(run===current && run.round===round && run.busy)equipFromInventory(player,unit,index,item);
+   },!legal);
+   targets.append(target);
   }
+  dialog.append(targets,button('Cancel',()=>dialog.close()));
+  dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+  content.append(dialog);dialog.showModal();
  }
  function itemMods(unit,trainer){
   const mods={...trainer.mods};
@@ -1051,10 +1083,10 @@
   }
   return offers;
  }
- function draftCarousel(trainer,offer,branch){
+ function draftCarousel(trainer,offer,branch,confirmed=false){
   const plan=fusionPlan(trainer,offer.unit,branch);
   if(plan.overflow)return false;
-  if(trainer===run.trainers[0] && plan.displaced.length && !window.confirm(
+  if(!confirmed && trainer===run.trainers[0] && plan.displaced.length && !window.confirm(
    'Fusion moves '+plan.displaced.map(unit=>unit.name).join(', ')+' to the bench. Choose this offer?'))return false;
   applyFusion(trainer,plan);
   return true;
@@ -1075,6 +1107,7 @@
   }else if(carouselRound(run.round)){
    const {stage}=stageRound(run.round);
    const offers=carouselOffers(run.pool,stage);
+   const stations=offers.map(({slot,ball,tier,item})=>({slot,ball,tier,item}));
    const release=()=>{for(const offer of offers)run.pool.get(offer.name).copies+=offer.unit.poolCopies;};
    const order=[...living].sort((a,b)=>a.hp-b.hp);
    const fits=(trainer,offer)=>!fusionPlan(trainer,offer.unit).overflow;
@@ -1094,52 +1127,72 @@
     for(const ai of order.slice(1))aiPick(ai);
     release();
     return false;
-   }else run.choice={kind:'carousel',stage,offers,complete:()=>{
+   }else run.choice={kind:'carousel',stage,offers,stations,complete:()=>{
     for(const ai of order.slice(1))aiPick(ai);
     release();
    }};
   }
  }
- function renderChoice(choice){
-  const player=run.trainers[0];
-  const carousel=choice.kind==='carousel';
-  const grid=element('div',null,carousel?'tactics-carousel-grid':'shop-grid');
-  const slots=carousel?Array.from({length:9},(_,slot)=>choice.offers.find(offer=>offer.slot===slot)):choice.offers;
-  for(const [index,offer] of slots.entries()){
-   if(!offer){grid.append(element('div','Unavailable','tactics-carousel-empty'));continue;}
-   const tile=element('div',null,'bag-item');
-   const plan=carousel?fusionPlan(player,offer.unit):null;
-   if(plan){
-    tile.classList.add('tactics-carousel-ball','tier-'+offer.tier);
-    if(choice.stage<=3)tile.classList.add('is-mystery');
-    tile.tabIndex=0;
-    const preview=element('div',null,'tactics-carousel-preview');
-    preview.append(idlePokemonPortrait(offer.unit.name),element('strong',offer.unit.name+' '+'★'.repeat(offer.unit.star)));
-    tile.append(bagItemIcon(offer.ball),element('strong',offer.ball),element('small','Tier '+offer.tier),
-     preview,itemIcon(offer.item),element('small',offer.item));
-    if(plan.overflow)tile.append(element('small','Needs '+plan.overflow+' more bench slot(s).'));
-    else if(plan.displaced.length)tile.append(element('small','Moves to bench: '+plan.displaced.map(unit=>unit.name).join(', ')));
-    else if(plan.upgrades.length)tile.append(element('small','Fuses immediately.'));
+ function selectCarouselBall(choice,offer){
+  if(run?.choice!==choice || choice.picked || !choice.offers.includes(offer))return;
+  const player=run.trainers[0],plan=fusionPlan(player,offer.unit);
+  if(plan.overflow)return;
+  if(plan.displaced.length && !window.confirm('This pick moves '+plan.displaced.length+' of your deployed Pokémon to the bench. Choose this ball?'))return;
+  choice.picked=offer;
+  pickFusionBranch(player,offer.unit,branch=>{
+   if(!draftCarousel(player,offer,branch,true))return;
+   choice.offers.splice(choice.offers.indexOf(offer),1);choice.complete();
+   run.choice=null;run.result='Drafted '+offer.unit.name+' with '+offer.item+'.';advanceRound();
+  },true);
+ }
+ function renderCarousel(choice){
+  const panel=element('section',null,'tactics-choice tactics-carousel-screen');
+  const ring=element('div',null,'tactics-carousel-ring'),key=element('ol',null,'tactics-carousel-key');
+  key.setAttribute('aria-label','Carried items by ball number');
+  ring.setAttribute('role','group');ring.setAttribute('aria-label','Nine Poké Ball stations');
+  for(let i=0;i<9;i++){
+   const offer=choice.offers.find(o=>o.slot===i),station=choice.stations.find(o=>o.slot===i);
+   const blocked=offer && fusionPlan(run.trainers[0],offer.unit).overflow>0;
+   const state=!station?'Empty':!offer?'Taken':blocked?'Bench full':'';
+   const tile=button('',()=>selectCarouselBall(choice,offer),Boolean(state));
+   tile.className='tactics-carousel-stop tier-'+(station?.tier ?? 1);tile.dataset.number=i+1;
+   tile.setAttribute('aria-description','Ball '+(i+1)+' of 9');
+   const angle=i*Math.PI*2/9-Math.PI/2;
+   tile.style.setProperty('--station-x',(50+39*Math.cos(angle)).toFixed(3)+'%');
+   tile.style.setProperty('--station-y',(50+39*Math.sin(angle)).toFixed(3)+'%');
+   const ball=station?.ball ?? 'Poké Ball';
+   const label=station?ball+' · Tier '+station.tier+' · '+station.item:'Empty station';
+   tile.setAttribute('aria-label',(state?state+' · ':'Choose ')+label);tile.title=label+(state?' · '+state:'');
+   const icon=element('span',null,'tactics-carousel-capsule');
+   icon.append(bagItemIcon(ball));
+   if(station){
+    const held=element('span',null,'tactics-carousel-carry');held.append(tacticsItemArt(station.item));icon.append(held);
    }
-   if(choice.kind==='augment'){tile.classList.add('tactics-augment-card');tile.append(element('span',['✦','◆','✹'][index],'tactics-augment-icon'),element('strong',offer[0]),element('small',offer[1]));}
-   tile.append(button('Choose',()=>{
-    if(choice.kind==='augment'){
-     grantAugment(player,offer);
-     run.choice=null;
-     startPlanning();
-    }else pickFusionBranch(player,offer.unit,branch=>{
-     if(!draftCarousel(player,offer,branch))return;
-     choice.offers.splice(choice.offers.indexOf(offer),1);
-     choice.complete();
-     run.choice=null;
-     advanceRound();
-    });
-   },Boolean(plan?.overflow)));
+   const tier=element('span',station?'Tier '+station.tier:'','tactics-carousel-tier');tier.dataset.tier=station?.tier ?? '';
+   tile.append(icon,tier,
+    element('span',station?.item ?? 'Empty','tactics-carousel-item'));
+   if(state && station)tile.append(element('span',state,'tactics-carousel-state'));
+   ring.append(tile);
+   const row=element('li'),pick=button('',()=>tile.click(),Boolean(state));
+   pick.append(element('b',String(i+1)),element('span',station?.item ?? 'Empty'));
+   if(station)pick.append(element('small','Tier '+station.tier+(state?' · '+state:'')));
+   row.append(pick);key.append(row);
+  }
+  panel.append(heading(choice.stage===5?'Master Ball Draft':'Poké Ball Carousel'),
+   element('p','Choose a ball by its tier and held item. Picking it reveals the Pokémon.','tactics-carousel-help'),ring,key);
+  content.replaceChildren(panel);
+ }
+ function renderChoice(choice){
+  if(choice.kind==='carousel'){renderCarousel(choice);return;}
+  const player=run.trainers[0],grid=element('div',null,'shop-grid');
+  for(const [index,offer] of choice.offers.entries()){
+   const tile=element('div',null,'bag-item tactics-augment-card');
+   tile.append(element('span',['✦','◆','✹'][index],'tactics-augment-icon'),element('strong',offer[0]),element('small',offer[1]),
+    button('Choose',()=>{grantAugment(player,offer);run.choice=null;startPlanning();}));
    grid.append(tile);
   }
-  const panel=element('section',null,'tactics-choice'+(choice.kind==='augment'?' tactics-augment-screen':''));
-  panel.append(choice.kind==='augment'?element('h2','Choose one'):heading(choice.stage===5?'Master Ball Draft':'Poké Ball Carousel'),grid);
-  content.replaceChildren(panel);
+  const panel=element('section',null,'tactics-choice tactics-augment-screen');
+  panel.append(element('h2','Choose one'),grid);content.replaceChildren(panel);
  }
  function neutralTrainer(){
   if(megaRound(run.round)){
@@ -1233,7 +1286,7 @@
    element('p','Meet a different board challenge in two trainer duels per stage to earn these supplies at placement. Pick augments at stages 2 and 4.'),
    button('Start match',start));
   const guide=element('details');
-  guide.append(element('summary','How to play'),element('p','Buy Pokémon from the shop, then select one and choose a hex on your half of the board. Fusing copies stars up and evolves the Pokémon. Select a branching Pokémon and pick its evolution path before it fuses. Drag items from the left rail to equip them. Focus or hover an item to see its recipes. Lock offers you want to keep for next round. Select a Pokémon to sell it and recover its items. All eight trainers draw from the same supply. Tiers 1 through 5 start with '+familyStock.join(', ')+' copies per Pokémon family, respectively. Shops reserve cards. Selling and elimination return their copies. Mega wins award two components, 15 Tactics gold and a Pokémon from the highest stocked tier up to the stage reward tier.'));
+  guide.append(element('summary','How to play'),element('p','Buy Pokémon from the shop, then select one and choose a hex on your half of the board. Fusing copies stars up and evolves the Pokémon. Select a branching Pokémon and pick its evolution path before it fuses. Drag items from the left rail onto your field or bench during planning or combat. During combat you can also tap an item and choose its holder. Focus or hover an item to see its recipes. Lock offers you want to keep for next round. Select a Pokémon to sell it and recover its items. All eight trainers draw from the same supply. Tiers 1 through 5 start with '+familyStock.join(', ')+' copies per Pokémon family, respectively. Shops reserve cards. Selling and elimination return their copies. Mega wins award two components, 15 Tactics gold and a Pokémon from the highest stocked tier up to the stage reward tier.'));
   guide.append(element('p','Completed fights earn credit for simulated combat plus 18 seconds of planning, or 25 on augment and Mega rounds. Finishing pays account coins based on your highest PC level, unlocked Arena speed and placement. First place earns 25% more round coins than fourth. The Lucky Coin doubles your coins.'));
   content.append(guide);
  }
@@ -1443,11 +1496,13 @@
   return collectionPixelArt(shape,colors[left],colors[right]);
  }
  function dropUnit(tile,callback,unit){
-  tile.ondragover=event=>{if(dragged || (unit && draggedItem!==null))event.preventDefault();};
+  tile.ondragover=event=>{if((callback && dragged) || (unit && draggedItem))event.preventDefault();};
   tile.ondrop=event=>{
    event.preventDefault();
-   if(unit && draggedItem!==null)equipFromInventory(run.trainers[0],unit,draggedItem);
-   else if(dragged)callback(dragged);
+   if(unit && draggedItem){
+    const {owner,round,index,item}=draggedItem;
+    if(run===owner && run.round===round)equipFromInventory(run.trainers[0],unit,index,item);
+   }else if(dragged && callback)callback(dragged);
    dragged=null;draggedItem=null;
   };
  }
@@ -1511,7 +1566,7 @@
   const overflow=Math.max(0,units.length-deployed.length+displaced.length-benchLimit);
   return {units,upgrades,returned,displaced,overflow};
  }
- function pickFusionBranch(trainer,incoming,commit){
+ function pickFusionBranch(trainer,incoming,commit,committed=false){
   if(run.busy || run.branchDialog)return;
   const plan=fusionPlan(trainer,incoming);
   if(plan.overflow)return;
@@ -1521,7 +1576,12 @@
   const entered=Date.now();
   const dialog=element('dialog',null,'tactics-inspect tactics-branch-dialog');
   const grid=element('div',null,'shop-grid');
-  dialog.append(element('h2','Choose '+familyOf(incoming)+' evolution'),grid,button('Cancel',()=>dialog.close()));
+  dialog.append(element('h2','Choose '+familyOf(incoming)+' evolution'),grid);
+  if(committed){
+   const keep=()=>{dialog.close();if(finish())commit(undefined);};
+   dialog.append(button('Use current path',keep));
+   dialog.addEventListener('cancel',event=>{event.preventDefault();keep();});
+  }else dialog.append(button('Cancel',()=>dialog.close()));
   for(const [index,path] of branchPaths(incoming).entries()){
    const form=path[split.upgraded.star-2];
    const card=button('',()=>{
@@ -1768,13 +1828,17 @@
   for(let i=0;i<Math.max(9,inspected.items.length);i++){
    const item=inspected.items[i];
    const slot=itemIcon(item);
-   if(item){
-    if(!rival && !run.scout){
-     slot.draggable=true;
-     slot.ondragstart=event=>{
-      draggedItem=i;event.dataTransfer.setData('text/plain',item);
-     };
-     slot.ondragend=()=>{draggedItem=null;};
+   if(item && canManageGear(inspected)){
+    slot.draggable=true;
+    slot.ondragstart=event=>{
+     draggedItem={owner:run,round:run.round,index:i,item};event.dataTransfer.setData('text/plain',item);
+    };
+    slot.ondragend=()=>{draggedItem=null;};
+    if(rival){
+     slot.setAttribute('role','button');
+     slot.setAttribute('aria-label','Equip '+slot.getAttribute('aria-label'));
+     slot.onclick=()=>chooseGearTarget(inspected,i,item);
+     slot.onkeydown=event=>{if(event.key==='Enter' || event.key===' '){event.preventDefault();slot.onclick();}};
     }
    }
    inventory.append(slot);
@@ -1820,7 +1884,7 @@
    const title=element('div',null,'tactics-combat-title');
    title.append(element('strong','Combat'),countdown);
    banner.append(timer,title,element('small','Stage '+stageLabel(run.round)+' · '+rival));
-   arena.append(benchView(player,true));
+   arena.append(benchView(player,true,canManageGear(inspected) && player===inspected));
    arena.prepend(banner);
    middle.append(arena);
    const summary=element('div',null,'tactics-combat-wallet');
@@ -1835,7 +1899,7 @@
   layout.append(left,middle,rankings);
   return {layout,left,middle,arena,timer,countdown};
  }
- function benchView(player,combat=false){
+ function benchView(player,combat=false,editableGear=false){
   const bench=element('div',null,'tactics-bench');
   const benched=player.units.filter(unit=>unit.position===null);
   for(let i=0;i<benchLimit;i++){
@@ -1850,6 +1914,7 @@
     else if(benched.length>=benchLimit)return;
     draggedUnit.position=null;run.selected=null;render();
    },unit);
+   if(editableGear && unit)dropUnit(tile,null,unit);
    tile.setAttribute('aria-label',unit?'Select '+unit.name:'Empty bench slot');
    if(unit){
     const visual=unitVisual(unit,0);
@@ -2285,12 +2350,48 @@
    guard:mods.guard,echo:mods.echo,secondWind:mods.secondWind,overcharge:mods.overcharge,momentum:mods.momentum,
    position:combatPosition(unit.position,opponent)};
  }
+ const rosterMembers=new WeakMap();
  const battleEffects=new WeakMap();
+ function effectiveItems(items){
+  return items.includes('Mirage Goggles')?drawRogueChoices(standardGear,2):[...items];
+ }
+ function updateBattleGear(match,recipient,previousItems,previousTraits){
+  const player=match.a,currentTraits=traits(field(player));
+  for(const live of match.units){
+   if(live.opponent)continue;
+   const member=rosterMembers.get(live),changed=member===recipient;
+   const before=fighter({...member,items:changed?previousItems:member.items,combatItems:live.combatItems},false,previousTraits,player);
+   if(changed){
+    live.items=[...member.items];
+    live.combatItems=effectiveItems(member.items);
+   }
+   const after=fighter({...member,combatItems:live.combatItems},false,currentTraits,player);
+   // Apply equipment and trait differences to the running fighter. Combat timers, charges and temporary buffs retain their state.
+   for(const key of ['attack','specialAttack','attackSpeed','critChance','critDamage','defense','specialDefense','manaRegen','manaOnTravel','manaLockMs']){
+    live[key]+=after[key]-before[key];
+   }
+   for(const key of new Set([...Object.keys(before.gear),...Object.keys(after.gear)])){
+    let delta=(after.gear[key] ?? 0)-(before.gear[key] ?? 0);
+    if(live.glitchBonus)delta-=(after.roleBonus[key] ?? 0)-(before.roleBonus[key] ?? 0);
+    if(delta)live.gear[key]=(live.gear[key] ?? 0)+delta;
+   }
+   for(const key of ['guard','echo','secondWind','overcharge','momentum']){
+    if(before[key]!==after[key])live[key]=after[key];
+   }
+   if(before.max!==after.max){
+    live.hp=live.hp>0?Math.max(1,Math.round(live.hp/live.max*after.max)):0;
+    live.max=after.max;
+   }
+   live.roleBonus=after.roleBonus;
+  }
+ }
  function battle(a,b){
   const first=field(a),second=field(b), firstTraits=traits(first),secondTraits=traits(second);
   const build=(unit,opponent,counts,trainer)=>{
-   const combatItems=unit.items?.includes('Mirage Goggles')?drawRogueChoices(standardGear,2):unit.items;
-   return fighter({...unit,combatItems},opponent,counts,trainer);
+   const items=[...(unit.items ?? [])];
+   const live=fighter({...unit,items,combatItems:effectiveItems(items)},opponent,counts,trainer);
+   rosterMembers.set(live,unit);
+   return live;
   };
   const units=[...first.map(unit=>build(unit,false,firstTraits,a)),...second.map(unit=>build(unit,true,secondTraits,b))];
   const storm=(trainer,counts)=>{
@@ -2815,7 +2916,7 @@
   weaken:'Damage down',rally:'Attack speed up',rush:'Faster next attack',veil:'Damage reduction',
   thorn:'Defense up',cleanse:'Cleanse',volley:'Splash',spread:'Area damage',gale:'Knockback',blink:'Repositioned',quake:'Area delay'
  };
- function combatLayer(units){
+ function combatLayer(units,editableGear=false){
   const layer=element('div',null,'tactics-combat-space');
   const effects=element('canvas',null,'tactics-signature-effects');
   effects.setAttribute('aria-hidden','true');
@@ -2823,6 +2924,7 @@
   const damageLabels=new Map();
   const views=units.map(unit=>{
    const node=element('div',null,'tactics-live-unit'+(unit.opponent?' is-opponent':''));
+   if(editableGear && !unit.opponent)dropUnit(node,null,rosterMembers.get(unit));
    const bars=element('div',null,'tactics-live-bars');
    const hp=element('progress'),mana=element('progress');
    hp.max=unit.max;mana.max=60;
@@ -2927,7 +3029,7 @@
   for(const trainer of drawRogueChoices(living,living.length))fillShop(trainer);
   run.selected=null;
   run.busy=false;
-  run.spectate=null;
+  run.spectate=null;run.playerFight=null;run.viewingTrainer=null;draggedItem=null;
   beginChoices();
   if(run.choice)render();
   else if(carouselRound(run.round))advanceRound();
@@ -2939,7 +3041,7 @@
   if(openingRound(run.round)){run.result='Opening complete. Wild battles begin at 1-2.';advanceRound();return;}
   const current=run;
   run.busy=true;
-  run.scout=null;
+  run.scout=null;dragged=null;draggedItem=null;
   const player=run.trainers[0];
   if(!field(player).length && player.units.length)player.units[0].position=cells[31];
   const opponents=drawRogueChoices(run.trainers.slice(1).filter(t=>t.hp>0),7);
@@ -2960,15 +3062,18 @@
    if(opponents.length%2)addMatch(opponents.at(-1),ghost,true);
   }
   let watched, watchedTrainer, view, timer, countdown, chart, frame=0;
-  run.spectate=trainer=>{
+  run.playerFight=matches[0];
+  run.spectate=(trainer,refresh=false)=>{
    const match=matches.find(entry=>entry.a===trainer || entry.b===trainer);
-   if(!match || match===watched && trainer===watchedTrainer)return;
-   watched=match;watchedTrainer=trainer;
+   if(!match || !refresh && match===watched && trainer===watchedTrainer)return;
+   watched=match;watchedTrainer=trainer;run.viewingTrainer=trainer;draggedItem=null;
    const opponent=match.b.name ?? 'Mirror team';
    const battleView=battleLayout(match.a,match.units,match.a.name+' vs '+opponent,trainer);
    timer=battleView.timer;
    countdown=battleView.countdown;
-   view=combatLayer(match.units);
+   timer.value=100*(1-frame/combatTicks);
+   countdown.textContent=(frame*combatStepMs>=overtimeStartMs?'Overtime · ':'')+Math.ceil((combatTicks-frame)*combatStepMs/1000)+'s';
+   view=combatLayer(match.units,trainer===player);
    battleView.arena.insertBefore(view.layer,battleView.arena.querySelector('.tactics-bench'));
    chart=damageChart(matches[0]);
    battleView.left.append(chart.panel);
@@ -3028,7 +3133,7 @@
    await deliverPlacement(current);
    if(run!==current || phase!=='tactics')return;
    run.busy=false;
-   run.spectate=null;
+   run.spectate=null;run.playerFight=null;run.viewingTrainer=null;draggedItem=null;
    render();
   }else advanceRound();
   void checkGameVersion();

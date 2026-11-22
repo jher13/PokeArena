@@ -1,3 +1,7 @@
+# Update to 0.22.97
+
+Extract the changed files over **0.22.96** and publish them together. The hosted and local clients load the updated expedition and Tactics scripts. The existing workflow ships the matching generated engine. This update requires no database migration.
+
 # Update to 0.22.96
 
 Extract the changed files over **0.22.95** and publish them together. The hosted and local pages load the updated Roguelit and Tactics scripts. The existing backend workflow includes the matching generated Arena engine. This update uses the existing save format and requires no database migration.

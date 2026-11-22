@@ -110,7 +110,10 @@ module.exports=function checkTacticsDraft(game,context){
  // Three cups per rotation, with the preview locked to the match and rules shared by all eight trainers.
  const seen=[],cupGold={};
  const picker=game.sideSupplyPicker('tactics',['Stage 2','Stage 3','Stage 4']),select=picker.children[0].children[0];
- select.value='development';select.onchange();assert.match(picker.children[1].textContent,/IV Booster/);
+ select.value='development';select.onchange();
+ const supplyRows=picker.children[1].children;
+ assert.deepEqual(Array.from(supplyRows,r=>r.children[0].textContent),['Stage 2','Stage 3','Stage 4']);
+ assert(supplyRows.some(row=>row.children[1].children.some(item=>item.textContent.includes('IV Booster'))));
  for(let i=0;i<7;i++){
   const rotation=game.cupSchedule();assert.equal(new Set(rotation).size,rotation.length);
   const next=rotation[0];game.start();const cupRun=getRun();
@@ -152,4 +155,60 @@ module.exports=function checkTacticsDraft(game,context){
  assert.deepEqual(received.filter(([kind,name])=>kind==='capsules' || name.startsWith('IV ')).map(x=>JSON.stringify(x)).sort(),
   [['vitamins','IV Reducer',1],['vitamins','IV Booster',2],['capsules','Ability Capsule',1]].map(x=>JSON.stringify(x)).sort());
  console.log('Tactics cups, double augments, unique board challenges, actual field requirements and main-bag placement bonuses passed.');
+ // Each rendered station stays anonymous, even when a lower-HP trainer has taken its ball.
+ for(const stage of [2,3,4,5,6]){
+  const offers=game.carouselOffers(structuredClone(getRun().pool),stage);
+  const stations=offers.map(({slot,ball,tier,item})=>({slot,ball,tier,item}));
+  game.renderCarousel({stage,stations,offers:offers.slice(2)});
+  const ring=context.byId('tactics-content').children[0].children.find(node=>node.className==='tactics-carousel-ring');
+  assert.equal(ring.children.length,9);
+  const angles=new Set();
+  for(let i=0;i<9;i++){
+   const tile=ring.children[i],station=stations[i],text=tile.attrs['aria-label'];
+   assert.equal(tile.disabled,i<2);assert.equal(tile.children[2].textContent,station.item);
+   assert.equal(text,(i<2?'Taken · ':'Choose ')+station.ball+' · Tier '+station.tier+' · '+station.item);
+   assert(!Object.keys(station).includes('name'));
+   const x=parseFloat(tile.style['--station-x'])-50,y=parseFloat(tile.style['--station-y'])-50;
+   assert(Math.abs(Math.hypot(x,y)-39)<.002);angles.add(Math.round(Math.atan2(y,x)*180/Math.PI));
+  }
+  assert.equal(angles.size,9);
+ }
+
+ // Mid-combat equipment must affect the actual fighter and preserve transient fight state.
+ game.start();const liveRun=getRun(),[owner,other]=liveRun.trainers;
+ game.setRound(6);liveRun.choice=null;liveRun.busy=true;
+ const one=mon('Abra',front),two=mon('Abra',back),bench=mon('Pichu'),receiver=mon('Eevee',{x:0,y:5});
+ owner.units=[one,two,receiver,bench];other.units=[mon('Squirtle',back)];
+ const fight={a:owner,b:other,units:game.battle(owner,other),sign:null};
+ liveRun.playerFight=fight;liveRun.viewingTrainer=owner;let updates=0;
+ liveRun.spectate=(trainer,refresh)=>{assert.equal(trainer,owner);assert(refresh);updates++;};
+ const [ally,holder,reaper,enemy]=fight.units;
+ const give=(unit,item)=>{owner.items=[item];return game.equipFromInventory(owner,unit,0,item);};
+ const oldAttack=holder.attack,position=holder.position;
+ Object.assign(holder,{mana:33,elapsed:3500,wait:2,manaLock:140,echo:false,secondWind:false,burnUntil:4100});
+ holder.specialAttack+=25;const boosted=holder.specialAttack;
+ assert(give(two,'Claw'));assert(holder.attack>oldAttack);assert.equal(ally.attack,oldAttack);assert.equal(enemy.items.length,0);
+ assert.equal(owner.items.length,0);assert.deepEqual(Array.from(two.items),['Claw']);
+ assert.deepEqual(Array.from(holder.combatItems),['Claw']);assert.equal(holder.position,position);
+ assert.equal(holder.specialAttack,boosted);assert.equal(holder.mana,33);assert.equal(holder.elapsed,3500);
+ assert.equal(holder.wait,2);assert.equal(holder.manaLock,140);assert.equal(holder.burnUntil,4100);assert.equal(holder.echo,false);
+ assert(give(two,'Claw'));assert.deepEqual(Array.from(holder.items),['Razor Claws']);
+ assert(holder.gear.amp>0);assert.equal(holder.secondWind,false);
+ holder.hp=Math.floor(holder.max*.4);const ratio=holder.hp/holder.max,max=holder.max;
+ assert(give(two,'Berry'));assert.equal(holder.max,max+150);assert.equal(holder.hp,Math.round(holder.max*ratio));
+ assert(give(bench,'Wing'));assert.equal(bench.items[0],'Wing');assert.equal(fight.units.length,4);
+ assert.equal(ally.gear.castRefund ?? 0,0);assert(give(receiver,'Spellcraft Emblem'));
+ assert.equal(ally.gear.castRefund,8);assert.equal(reaper.gear.castRefund,8);
+ assert(give(one,'Lens'));assert(give(one,'Lens'));assert.equal(one.items[0],'Mirage Goggles');assert.equal(ally.combatItems.length,2);
+ const rolled=ally.combatItems;assert(!give(one,'Claw'));assert.deepEqual(owner.items,['Claw']);
+ assert(give(two,'Razor Claws'));assert.equal(ally.combatItems,rolled);
+ owner.items=['Wing'];assert(!game.equipFromInventory(owner,two,0,'Claw'));assert.equal(owner.items[0],'Wing');
+ assert(!give(enemy,'Claw'));liveRun.viewingTrainer=other;assert(!give(two,'Claw'));liveRun.viewingTrainer=owner;
+ holder.hp=0;assert(give(two,'Berry'));assert.equal(holder.hp,0);
+ fight.sign=1;const finishedItems=Array.from(reaper.items);
+ assert(give(receiver,'Charm'));assert.deepEqual(Array.from(reaper.items),finishedItems);
+ const next=game.battle(owner,other);assert(next[2].items.includes('Charm'));assert(next[1].items.every(item=>two.items.includes(item)));
+ assert(updates>=10);
+ console.log('Nine mystery stations, duplicate combatants, live item fusion, health, emblem thresholds, spent charges, bench, spectating and next-fight gear passed.');
+
 };

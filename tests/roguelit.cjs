@@ -17,8 +17,10 @@ const ui=String.raw`
   constructor(tagName,text='',className=''){
    Object.assign(this,{tagName,textContent:text,children:[],className,style:{setProperty(){}},attrs:{},classList:{add(){}}});
   }
+  get textContent(){return (this.text ?? '')+(this.children ?? []).map(node=>typeof node==='string'?node:node.textContent).join('');}
+  set textContent(value){this.text=value;this.children=[];}
   append(...v){this.children.push(...v);}
-  replaceChildren(...v){this.children=v;}
+  replaceChildren(...v){this.text='';this.children=v;}
   setAttribute(key,value){this.attrs[key]=value;}
  }
  const testNodes=new Map();document.getElementById=id=>{
@@ -27,7 +29,8 @@ const ui=String.raw`
  document.createTextNode=text=>new TestNode('#text',text);
  element=(...args)=>new TestNode(...args);
  skillTitle=(tag,name)=>element(tag,name);pokemonPortrait=name=>element('canvas',name);
- bagItemIcon=name=>element('span',name);
+ idlePokemonPortrait=(name,style,variant,fullSize,direction,shiny,preferMotion)=>Object.assign(element('canvas',name,style),{preferMotion});
+ collectionPixelArt=()=>element('canvas');bagItemIcon=name=>element('span',name);
  showScreen=()=>{};openMenu=()=>{phase='home';rogueRun=null;};checkGameVersion=()=>{};
  openBattle=(g,w,t,run)=>{rogueRun=run;phase='setup';};startBattle=()=>{phase='battle';};
  playerStorage.getItem=k=>storage.get(k) ?? null;
@@ -65,6 +68,8 @@ const api=String.raw`
    const inactive=pair();rogueRun=previous;return [...normal,inactive];
   },
   choose:name=>{const b=buttons().find(b=>label(b)===name && !b.disabled);if(!b)throw Error('Missing '+name+' on '+byId('rogue-status').textContent);b.onclick();},
+  cards:buttons,
+  supplies:()=>byId('rogue-route-map').children[0].children[1].children,
   options:()=>buttons().filter(b=>!b.disabled).map(label),
   status:()=>byId('rogue-status').textContent,
   snapshot:()=>readRogueProgress(),
@@ -84,7 +89,14 @@ const run=()=>g.snapshot().expedition;
 const wallet=()=>JSON.parse(storage.get(walletKey) ?? '{}');
 const choose=x=>g.choose(x);
 const first=()=>choose(g.options()[0]);
-choose('Permanent upgrades');choose('Power · 0/10');
+assert.deepEqual(Array.from(g.supplies(),row=>row.children[0].textContent),['Kanto','Johto','Hoenn']);
+choose('Boss rewards');
+for(const card of g.cards().slice(0,3)){
+ const [bosses,repeat,firstClear]=card.children[1].children;
+ assert.equal(bosses.children.length,3);assert(bosses.children.every(row=>row.children[0].preferMotion));
+ assert.equal(repeat.children[0].textContent,'Every clear');assert.match(firstClear.children[0].textContent,/First clear/);
+}
+choose('Back to Roguelit');choose('Permanent upgrades');choose('Power · 0/10');
 assert.equal(g.snapshot().shards,70);assert.equal(g.snapshot().ranks.level,2);assert.equal(g.snapshot().ranks.offense,1);
 choose('Back to Roguelit');choose('Start expedition');
 assert.equal(run().options.length,5);first();assert.equal(run().members[0].level,12);
@@ -92,6 +104,11 @@ const draft=json(run());g=boot(storage);choose('Resume expedition');
 assert.deepEqual(json(run()),draft);assert.deepEqual(json(g.options()),draft.options);
 while(run().step==='moves')first();
 assert.equal(new Set(run().members[0].moves).size,run().members[0].moves.length);
+const routeCard=g.cards()[0],cardRows=routeCard.children[2].children;
+assert(routeCard.children[1].preferMotion);
+assert.match(cardRows[0].textContent,/Lv\. /);assert.match(cardRows.at(-4).textContent,/ Arena/);
+assert.match(cardRows.at(-3).textContent,/main-game coins/);assert.match(cardRows.at(-2).attrs['aria-label'],/shards?$/);
+assert.equal(cardRows.at(-2).children[0].tagName,'canvas');assert(cardRows.at(-1).textContent.length>15);
 const oldTab=boot(storage);oldTab.choose('Resume expedition');
 const oldBest=g.snapshot().best;let expectedShards=g.snapshot().shards,expectedCoins=0;
 function battle(kind,failSave=false){

@@ -803,10 +803,21 @@ function paintIdlePortraits(now) {
  }
  idlePortraitFrame=idlePortraits.size?requestAnimationFrame(paintIdlePortraits):null;
 }
-function idlePokemonPortrait(name,className,variant=null,fullSize=false,direction=0,shiny=false) {
+function idlePokemonPortrait(name,className,variant=null,fullSize=false,direction=0,shiny=false,preferMotion=false) {
  const canvas=pokemonPortrait(name,className,fullSize,direction,variant,shiny);
  const reduced=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
- const clip=pmdMotion({name,direction,spriteVariant:variant},'idle');
+ const actor={name,direction,spriteVariant:variant};
+ let clip=pmdMotion(actor,'idle');
+ if(preferMotion && !reduced){
+  const hasMotion=sequence=>sequence?.frames.some(frame=>{
+   const first=sequence.frames[0];
+   return frame.page!==first.page || frame.sx!==first.sx || frame.sy!==first.sy;
+  });
+  if(!hasMotion(clip)){
+   const walk=pmdMotion(actor,'walk');
+   if(hasMotion(walk))clip=walk;else canvas.classList.add('rogue-resting');
+  }
+ }
  if(clip?.duration && !reduced) {
   idlePortraits.set(canvas,{clip,seed:dex[name][0]});
   idlePortraitFrame ??= requestAnimationFrame(paintIdlePortraits);
@@ -4502,12 +4513,16 @@ function sideSupplyText(items) {
  return items.map(([,name,count])=>count+' × '+experienceCandyName(name)).join(' · ');
 }
 function sideSupplyPicker(mode,steps) {
- const box=element('section',null,'mode-supplies'),label=element('label','Main-game supplies '),select=element('select'),preview=element('small');
+ const box=element('section',null,'mode-supplies'),label=element('label','Main-game supplies '),select=element('select'),preview=element('dl',null,'mode-supply-rows');
  for(const [id,track] of Object.entries(sideSupplyTracks)){
   const option=element('option',track.name);option.value=id;select.append(option);
  }
  select.value=sideSupplyFocus(mode);
- const show=()=>{preview.textContent=sideSupplyTracks[select.value].bundles.map((items,i)=>steps[i]+' · '+sideSupplyText(items)).join('  /  ');};
+ const show=()=>preview.replaceChildren(...sideSupplyTracks[select.value].bundles.map((items,i)=>{
+  const row=element('div'),rewards=element('dd');
+  for(const item of items)rewards.append(element('span',sideSupplyText([item])));
+  row.append(element('dt',steps[i]),rewards);return row;
+ }));
  select.onchange=()=>{sidePreference(mode,select.value);show();};show();
  label.append(select);box.append(label,preview);return box;
 }
@@ -10505,6 +10520,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.97',changes:['Roguelit now shows animated Pokémon, a shard currency icon and separate rows for supplies, boss rewards and route details.','Tactics carousels arrange nine mystery balls around an altar. Each displays its tier and held item until you choose.','Equip Tactics items on your Pokémon during a fight, including from the bench or by tapping an inventory item.']},
  {version:'0.22.96',changes:['Roguelit expeditions can visit nine boss sites. Take a relic hunt, build around a team relic and complete a regional field study for main-game supplies.','Poke Fight Tactics rotates three cup rules, offers a second augment at stage 4 and rewards board challenges in stages 2–4.','Choose EXP Candy, Poké Balls or stat-training items before entering either mode. Bonus supplies go to your main bag alongside the usual rewards.']},
  {version:'0.22.95',changes:['Roguelit is now a three-region expedition with branching encounters, regional bosses, recruits, gear and optional endless play.','Expeditions save at each choice and before each fight. Shards and permanent upgrades carry between runs.','Five new permanent upgrade paths expand drafts, starting gear and coin rewards. Every victory banks main-game coins, and regional bosses deliver bag items and first-clear bonuses.']},
  {version:'0.22.94',changes:['Poke Fight Tactics trainers now draft for trait breakpoints, evolutions and stronger boards, spend on levels and rerolls, and compete for a finite shared pool.','Finishing a Tactics match pays account coins for completed rounds as well as placement and items. Round coins scale with PC level and unlocked Arena speed.']},

@@ -655,18 +655,50 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .detail-title .pc-favorite-toggle{padding:.15em .4em;font-size:1em}
 .detail-title .pc-favorite-toggle[aria-pressed=true]{color:#ffe58b}
 .experience-candy-controls canvas{width:24px;height:24px;image-rendering:pixelated}
-.tactics-carousel-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-#tactics .tactics-carousel-ball,.tactics-carousel-empty{display:grid;justify-items:center;align-content:center;gap:4px;text-align:center;min-width:0;padding:7px;border:1px solid var(--ball-rim,#c8c8bb);border-radius:8px;background:#202f34;color:#fff0cf}
-#tactics .tactics-carousel-ball.tier-2{--ball-rim:#81ce9f}
-#tactics .tactics-carousel-ball.tier-3{--ball-rim:#80bafa}
-#tactics .tactics-carousel-ball.tier-4{--ball-rim:#d9a6ff}
-#tactics .tactics-carousel-ball.tier-5{--ball-rim:#efce76}
-#tactics .tactics-carousel-ball>canvas{width:38px;height:38px;image-rendering:pixelated}
-.tactics-carousel-preview{display:grid;justify-items:center;font-size:12px;min-width:0;overflow-wrap:anywhere}
-#tactics .tactics-carousel-preview canvas{width:40px;height:40px;object-fit:contain;image-rendering:pixelated}
-.tactics-carousel-ball.is-mystery:not(:hover):not(:focus-within) .tactics-carousel-preview canvas{filter:brightness(0) drop-shadow(0 0 2px #b9ccc8)}
-.tactics-carousel-ball.is-mystery:not(:hover):not(:focus-within) .tactics-carousel-preview strong{visibility:hidden}
-.tactics-carousel-empty{opacity:.65}
+.tactics-carousel-screen{background:#172428;container-type:inline-size}
+.tactics-carousel-key{display:none}
+.tactics-carousel-help{text-align:center;line-height:1.45;color:#ece5cf;margin:.4rem auto .65rem;font-size:.92rem}
+.tactics-carousel-ring{position:relative;isolation:isolate;width:min(100%,570px);aspect-ratio:1;margin:0 auto;container-type:inline-size;
+ background:#243538 url('../assets/tactics-carousel-altar.webp') center/cover no-repeat;border:1px solid #766949;border-radius:12px}
+#tactics .tactics-carousel-stop{position:absolute;left:var(--station-x);top:var(--station-y);transform:translate(-50%,-50%);
+ width:23%;max-width:108px;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+ padding:3px 2px;line-height:1.12;background:#142328f2;color:#f7f4e8;border:1px solid #819199;border-radius:8px;font-weight:600;cursor:pointer}
+#tactics .tactics-carousel-stop.tier-2{border-color:#8ec5a0}#tactics .tactics-carousel-stop.tier-3{border-color:#89bddd}
+#tactics .tactics-carousel-stop.tier-4{border-color:#c7a4df}#tactics .tactics-carousel-stop.tier-5{border-color:#e6bf67}
+#tactics .tactics-carousel-stop:disabled{background:#202c2eee;color:#c1cac6;opacity:1;cursor:default}
+.tactics-carousel-stop:disabled .tactics-carousel-capsule{filter:saturate(.4);opacity:.68}
+#tactics .tactics-carousel-stop:enabled:is(:hover,:focus-visible){background:#284241;outline:2px solid #ffe0a1;outline-offset:2px;z-index:2}
+.tactics-carousel-capsule{position:relative;display:block;width:clamp(24px,8cqi,44px);aspect-ratio:1}
+#tactics .tactics-carousel-capsule>canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+.tactics-carousel-carry{position:absolute;right:-22%;bottom:0;display:grid;place-items:center;width:46%;aspect-ratio:1;padding:1px;
+ background:#111b20;border:1px solid #b8a475;border-radius:3px}
+#tactics .tactics-carousel-carry>*{width:100%;height:100%;image-rendering:pixelated}
+.tactics-carousel-tier,.tactics-carousel-state{font-size:clamp(9px,2.4cqi,12px);color:#e6d6aa}
+.tactics-carousel-item{font-size:clamp(10px,2.7cqi,14px);overflow-wrap:anywhere}
+.tactics-carousel-state{color:#c4cfcc;line-height:1}
+@container (max-width:410px){
+ #tactics .tactics-carousel-stop{padding:2px 1px;gap:1px}
+ .tactics-carousel-capsule{width:clamp(20px,7cqi,27px)}
+ .tactics-carousel-tier,.tactics-carousel-state{position:absolute;top:2px;font-size:0}
+ .tactics-carousel-tier{left:3px}.tactics-carousel-state{right:3px}
+ .tactics-carousel-tier::before{content:attr(data-tier);font-size:10px}
+ .tactics-carousel-state::before{content:'×';font-size:12px;color:#e1cfa5}
+ .tactics-carousel-item{font-size:clamp(10px,3.1cqi,12px);line-height:1.06}
+}
+@media(max-width:440px){#tactics .tactics-carousel-screen{padding-inline:4px}}
+@container (max-width:365px){
+ #tactics .tactics-carousel-stop{width:clamp(44px,18.8cqi,58px);height:clamp(44px,16cqi,54px);min-height:44px;gap:0}
+ .tactics-carousel-stop::before{content:attr(data-number);position:absolute;top:2px;left:4px;font-size:11px;color:#ffe7ac}
+ .tactics-carousel-stop .tactics-carousel-item{display:none}
+ .tactics-carousel-stop .tactics-carousel-capsule{width:clamp(25px,9cqi,32px)}
+ .tactics-carousel-stop .tactics-carousel-tier{top:auto;bottom:1px;left:3px}
+ .tactics-carousel-tier::before{content:'T' attr(data-tier);font-size:9px}
+ .tactics-carousel-key{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.3rem;list-style:none;padding:0;margin:.6rem 0 0;text-align:start}
+ #tactics .tactics-carousel-key button{display:grid;grid-template-columns:1.3rem 1fr;gap:1px 3px;align-items:center;width:100%;height:100%;min-height:44px;padding:4px;text-align:start;line-height:1.14;color:#f7f4e8;background:#203033;font-size:.78rem}
+ #tactics .tactics-carousel-key button:disabled{background:#19272a;color:#b7c3bf}
+ .tactics-carousel-key b{grid-row:span 2;text-align:center;color:#ffe0a1}
+ .tactics-carousel-key small{font-size:.7rem;color:#d7ceae}
+}
 #tactics .tactics-choice .bag-item small{color:#d5dccc}
 @media(max-width:760px){
  .tactics-layout{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -954,6 +986,33 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .mode-supplies label{font-weight:700}.mode-supplies select{margin-inline-start:.3rem;max-width:100%}
 .mode-supplies small,.mode-objective small{display:block}.mode-objective{margin:.4rem 0;padding:.45rem .65rem;border-inline-start:3px solid #ba9148}
 .tactics-stage .mode-objective{flex-basis:100%;text-align:start;margin:0;padding:.2rem .6rem}
+.mode-supply-rows{display:grid;margin:0;line-height:1.45;font-size:.92rem}
+.mode-supply-rows>div{display:grid;grid-template-columns:minmax(4.3rem,6rem) minmax(0,1fr);gap:.65rem;padding:.42rem 0;border-top:1px solid #aabcae}
+.mode-supply-rows dt{font-weight:700}.mode-supply-rows dd{margin:0;display:grid;gap:.2rem}
+.rogue-shards{display:inline-flex;align-items:center;gap:.3rem;vertical-align:middle;font-variant-numeric:tabular-nums;font-weight:700;line-height:1.3}
+#roguelit .rogue-shards canvas{width:18px;height:18px;margin:0;image-rendering:pixelated;background:transparent;border:0}
+#roguelit .rogue-route{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;align-items:center;justify-items:start;row-gap:.3rem;text-align:start;padding:12px}
+#roguelit .rogue-route>strong{grid-area:1/1}.rogue-route>.rogue-portrait{grid-area:1/2}
+.rogue-route-info{display:grid;grid-column:1/-1;width:100%;gap:.2rem;font-size:.9rem;line-height:1.4}
+.rogue-foe{font-weight:650}.rogue-arena-name{margin-bottom:.18rem}.rogue-path-description{border-top:1px solid #b4caba;margin-top:.3rem;padding-top:.45rem}
+#roguelit .rogue-route small,#roguelit .rogue-boss-rewards{font-size:.9rem;line-height:1.4}
+#rogue-choices:has(.rogue-boss-rewards){grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
+#rogue-choices:has(.rogue-boss-rewards)>.gym-card{align-content:start;text-align:start;padding:12px}
+#rogue-choices:has(.rogue-boss-rewards)>button{grid-column:1/-1;justify-self:start;min-height:38px;align-content:center}
+.rogue-boss-rewards,.rogue-boss-list,.rogue-loot-group{display:grid;gap:.28rem}
+.rogue-boss-list{list-style:none;margin:.25rem 0;padding:0}
+.rogue-boss-list li{display:grid;grid-template-columns:36px 1fr;align-items:center;gap:.45rem;min-height:32px}
+.rogue-loot-group{margin-top:.3rem;padding-top:.45rem;border-top:1px solid #b4caba}
+.rogue-loot-group b{display:flex;align-items:center;gap:.6rem}
+.rogue-receipt{display:grid;justify-items:start;gap:.28rem;margin:.45rem 0}
+.rogue-receipt>span:last-child{margin-top:.3rem}
+#roguelit .rogue-route>strong{text-transform:capitalize}
+@media(prefers-reduced-motion:no-preference){.rogue-resting{animation:rogue-idle-bob 1.2s steps(2,end) infinite alternate}}
+@keyframes rogue-idle-bob{to{translate:0 -2px}}
+.tactics-gear-dialog{max-width:min(92vw,26rem);max-height:82dvh;overflow:auto}
+.tactics-gear-targets{display:grid;gap:.35rem;margin:.6rem 0}
+.tactics-gear-targets button{text-align:start}
+.rogue-claimed{font-size:.78rem;font-weight:600;color:#285f42}
 </style>
 <link rel="stylesheet" href="../social.css?v=0.22.92">
 <link rel="stylesheet" href="../trainer-card.css?v=0.22.92">
@@ -2017,10 +2076,21 @@ function paintIdlePortraits(now) {
  }
  idlePortraitFrame=idlePortraits.size?requestAnimationFrame(paintIdlePortraits):null;
 }
-function idlePokemonPortrait(name,className,variant=null,fullSize=false,direction=0,shiny=false) {
+function idlePokemonPortrait(name,className,variant=null,fullSize=false,direction=0,shiny=false,preferMotion=false) {
  const canvas=pokemonPortrait(name,className,fullSize,direction,variant,shiny);
  const reduced=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
- const clip=pmdMotion({name,direction,spriteVariant:variant},'idle');
+ const actor={name,direction,spriteVariant:variant};
+ let clip=pmdMotion(actor,'idle');
+ if(preferMotion && !reduced){
+  const hasMotion=sequence=>sequence?.frames.some(frame=>{
+   const first=sequence.frames[0];
+   return frame.page!==first.page || frame.sx!==first.sx || frame.sy!==first.sy;
+  });
+  if(!hasMotion(clip)){
+   const walk=pmdMotion(actor,'walk');
+   if(hasMotion(walk))clip=walk;else canvas.classList.add('rogue-resting');
+  }
+ }
  if(clip?.duration && !reduced) {
   idlePortraits.set(canvas,{clip,seed:dex[name][0]});
   idlePortraitFrame ??= requestAnimationFrame(paintIdlePortraits);
@@ -5716,12 +5786,16 @@ function sideSupplyText(items) {
  return items.map(([,name,count])=>count+' × '+experienceCandyName(name)).join(' · ');
 }
 function sideSupplyPicker(mode,steps) {
- const box=element('section',null,'mode-supplies'),label=element('label','Main-game supplies '),select=element('select'),preview=element('small');
+ const box=element('section',null,'mode-supplies'),label=element('label','Main-game supplies '),select=element('select'),preview=element('dl',null,'mode-supply-rows');
  for(const [id,track] of Object.entries(sideSupplyTracks)){
   const option=element('option',track.name);option.value=id;select.append(option);
  }
  select.value=sideSupplyFocus(mode);
- const show=()=>{preview.textContent=sideSupplyTracks[select.value].bundles.map((items,i)=>steps[i]+' · '+sideSupplyText(items)).join('  /  ');};
+ const show=()=>preview.replaceChildren(...sideSupplyTracks[select.value].bundles.map((items,i)=>{
+  const row=element('div'),rewards=element('dd');
+  for(const item of items)rewards.append(element('span',sideSupplyText([item])));
+  row.append(element('dt',steps[i]),rewards);return row;
+ }));
  select.onchange=()=>{sidePreference(mode,select.value);show();};show();
  label.append(select);box.append(label,preview);return box;
 }
@@ -11723,6 +11797,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.97',changes:['Roguelit now shows animated Pokémon, a shard currency icon and separate rows for supplies, boss rewards and route details.','Tactics carousels arrange nine mystery balls around an altar. Each displays its tier and held item until you choose.','Equip Tactics items on your Pokémon during a fight, including from the bench or by tapping an inventory item.']},
  {version:'0.22.96',changes:['Roguelit expeditions can visit nine boss sites. Take a relic hunt, build around a team relic and complete a regional field study for main-game supplies.','Poke Fight Tactics rotates three cup rules, offers a second augment at stage 4 and rewards board challenges in stages 2–4.','Choose EXP Candy, Poké Balls or stat-training items before entering either mode. Bonus supplies go to your main bag alongside the usual rewards.']},
  {version:'0.22.95',changes:['Roguelit is now a three-region expedition with branching encounters, regional bosses, recruits, gear and optional endless play.','Expeditions save at each choice and before each fight. Shards and permanent upgrades carry between runs.','Five new permanent upgrade paths expand drafts, starting gear and coin rewards. Every victory banks main-game coins, and regional bosses deliver bag items and first-clear bonuses.']},
  {version:'0.22.94',changes:['Poke Fight Tactics trainers now draft for trait breakpoints, evolutions and stronger boards, spend on levels and rerolls, and compete for a finite shared pool.','Finishing a Tactics match pays account coins for completed rounds as well as placement and items. Round coins scale with PC level and unlocked Arena speed.']},
@@ -12061,5 +12136,5 @@ requestAnimationFrame(frame);
 byId('home-events').onclick=()=>{phase='events';showScreen('events');selectedPassReward=null;renderBattlePass();};
 byId('events-back').onclick=openMenu;
 </script>
-<script src="../roguelit.js?v=0.22.96"></script><script src="../tactics.js?v=0.22.96"></script><script src="../multiplayer.js?v=0.22.92"></script>
+<script src="../roguelit.js?v=0.22.97"></script><script src="../tactics.js?v=0.22.97"></script><script src="../multiplayer.js?v=0.22.92"></script>
 <script src="../trade-hub.js?v=0.22.93"></script><script src="../campaign-progression.js?v=0.22.82"></script><script src="../trainer-card.js?v=0.22.91"></script><script src="../social.js?v=0.22.92"></script></html>
