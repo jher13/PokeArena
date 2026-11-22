@@ -1278,10 +1278,11 @@
  }
  function showTacticsLobby(){
   const cup=cups[cupSchedule()[0]];
-  content.replaceChildren(heading('Poke Fight Tactics'),
+  const banner=element('header',null,'tactics-league-banner');
+  banner.append(heading(cup.name),element('p',cup.rule));
+  content.replaceChildren(banner,
    element('p','Draft from a shared shop, position your Pokémon, and outlast seven AI trainers.'),
    element('p','At your progression, fourth place earns '+earnedCoins(tacticsCoinRate()).toLocaleString()+' account coins per credited minute, plus a placement bonus and items.'),
-   element('p',cup.name+' · '+cup.rule),
    sideSupplyPicker('tactics',['Stage 2','Stage 3','Stage 4']),
    element('p','Meet a different board challenge in two trainer duels per stage to earn these supplies at placement. Pick augments at stages 2 and 4.'),
    button('Start match',start));

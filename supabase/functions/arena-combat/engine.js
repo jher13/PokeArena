@@ -4865,7 +4865,7 @@ const rogueUpgrades=[
  {key:'supply',label:'Quartermaster',detail:'+1 held item to choose from at supply stops per rank',cost:26,cap:2},
  {key:'kit',label:'Field Kit',detail:'Start with an Oran Berry at rank 1 or a Sitrus Berry at rank 2',cost:36,cap:2},
  {key:'curator',label:'Relic Appraisal',detail:'Choose from three expedition relics at a relic hunt',cost:55,cap:1},
- {key:'bounty',label:'Bounty Hunter',detail:'+5% main-game coins per expedition win per rank',cost:35,cap:3}
+ {key:'bounty',label:'Bounty Hunter',detail:'Increase victory coin rewards by 5% per rank',cost:35,cap:3}
 ];
 function readRogueProgress() {
  const progress={shards:0,best:0,ranks:{},firstClears:[]};
@@ -10520,6 +10520,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.98',changes:['Roguelit uses the wallet coin icon for payouts, shows each recruit’s level, types and moves on separate lines, and displays expedition team sprites on a clear background.','Poke Fight Tactics now visits a Pokémon League stadium and a Poké Ball draft plaza.']},
  {version:'0.22.97',changes:['Roguelit now shows animated Pokémon, a shard currency icon and separate rows for supplies, boss rewards and route details.','Tactics carousels arrange nine mystery balls around an altar. Each displays its tier and held item until you choose.','Equip Tactics items on your Pokémon during a fight, including from the bench or by tapping an inventory item.']},
  {version:'0.22.96',changes:['Roguelit expeditions can visit nine boss sites. Take a relic hunt, build around a team relic and complete a regional field study for main-game supplies.','Poke Fight Tactics rotates three cup rules, offers a second augment at stage 4 and rewards board challenges in stages 2–4.','Choose EXP Candy, Poké Balls or stat-training items before entering either mode. Bonus supplies go to your main bag alongside the usual rewards.']},
  {version:'0.22.95',changes:['Roguelit is now a three-region expedition with branching encounters, regional bosses, recruits, gear and optional endless play.','Expeditions save at each choice and before each fight. Shards and permanent upgrades carry between runs.','Five new permanent upgrade paths expand drafts, starting gear and coin rewards. Every victory banks main-game coins, and regional bosses deliver bag items and first-clear bonuses.']},

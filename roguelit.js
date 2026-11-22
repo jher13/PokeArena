@@ -84,12 +84,25 @@
  const basePool=()=>dexNames.filter(name=>!isLegendaryEncounter(name) && minimumEncounterLevel(dex[name][0])<=1);
  const sample=(list,count)=>drawRogueChoices(list,count);
  const levelAfter=(level,bonus)=>Math.min(100,level+bonus);
- const teamDescription=member=>member.name+' · Lv. '+member.level+(member.heldItem?' · '+member.heldItem:'');
  const member=(name,level,moves)=>({name,level,moves,profile:rollProfile()});
  const movePool=mon=>legalMoves(mon.name).filter(move=>isVisibleArenaMove(move) && !mon.moves.includes(move));
  function moveDetail(name){
   const [type,power,accuracy,,status]=moveCatalog[name];
   return type+' · '+(status?'Status':power+' power')+' · '+(accuracy?accuracy+'% accuracy':'Always hits')+' · '+moveRules(name).cooldown+'s cooldown';
+ }
+ function pokemonDetails(mon){
+  const info=element('span',null,'rogue-mon-details');
+  info.append(element('span','Lv. '+mon.level),element('span',typesOf(mon.name).join(' / '),'rogue-mon-types'));
+  if(mon.heldItem)info.append(element('span','Held item · '+mon.heldItem));
+  if(mon.moves?.length){
+   const moves=element('span',null,'rogue-mon-moves');
+   moves.setAttribute('role','list');moves.setAttribute('aria-label','Moves');
+   for(const move of mon.moves){
+    const line=skillTitle('span',move);line.setAttribute('role','listitem');moves.append(line);
+   }
+   info.append(moves);
+  }
+  return info;
  }
  function expeditionHud(run){
   const map=byId('rogue-route-map'),party=byId('rogue-party');map.replaceChildren();party.replaceChildren();
@@ -121,12 +134,16 @@
   const row=element('div',null,'rogue-party');
   for(const [i,mon] of run.members.entries()){
    const canPick=run.step==='route' && run.members.length>1;
-   const chip=element(canPick?'button':'span',null,'rogue-member');chip.append(expeditionPortrait(mon.name,mon.profile?.shiny),element('span',(i===0?'Lead · ':'')+teamDescription(mon)));
+   const chip=element(canPick?'button':'span',null,'rogue-member');
+   const summary=element('span',null,'rogue-member-info');
+   summary.append(element('strong',(i===0?'Lead · ':'')+mon.name),element('span','Lv. '+mon.level));
+   if(mon.heldItem)summary.append(element('span','Held item · '+mon.heldItem));
+   chip.append(expeditionPortrait(mon.name,mon.profile?.shiny),summary);
    if(canPick){
     chip.type='button';chip.setAttribute('aria-pressed',String(i===0));chip.setAttribute('aria-label','Lead with '+mon.name);
     chip.onclick=()=>{if(i)edit(r=>{const [lead]=r.members.splice(i,1);r.members.unshift(lead);});};
    }
-   chip.title=mon.moves.join(' · ');row.append(chip);
+   chip.title=mon.moves.join('\n');row.append(chip);
   }
   party.append(element('h3','Expedition team','rogue-squad-label'),row);
   if(run.health!==1 || run.offense!==1 || run.power!==1){
@@ -143,15 +160,23 @@
    pace.append(document.createTextNode('Battle speed '),select);party.append(pace);
   }
  }
+ function currencyCount(amount,unit,icon){
+  const chip=element('span',null,'rogue-currency'),number=amount.toLocaleString();
+  const label=number+' '+unit+(amount===1?'':'s');
+  chip.title=label;chip.setAttribute('role','img');chip.setAttribute('aria-label',label);
+  chip.append(icon,element('span',number));
+  return chip;
+ }
+ function coinCount(amount){
+  const icon=byId('toolbar-coin-display').querySelector('svg').cloneNode(true);
+  return currencyCount(amount,'main-game coin',icon);
+ }
  function shardCount(amount){
-  const chip=element('span',null,'rogue-shards');
-  const name=amount.toLocaleString()+' '+(amount===1?'shard':'shards');
-  chip.title=name;chip.setAttribute('role','img');chip.setAttribute('aria-label',name);
   const crystal=collectionPixelArt([
    '.......ooo..','......olco..','.....olcco..','....olccgo..','...olccggo..','..olccgggo..',
    '..owccggoo..','.owccgggo...','.occcggo....','..ogggo.....','...ooo......'
   ],'#ad7cec','#6951ad');
-  chip.append(crystal,element('span',amount.toLocaleString()));return chip;
+  return currencyCount(amount,'shard',crystal);
  }
  function expeditionPortrait(name,shiny=false){
   return idlePokemonPortrait(name,'rogue-portrait',shiny?spriteVariants(name).shiny:null,false,0,shiny,true);
@@ -160,7 +185,7 @@
   const lines=element('span',null,'rogue-route-info');
   for(const mon of node.foes)lines.append(element('span',mon.name+' · Lv. '+mon.level,'rogue-foe'));
   lines.append(element('span',node.type+' Arena','rogue-arena-name'),
-   element('span',bounty(run,node.kind).toLocaleString()+' main-game coins'),shardCount(node.shards),
+   coinCount(bounty(run,node.kind)),shardCount(node.shards),
    element('small',trails[node.kind].detail,'rogue-path-description'));
   return lines;
  }
@@ -375,7 +400,7 @@
    run.members.forEach(mon=>{mon.level=levelAfter(mon.level,2);});
    run.step='reward';prepareRewards(run);
   },()=>{
-   if(won)showRun();else screen(['Expedition ended at '+regionFor(expected).site+' · '+expected.cleared+' wins · '+expected.coinsEarned.toLocaleString()+' main-game coins earned this run · Banked ',shardCount(rogueProgress.shards)],[
+   if(won)showRun();else screen(['Expedition ended at '+regionFor(expected).site+' · '+expected.cleared+' wins · Earned ',coinCount(expected.coinsEarned),' · Banked ',shardCount(rogueProgress.shards)],[
     {label:'Back to Roguelit',action:()=>lobby()},{label:'New expedition',action:start}
    ],null);
    void checkGameVersion();
@@ -406,11 +431,11 @@
  function showRecruits(){
   const run=rogueRun;
   screen('Choose a recruit from '+run.region+'.',[
-   ...run.rewards.recruits.map((mon,i)=>({label:mon.name,portrait:mon.name,shiny:mon.profile?.shiny,detail:'Lv. '+mon.level+' · '+typesOf(mon.name).join(' / ')+'\n'+mon.moves.join(' · '),
+   ...run.rewards.recruits.map((mon,i)=>({label:mon.name,portrait:mon.name,shiny:mon.profile?.shiny,body:pokemonDetails(mon),
     action:()=>{
      if(run.members.length<6){takeReward(r=>{r.members.push(r.rewards.recruits[i]);});return;}
      screen('Choose a teammate to replace with '+mon.name+'.',[
-      ...run.members.map((old,index)=>({label:'Replace '+old.name,portrait:old.name,shiny:old.profile?.shiny,detail:teamDescription(old),
+      ...run.members.map((old,index)=>({label:'Replace '+old.name,portrait:old.name,shiny:old.profile?.shiny,body:pokemonDetails(old),
        action:()=>takeReward(r=>{r.members[index]=r.rewards.recruits[i];})})),
       {label:'Back to recruits',action:showRecruits}
      ]);
@@ -431,7 +456,7 @@
  function showTutor(){
   const run=rogueRun;
   screen('Choose a teammate to learn a move.',[
-   ...run.members.map((mon,i)=>({label:mon.name,portrait:mon.name,shiny:mon.profile?.shiny,disabled:!run.rewards.tutors[i].length,detail:mon.moves.join(' · '),action:()=>{
+   ...run.members.map((mon,i)=>({label:mon.name,portrait:mon.name,shiny:mon.profile?.shiny,disabled:!run.rewards.tutors[i].length,body:pokemonDetails(mon),action:()=>{
     screen('Choose a new move for '+mon.name+'.',[
      ...run.rewards.tutors[i].map(name=>({move:name,detail:moveDetail(name),action:()=>{
       if(mon.moves.length<4){takeReward(r=>{r.members[i].moves.push(name);});return;}
@@ -451,14 +476,18 @@
    const relic=expeditionRelics[key];choices.push({label:relic.name,detail:relic.detail+(run.relic?' Replaces '+expeditionRelics[run.relic].name+'.':''),
     action:()=>takeReward(r=>{r.relic=key;})});
   }
-  if(recruits?.length)choices.push({label:'Recruit a teammate',portrait:recruits[0].name,detail:recruits.map(mon=>mon.name).join(' · '),action:showRecruits});
+  if(recruits?.length){
+   const names=element('span',null,'rogue-mon-details');
+   for(const mon of recruits)names.append(element('span',mon.name));
+   choices.push({label:'Recruit a teammate',portrait:recruits[0].name,body:names,action:showRecruits});
+  }
   if(items?.length)choices.push({label:'Choose held gear',item:items[0],detail:items.join(' · '),action:showGear});
   if(tutors?.some(moves=>moves.length))choices.push({label:'Visit the move tutor',detail:'Choose a teammate, a new move and the slot to replace.',action:showTutor});
   if(!choices.length || run.node.kind==='boss' || run.node.kind==='elite')choices.push(...trainingChoices());
   else choices.push({label:'Train the team instead',detail:'Choose endurance, power or balanced training.',action:showTraining});
   const payout=run.lastPayout;
   const receipt=element('span',null,'rogue-receipt');
-  receipt.append(element('strong',run.node.label+' cleared'),element('span',payout.coins.toLocaleString()+' main-game coins'),shardCount(run.node.shards));
+  receipt.append(element('strong',run.node.label+' cleared'),coinCount(payout.coins),shardCount(run.node.shards));
   for(const item of payout.items)receipt.append(element('span',sideSupplyText([item])));
   if(payout.first)receipt.append(element('small','First-clear bonus included'));
   if(payout.study)receipt.append(element('small','Field study completed · '+payout.study));
@@ -469,7 +498,7 @@
   const run=rogueRun,region=regionFor(run);
   switch(run.step){
    case 'starter':
-    screen('Choose a Pokémon to lead your expedition.',run.options.map(name=>({label:name,portrait:name,detail:typesOf(name).join(' / '),
+    screen('Choose a Pokémon to lead your expedition.',run.options.map(name=>({label:name,portrait:name,body:pokemonDetails({name,level:run.startLevel}),
      action:()=>edit(r=>{
       const starter=member(name,r.startLevel,[]);
       if(r.perks.kit)starter.heldItem=r.perks.kit===2?'Sitrus Berry':'Oran Berry';
@@ -487,7 +516,7 @@
    case 'battle':enterCombat();break;
    case 'reward':rewards(run);break;
    case 'clear':
-    screen(['Expedition cleared · '+run.cleared+' wins · '+run.coinsEarned.toLocaleString()+' main-game coins earned this run · Banked ',shardCount(rogueProgress.shards)],[
+    screen(['Expedition cleared · '+run.cleared+' wins · Earned ',coinCount(run.coinsEarned),' · Banked ',shardCount(rogueProgress.shards)],[
      {label:'Finish expedition',detail:'Return to Roguelit with your banked shards.',action:()=>update(run,p=>{delete p.expedition;},()=>lobby('Expedition complete.'))},
      {label:'Continue into endless',detail:'Keep your team, held items and training. Explore a new regional itinerary with stronger opponents.',
       action:()=>edit((r,p)=>nextBattle(r,p))}

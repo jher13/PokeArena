@@ -10,6 +10,10 @@ for(const [file,prefix] of [['index.html','./'],['local-test/PokeArena_Local_Tes
  const script=html.match(/<script src="([^"]*?)roguelit\.js\?v=(\d+\.\d+\.\d+)"/);
  assert(script);assert.equal(script[1],prefix);if(cacheVersion)assert.equal(script[2],cacheVersion);cacheVersion=script[2];
  assert(html.includes("window.ArenaRoguelit.finish(phase==='win')"));
+ assert(html.includes('id="toolbar-coin-display" class="home-pill" title="Coins"><svg class="currency-pixel"'));
+ for(const asset of ['tactics-arena.webp','tactics-carousel-altar.webp']){
+  assert(html.includes(prefix+'assets/'+asset+'?v='+cacheVersion),'Current PFT art in '+file);
+ }
 }
 const engine=read('supabase/functions/arena-combat/engine.js').replace(/^export /gm,'');
 const ui=String.raw`
@@ -27,6 +31,9 @@ const ui=String.raw`
   if(!testNodes.has(id))testNodes.set(id,new TestNode('div'));return testNodes.get(id);
  };
  document.createTextNode=text=>new TestNode('#text',text);
+ const walletCoin=new TestNode('svg','','currency-pixel');
+ walletCoin.cloneNode=()=>new TestNode('svg','','currency-pixel');
+ byId('toolbar-coin-display').querySelector=tag=>tag==='svg'?walletCoin:null;
  element=(...args)=>new TestNode(...args);
  skillTitle=(tag,name)=>element(tag,name);pokemonPortrait=name=>element('canvas',name);
  idlePokemonPortrait=(name,style,variant,fullSize,direction,shiny,preferMotion)=>Object.assign(element('canvas',name,style),{preferMotion});
@@ -68,7 +75,7 @@ const api=String.raw`
    const inactive=pair();rogueRun=previous;return [...normal,inactive];
   },
   choose:name=>{const b=buttons().find(b=>label(b)===name && !b.disabled);if(!b)throw Error('Missing '+name+' on '+byId('rogue-status').textContent);b.onclick();},
-  cards:buttons,
+  cards:buttons,statusNode:()=>byId('rogue-status'),
   supplies:()=>byId('rogue-route-map').children[0].children[1].children,
   options:()=>buttons().filter(b=>!b.disabled).map(label),
   status:()=>byId('rogue-status').textContent,
@@ -107,7 +114,14 @@ assert.equal(new Set(run().members[0].moves).size,run().members[0].moves.length)
 const routeCard=g.cards()[0],cardRows=routeCard.children[2].children;
 assert(routeCard.children[1].preferMotion);
 assert.match(cardRows[0].textContent,/Lv\. /);assert.match(cardRows.at(-4).textContent,/ Arena/);
-assert.match(cardRows.at(-3).textContent,/main-game coins/);assert.match(cardRows.at(-2).attrs['aria-label'],/shards?$/);
+function checkCoin(chip,amount){
+ assert.equal(chip.attrs.role,'img');assert.equal(chip.children[0].tagName,'svg');
+ assert.equal(chip.children[0].className,'currency-pixel');assert.equal(chip.textContent,amount.toLocaleString());
+ assert.equal(chip.attrs['aria-label'],chip.textContent+' main-game coin'+(amount===1?'':'s'));
+}
+const routeCoins=cardRows.at(-3);
+checkCoin(routeCoins,Number(routeCoins.textContent.replaceAll(',','')));
+assert.match(cardRows.at(-2).attrs['aria-label'],/shards?$/);
 assert.equal(cardRows.at(-2).children[0].tagName,'canvas');assert(cardRows.at(-1).textContent.length>15);
 const oldTab=boot(storage);oldTab.choose('Resume expedition');
 const oldBest=g.snapshot().best;let expectedShards=g.snapshot().shards,expectedCoins=0;
@@ -125,12 +139,22 @@ function battle(kind,failSave=false){
  expectedShards+=route.shards;
  const credits=wallet().battlePass.testCredits;
  expectedCoins+=run().lastPayout.coins;assert.equal(wallet().coins,expectedCoins);
+ checkCoin(g.statusNode().children[0].children[1],run().lastPayout.coins);
  g.finish(true);assert.equal(wallet().battlePass.testCredits,credits);
  assert.equal(g.snapshot().shards,expectedShards);assert.equal(run().step,'reward');
 }
 function recruit(){
  const target=run().rewards.recruits[0].name,was=run().members.length,drop=run().members.at(-1).name;
- choose('Recruit a teammate');choose(target);
+ choose('Recruit a teammate');
+ for(const [i,mon] of run().rewards.recruits.entries()){
+  const card=g.cards()[i],details=card.children.find(node=>node.className==='rogue-mon-details');
+  assert.equal(card.children.find(node=>node.tagName==='strong').textContent,mon.name);
+  assert.equal(details.children[0].textContent,'Lv. '+mon.level);assert.equal(details.children[1].className,'rogue-mon-types');
+  const list=details.children.at(-1);assert.equal(list.attrs['aria-label'],'Moves');
+  assert.deepEqual(Array.from(list.children,row=>row.textContent),Array.from(mon.moves));
+  assert(list.children.every(row=>row.attrs.role==='listitem'));
+ }
+ choose(target);
  if(was===6)choose('Replace '+drop);
  assert(run().members.some(m=>m.name===target));assert.equal(run().members.length,Math.min(6,was+1));
 }
@@ -154,6 +178,7 @@ for(let index=4;index<=12;index++){
 assert.equal(run().step,'clear');assert.equal(wallet().battlePass.testCredits,12);assert.equal(g.snapshot().best,12);
 assert.deepEqual(json(g.snapshot().firstClears),['Kanto','Johto','Hoenn']);
 assert.equal(wallet().capsules,1);assert.equal(wallet().vitamins['Rare Candy'],1);assert.equal(wallet().vitamins['IV Booster'],1);
+checkCoin(g.statusNode().children.find(node=>node.attrs?.['aria-label']?.includes('coin')),expectedCoins);
 const finished=boot(new Map(storage));finished.choose('Resume expedition');finished.choose('Finish expedition');
 assert.equal(finished.snapshot().expedition,undefined);assert.equal(finished.snapshot().shards,expectedShards);
 const endlessStore=new Map(storage),endless=boot(endlessStore);endless.choose('Resume expedition');endless.choose('Continue into endless');
@@ -167,6 +192,7 @@ assert.equal(endless.snapshot().expedition.round,25);
 g=boot(storage);choose('Resume expedition');choose('Continue into endless');
 assert.equal(run().round,13);assert.equal(run().members.length,6);assert.equal(run().region,'Kanto');
 choose(run().routes[0].label);g.finish(false);
+checkCoin(g.statusNode().children.find(node=>node.attrs?.['aria-label']?.includes('coin')),expectedCoins);
 assert.equal(g.snapshot().expedition,undefined);assert.equal(g.snapshot().shards,expectedShards);
 assert.equal(storage.get('pokemon-arena-team'),'["Ditto"]');assert.equal(wallet().battlePass.testCredits,13);
 // A failed bag write leaves the saved victory collectible. A failed cleanup leaves its credited receipt idempotent.

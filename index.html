@@ -496,10 +496,11 @@ button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visi
 #roguelit .rogue-itinerary [aria-current=step]{border-color:#794591;color:#502865;font-weight:700}
 #roguelit .rogue-itinerary .complete{border-color:#397656;color:#29543d}
 #roguelit .rogue-party{display:flex;gap:.4rem;flex-wrap:wrap;margin:.65rem 0 1rem}
-#roguelit .rogue-member{display:inline-flex;align-items:center;gap:.35rem;background:#e6efe4;border:1px solid #b7cab9;border-radius:6px;padding:.25rem .45rem;font-size:.84rem}
-#roguelit button.rogue-member{background:#e6efe4;color:#263b2d;border-color:#b7cab9}
+#roguelit .rogue-member{display:inline-flex;align-items:center;gap:.45rem;background:transparent;border:1px solid transparent;border-radius:6px;padding:.25rem .45rem;font-size:.84rem}
+#roguelit button.rogue-member{background:transparent;color:#263b2d;border-color:#b7cab9;min-height:44px}
+#roguelit button.rogue-member:focus-visible{outline:2px solid #397656;outline-offset:2px}
 #roguelit button.rogue-member[aria-pressed=true]{border-color:#397656}
-#roguelit .rogue-member canvas{width:28px;height:28px;object-fit:contain;image-rendering:pixelated}
+#roguelit .rogue-member canvas{width:28px;height:28px;flex:none;object-fit:contain;image-rendering:pixelated;background:transparent;border:0;border-radius:0;box-shadow:none}
 #roguelit .rogue-route{border-top:4px solid var(--route-color,#837494);align-content:start}
 #roguelit .rogue-route small{white-space:pre-line}
 #roguelit .rogue-squad-label{margin:.5rem 0 .2rem;font-size:.95rem}
@@ -581,7 +582,13 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .gym-badge-sprite.is-uncollected{filter:grayscale(1);opacity:.62}
 
 
-#tactics{max-width:1400px}
+#tactics{max-width:1400px;--tactics-stadium:url('./assets/tactics-arena.webp?v=0.22.98')}
+.tactics-league-banner{display:grid;align-content:end;gap:.3rem;min-height:clamp(154px,24vw,238px);padding:clamp(15px,3vw,30px);overflow:hidden;border:1px solid #557174;border-radius:9px;
+ background:linear-gradient(90deg,#122934ee 0%,#15313bc9 30%,#18373a24 69%),var(--tactics-stadium) center 47%/cover;color:#fff}
+#tactics .tactics-league-banner .bag-section-title{display:block;text-align:start;margin:0;color:#fff0b4;font-size:clamp(19px,3.4vw,32px);line-height:1.14;letter-spacing:.02em;text-shadow:0 1px 3px #122833}
+#tactics .tactics-league-banner .bag-section-title::before,#tactics .tactics-league-banner .bag-section-title::after{display:none}
+#tactics .tactics-league-banner p{max-width:38ch;margin:0;color:#fff;line-height:1.4;text-shadow:0 1px 3px #0c2230}
+@media(max-width:560px){.tactics-league-banner{background:linear-gradient(0deg,#112a35f5,#14374418 83%),var(--tactics-stadium) center/cover}}
 #tactics:has(.tactics-layout,.tactics-choice){background:#101c20;color:#eee4c9;border:1px solid #786440;padding:10px clamp(6px,2vw,22px)}
 #tactics:has(.tactics-layout,.tactics-choice) .menu-heading h2{color:#ead6a7;font-size:18px}
 #tactics :is(.tactics-layout,.tactics-choice) .bag-section-title{color:#e5cc91;margin:8px 0}
@@ -597,7 +604,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .tactics-center{min-width:0}
 .tactics-stage{display:flex;justify-content:center;gap:clamp(6px,2vw,20px);padding:7px;font-size:12px;text-align:center}
 .tactics-stage strong{color:#f4d990}
-.tactics-field{background:#364f3b url('./assets/tactics-arena.webp') center/cover;border:1px solid #90784e;min-width:0;padding:10px 2px;display:grid;place-items:center;overflow:hidden}
+.tactics-field{background:#345e50 var(--tactics-stadium) center/cover;border:1px solid #90784e;min-width:0;padding:10px 2px;display:grid;place-items:center;overflow:hidden}
 .tactics-board{--hex:min(9vw,clamp(32px,5.5dvh,62px));width:max-content;max-width:100%;padding:3px}
 .tactics-hex-row{display:flex;gap:2px;margin-top:-3px}
 .tactics-hex-row:nth-child(even){padding-left:calc(var(--hex)/2)}
@@ -659,7 +666,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .tactics-carousel-key{display:none}
 .tactics-carousel-help{text-align:center;line-height:1.45;color:#ece5cf;margin:.4rem auto .65rem;font-size:.92rem}
 .tactics-carousel-ring{position:relative;isolation:isolate;width:min(100%,570px);aspect-ratio:1;margin:0 auto;container-type:inline-size;
- background:#243538 url('./assets/tactics-carousel-altar.webp') center/cover no-repeat;border:1px solid #766949;border-radius:12px}
+ background:#243538 url('./assets/tactics-carousel-altar.webp?v=0.22.98') center/cover no-repeat;border:1px solid #766949;border-radius:12px}
 #tactics .tactics-carousel-stop{position:absolute;left:var(--station-x);top:var(--station-y);transform:translate(-50%,-50%);
  width:23%;max-width:108px;min-width:0;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
  padding:3px 2px;line-height:1.12;background:#142328f2;color:#f7f4e8;border:1px solid #819199;border-radius:8px;font-weight:600;cursor:pointer}
@@ -835,7 +842,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .tactics-stat-meter span{position:absolute;inset:0 7px;line-height:18px;color:white;text-shadow:0 1px 2px #000}
 .tactics-stat-items,.tactics-stat-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:6px}
 .tactics-stat-items{max-width:126px}.tactics-stat-numbers span{display:grid;text-align:center}
-.tactics-augment-screen{display:grid;align-content:center;text-align:center;min-height:min(75dvh,650px);background:linear-gradient(#122126b5,#101726ef),url('./assets/tactics-arena.webp') center/cover}
+.tactics-augment-screen{display:grid;align-content:center;text-align:center;min-height:min(75dvh,650px);background:linear-gradient(#122126b5,#101726ef),var(--tactics-stadium) center/cover}
 #tactics .tactics-augment-screen .shop-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,2vw,20px);padding:8px}
 #tactics .tactics-augment-card{min-height:clamp(220px,44dvh,390px);background:radial-gradient(ellipse at top,#4169a0,#342776 42%,#18143f 88%);border:2px solid #838be7;border-radius:24px 24px 15px 15px;padding:clamp(5px,2vw,22px);justify-content:space-around;box-shadow:inset 0 0 22px #8275e955}
 .tactics-augment-icon{display:grid;place-items:center;width:clamp(40px,12vw,112px);aspect-ratio:1;border-radius:50%;color:#ffd475;background:#171934;border:2px solid #8d81cf;font-size:clamp(22px,5vw,56px)}
@@ -989,8 +996,14 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .mode-supply-rows{display:grid;margin:0;line-height:1.45;font-size:.92rem}
 .mode-supply-rows>div{display:grid;grid-template-columns:minmax(4.3rem,6rem) minmax(0,1fr);gap:.65rem;padding:.42rem 0;border-top:1px solid #aabcae}
 .mode-supply-rows dt{font-weight:700}.mode-supply-rows dd{margin:0;display:grid;gap:.2rem}
-.rogue-shards{display:inline-flex;align-items:center;gap:.3rem;vertical-align:middle;font-variant-numeric:tabular-nums;font-weight:700;line-height:1.3}
-#roguelit .rogue-shards canvas{width:18px;height:18px;margin:0;image-rendering:pixelated;background:transparent;border:0}
+.rogue-currency{display:inline-flex;align-items:center;gap:.3rem;vertical-align:middle;font-variant-numeric:tabular-nums;font-weight:700;line-height:1.3}
+#roguelit .rogue-currency :is(canvas,svg){display:block;flex:none;width:18px;height:18px;margin:0;image-rendering:pixelated;background:none;border:0;border-radius:0}
+.rogue-mon-details,.rogue-mon-moves,.rogue-member-info{display:grid;align-content:start;gap:.2rem;text-align:start}
+.rogue-mon-details{width:100%;margin-top:.35rem;font-size:.9rem;line-height:1.35}
+.rogue-mon-moves{padding-top:.35rem;margin-top:.1rem;border-top:1px solid #b6cabb;gap:.25rem}
+.rogue-mon-moves [role=listitem]{display:flex;align-items:center;gap:.3rem}
+#roguelit .gym-card:has(.rogue-mon-details){vertical-align:top;align-content:start;text-align:start}
+.rogue-member-info{gap:.08rem;line-height:1.25}
 #roguelit .rogue-route{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;align-items:center;justify-items:start;row-gap:.3rem;text-align:start;padding:12px}
 #roguelit .rogue-route>strong{grid-area:1/1}.rogue-route>.rogue-portrait{grid-area:1/2}
 .rogue-route-info{display:grid;grid-column:1/-1;width:100%;gap:.2rem;font-size:.9rem;line-height:1.4}
@@ -1067,7 +1080,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 <div id="knockout-notice" role="alert" hidden>All your pokemons have been knocked out!</div>
 <div id="home-sync"></div><div class="home-title"><h1>Pokemon Arena</h1><p data-game-subtitle>AUTO BATTLER</p></div>
 <div class="home-toolbar" aria-label="Player controls">
-<span class="home-pill" title="Coins"><svg class="currency-pixel" viewBox="0 0 12 12" aria-hidden="true"><path fill="#694020" d="M3 0h6v1h2v2h1v6h-1v2H9v1H3v-1H1V9H0V3h1V1h2z"/><path fill="#efad3c" d="M3 1h6v1h2v7H9v2H3V9H1V3h2z"/><path fill="#ffe476" d="M4 2h4v1h2v5H8v2H4V8H2V4h2z"/><path fill="#ca7b28" d="M5 4h2v4H5z"/></svg><span id="toolbar-coins"></span></span>
+<span id="toolbar-coin-display" class="home-pill" title="Coins"><svg class="currency-pixel" viewBox="0 0 12 12" aria-hidden="true"><path fill="#694020" d="M3 0h6v1h2v2h1v6h-1v2H9v1H3v-1H1V9H0V3h1V1h2z"/><path fill="#efad3c" d="M3 1h6v1h2v7H9v2H3V9H1V3h2z"/><path fill="#ffe476" d="M4 2h4v1h2v5H8v2H4V8H2V4h2z"/><path fill="#ca7b28" d="M5 4h2v4H5z"/></svg><span id="toolbar-coins"></span></span>
 <span class="home-pill" title="Co-op tickets"><svg class="currency-pixel" viewBox="0 0 12 12" aria-hidden="true"><path fill="#2f2550" d="M0 2h12v3h-1v2h1v3H0V7h1V5H0z"/><path fill="#b387f5" d="M1 3h10v1h-1v4h1v1H1V8h1V4H1z"/><path fill="#f1dafa" d="M3 4h4v4H3zM8 4h1v1H8zM8 7h1v1H8z"/></svg><span id="toolbar-tickets">0</span></span>
 <button id="toolbar-profile"></button>
 <button id="home-bag" type="button" aria-label="Open Item Bag" title="Item Bag">
@@ -6142,7 +6155,7 @@ const rogueUpgrades=[
  {key:'supply',label:'Quartermaster',detail:'+1 held item to choose from at supply stops per rank',cost:26,cap:2},
  {key:'kit',label:'Field Kit',detail:'Start with an Oran Berry at rank 1 or a Sitrus Berry at rank 2',cost:36,cap:2},
  {key:'curator',label:'Relic Appraisal',detail:'Choose from three expedition relics at a relic hunt',cost:55,cap:1},
- {key:'bounty',label:'Bounty Hunter',detail:'+5% main-game coins per expedition win per rank',cost:35,cap:3}
+ {key:'bounty',label:'Bounty Hunter',detail:'Increase victory coin rewards by 5% per rank',cost:35,cap:3}
 ];
 function readRogueProgress() {
  const progress={shards:0,best:0,ranks:{},firstClears:[]};
@@ -11797,6 +11810,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.98',changes:['Roguelit uses the wallet coin icon for payouts, shows each recruit’s level, types and moves on separate lines, and displays expedition team sprites on a clear background.','Poke Fight Tactics now visits a Pokémon League stadium and a Poké Ball draft plaza.']},
  {version:'0.22.97',changes:['Roguelit now shows animated Pokémon, a shard currency icon and separate rows for supplies, boss rewards and route details.','Tactics carousels arrange nine mystery balls around an altar. Each displays its tier and held item until you choose.','Equip Tactics items on your Pokémon during a fight, including from the bench or by tapping an inventory item.']},
  {version:'0.22.96',changes:['Roguelit expeditions can visit nine boss sites. Take a relic hunt, build around a team relic and complete a regional field study for main-game supplies.','Poke Fight Tactics rotates three cup rules, offers a second augment at stage 4 and rewards board challenges in stages 2–4.','Choose EXP Candy, Poké Balls or stat-training items before entering either mode. Bonus supplies go to your main bag alongside the usual rewards.']},
  {version:'0.22.95',changes:['Roguelit is now a three-region expedition with branching encounters, regional bosses, recruits, gear and optional endless play.','Expeditions save at each choice and before each fight. Shards and permanent upgrades carry between runs.','Five new permanent upgrade paths expand drafts, starting gear and coin rewards. Every victory banks main-game coins, and regional bosses deliver bag items and first-clear bonuses.']},
@@ -12136,5 +12150,5 @@ requestAnimationFrame(frame);
 byId('home-events').onclick=()=>{phase='events';showScreen('events');selectedPassReward=null;renderBattlePass();};
 byId('events-back').onclick=openMenu;
 </script>
-<script src="./roguelit.js?v=0.22.97"></script><script src="./tactics.js?v=0.22.97"></script><script src="./multiplayer.js?v=0.22.92"></script>
+<script src="./roguelit.js?v=0.22.98"></script><script src="./tactics.js?v=0.22.98"></script><script src="./multiplayer.js?v=0.22.92"></script>
 <script src="./trade-hub.js?v=0.22.93"></script><script src="./campaign-progression.js?v=0.22.82"></script><script src="./trainer-card.js?v=0.22.91"></script><script src="./social.js?v=0.22.92"></script></html>

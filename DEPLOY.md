@@ -1,3 +1,7 @@
+# Update to 0.22.98
+
+Extract the changed files over **0.22.97** and publish the client scripts, pages and versioned artwork together.
+
 # Update to 0.22.97
 
 Extract the changed files over **0.22.96** and publish them together. The hosted and local clients load the updated expedition and Tactics scripts. The existing workflow ships the matching generated engine. This update requires no database migration.
