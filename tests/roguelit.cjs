@@ -42,6 +42,28 @@ const api=String.raw`
  const buttons=()=>byId('rogue-choices').children;
  globalThis.testGame={
   home:()=>byId('home-roguelit').onclick(),
+  focus:key=>{const select=byId('rogue-route-map').children[0].children[0].children[0];select.value=key;select.onchange();},
+  bosses:run=>[0,1,2].map(i=>sideAudit.route({...run,round:(i+1)*4},'boss','Rock').foes),
+  bank:bankTacticsPrize,
+  routes:run=>{sideAudit.prepareRoutes(run);return run;},
+  studySequence:()=>{
+   const results={};
+   for(const key of ['relay','gear','coverage','elite']){
+    const run={round:2,study:{key,count:0,leg:0,leads:[]},members:[{name:'Pikachu',moves:['Thunderbolt']}],node:{kind:'training'}};
+    const tick=()=>{sideAudit.recordStudyWin(run);return run.study.count;};
+    const first=tick();run.node.kind='elite';run.members[0].heldItem='Leftovers';run.members[0].moves.push('Quick Attack');
+    const second=tick();run.members[0].name='Eevee';results[key]=[first,second,tick()];
+   }return results;
+  },
+  relicStats:key=>{
+   const previous=rogueRun,lead={name:'Pikachu',level:50,moves:['Thunderbolt','Quick Attack','Iron Tail'],profile:rollProfile()};
+   if(key==='iron')lead.heldItem='Leftovers';
+   rogueRun={power:1,enemyPower:1,health:1,offense:1,members:[lead,{name:'Eevee'}]};
+   const pair=()=>{delete rogueRun.relic;const before=unit(lead.name,0,0,true,50,lead).stats;rogueRun.relic=key;return [before,unit(lead.name,0,0,true,50,lead).stats];};
+   const normal=pair();if(key==='prism')lead.moves.pop();if(key==='iron')delete lead.heldItem;
+   if(key==='rations')lead.heldItem='Leftovers';if(key==='relay')rogueRun.members[1].name='Raichu';
+   const inactive=pair();rogueRun=previous;return [...normal,inactive];
+  },
   choose:name=>{const b=buttons().find(b=>label(b)===name && !b.disabled);if(!b)throw Error('Missing '+name+' on '+byId('rogue-status').textContent);b.onclick();},
   options:()=>buttons().filter(b=>!b.disabled).map(label),
   status:()=>byId('rogue-status').textContent,
@@ -52,7 +74,7 @@ const api=String.raw`
   liveMap:type=>randomArenaMap(type).type
  };
 `;
-const program=new vm.Script(engine+'\n'+ui+'\n'+read('roguelit.js')+'\n'+api,{filename:'roguelit-test.js'});
+const program=new vm.Script(engine+'\n'+ui+'\n'+read('roguelit.js').replace(' window.ArenaRoguelit={finish};',' globalThis.sideAudit={route,prepareRoutes,recordStudyWin}; window.ArenaRoguelit={finish};')+'\n'+api,{filename:'roguelit-test.js'});
 const key='pokemon-arena-roguelit-progress',walletKey='pokemon-arena-wild-progress';
 const storage=new Map([[key,JSON.stringify({shards:85,best:7,ranks:{level:2,health:1}})],['pokemon-arena-team','["Ditto"]']]);
 function boot(store){const c=vm.createContext({storage:store,console,structuredClone,setTimeout(){},clearTimeout(){}});program.runInContext(c);c.testGame.home();return c.testGame;}
@@ -152,6 +174,71 @@ assert.equal(h.snapshot().expedition.rewards.recruits.length,5);h.choose('Recrui
 assert.equal(h.snapshot().expedition.rewards.items.length,5);h.choose('Train the team instead');h.choose('Power training');
 h.choose('Move tutor');h.finish(true);assert(h.snapshot().expedition.rewards.tutors.some(values=>values.length===5));
 h.choose('Train the team instead');h.choose('Power training');h.choose('Venusaur');h.finish(true);
-bag=JSON.parse(separate.get(walletKey));assert.equal(bag.vitamins['EXP Candy 100'],1);assert.equal(bag.vitamins['EXP Candy 250'] ?? 0,0);
+bag=JSON.parse(separate.get(walletKey));assert.equal(bag.vitamins['EXP Candy 100'],1+(h.snapshot().expedition.lastPayout.study?2:0));assert.equal(bag.vitamins['EXP Candy 250'] ?? 0,0);
 assert.equal(bag.balls[2],greatBallsBefore+2);assert.equal(h.snapshot().expedition.lastPayout.first,undefined);
-console.log('Roguelit passed drafting, checkpoints, recovery after partial writes, eight permanent upgrades, main-game coins and bag rewards, first clears, recruits, held gear, tutoring, all three bosses and endless play.');
+console.log('Roguelit passed drafting, checkpoints, recovery after partial writes, permanent upgrades, main-game coins and bag rewards, first clears, recruits, held gear, tutoring, all three bosses and endless play.');
+const varietyStore=new Map(),v=boot(varietyStore),courses=[];
+for(let i=0;i<6;i++){
+ v.focus('catching');v.choose('Start expedition');const expedition=v.snapshot().expedition;
+ assert.equal(expedition.focus,'catching');courses.push(Array.from(expedition.course));
+ for(const mon of v.bosses(expedition).flat()){
+  assert(mon.moves.length>=1 && mon.moves.length<=4);assert(mon.moves.every(move=>v.validMove(mon.name,move)));
+ }
+ v.home();v.choose('Retire this expedition');v.choose('Retire expedition');
+}
+for(let region=0;region<3;region++){
+ assert.deepEqual(new Set(courses.slice(0,3).map(c=>c[region])),new Set([0,1,2]));
+ assert.deepEqual(new Set(courses.slice(3).map(c=>c[region])),new Set([0,1,2]));
+ assert.notEqual(courses[2][region],courses[3][region]);
+}
+v.choose('Start expedition');v.choose(v.options()[0]);
+while(v.snapshot().expedition.step==='moves')v.choose(v.options()[0]);
+const routeSave=v.snapshot().expedition;const checkpoint=JSON.parse(varietyStore.get(key));
+const savedRoutes=json(routeSave.routes),resumed=boot(new Map(varietyStore));resumed.choose('Resume expedition');
+assert.deepEqual(json(resumed.snapshot().expedition.routes),savedRoutes);
+assert.deepEqual(json(resumed.snapshot().expedition.study),json(routeSave.study));
+for(const field of ['course','study','focus','relic'])delete checkpoint.expedition[field];
+checkpoint.expedition.routes=checkpoint.expedition.routes.filter(node=>node.kind!=='relic');
+const legacy=boot(new Map([[key,JSON.stringify(checkpoint)]]));legacy.choose('Resume expedition');legacy.choose('Recruit trail');legacy.finish(true);
+legacy.choose('Train the team instead');legacy.choose('Power training');
+assert.equal(legacy.snapshot().expedition.study,undefined);assert.deepEqual(Array.from(legacy.snapshot().expedition.routes,r=>r.kind),['gear','elite']);
+
+const trialStore=new Map(varietyStore),base=JSON.parse(trialStore.get(key)),seedRun=base.expedition;
+seedRun.study.relicFork=0;seedRun.perks.curator=1;
+seedRun.study.key='elite';seedRun.focus='catching';base.expedition=v.routes(seedRun);trialStore.set(key,JSON.stringify(base));
+const q=boot(trialStore);q.choose('Resume expedition');q.choose('Relic hunt');q.finish(true);
+const relicOptions=q.snapshot().expedition.rewards.relics;assert.equal(new Set(relicOptions).size,3);
+q.choose(q.options()[0]);assert.equal(q.snapshot().expedition.relic,relicOptions[0]);
+q.choose('Elite encounter');q.finish(true);q.choose('Endurance training');
+q.choose('Move tutor');q.finish(true);
+if(q.options().includes('Train the team instead'))q.choose('Train the team instead');
+q.choose('Power training');const firstBoss=q.snapshot().expedition.routes[0].label;
+const beforeBoss=JSON.parse(trialStore.get(walletKey));q.choose(firstBoss);trialStore.failKey=walletKey;q.finish(true);
+assert.equal(q.snapshot().delivery.study,'Elite research');
+assert.equal(JSON.parse(trialStore.get(walletKey)).coins,beforeBoss.coins);
+trialStore.failKey='';const recovered=boot(trialStore);recovered.choose('Resume expedition');
+const bossBag=JSON.parse(trialStore.get(walletKey));assert.equal(bossBag.balls[2]-beforeBoss.balls[2],5);
+const freshQuiz=q.studySequence();
+assert.deepEqual(json(freshQuiz),{relay:[1,1,2],coverage:[0,1,2],gear:[0,1,1],elite:[0,1,1]});
+for(const [key,indices] of Object.entries({prism:[1,5],iron:[2,4],relay:[3],rations:[0]})){
+ const [normal,on,off]=q.relicStats(key);
+ for(let i=0;i<6;i++)assert.equal(on[i],indices.includes(i)?Math.round(normal[i]*1.15):normal[i],key+' stat '+i);
+ assert.deepEqual(Array.from(off[0]),Array.from(off[1]),key+' activation condition');
+}
+// PFT settlement uses the same pending-reward checkpoint, while keeping separate wallet receipts.
+const prizeStore=new Map(),prizeGame=boot(prizeStore);
+const prize={mode:'tactics',id:'pft/123',won:true,coins:4100,items:[['vitamins','IV Booster',2],['capsules','Ability Capsule',1]]};
+prizeStore.failKey=walletKey;assert.equal(prizeGame.bank(prize),false);assert.equal(prizeStore.has(walletKey),false);
+assert.equal(prizeGame.snapshot().delivery.id,prize.id);
+prizeStore.failKey='';prizeStore.failCleanup=true;const restart=boot(prizeStore);
+assert.equal(JSON.parse(prizeStore.get(walletKey)).coins,4100);assert(restart.snapshot().delivery);
+prizeStore.failCleanup=false;restart.home();assert(!restart.snapshot().delivery);
+assert(restart.bank({...prize,id:'pft/124'}));assert(restart.bank(prize));
+const finalBag=JSON.parse(prizeStore.get(walletKey));assert.equal(finalBag.coins,8200);assert.equal(finalBag.vitamins['IV Booster'],4);
+assert.equal(finalBag.capsules,2);assert.equal(finalBag.battlePass.testCredits,2);
+const queued=new Map(),qgame=boot(queued);queued.failKey=walletKey;
+assert.equal(qgame.bank(prize),false);assert.equal(qgame.bank({...prize,id:'pft/789'}),false);
+assert.equal(qgame.snapshot().tacticsQueue.length,1);assert.equal(qgame.bank({...prize,id:'pft/789'}),false);
+queued.failKey='';const drained=boot(queued);assert(!drained.snapshot().delivery);assert(!drained.snapshot().tacticsQueue);
+assert.equal(JSON.parse(queued.get(walletKey)).coins,8200);
+console.log('All nine boss sites, legacy saves, relic conditions, field studies, both supply deliveries and duplicate-reward recovery passed.');

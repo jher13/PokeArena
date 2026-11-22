@@ -107,4 +107,49 @@ module.exports=function checkTacticsDraft(game,context){
   assert.match(finished.placementReward,/from rounds/);
  }
  console.log('PFT passed shared stock conservation across eight trainers, weighted shops, fusions, locks, carousel, elimination, sold-out prizes, composition upgrades and all eight placement payouts.');
+ // Three cups per rotation, with the preview locked to the match and rules shared by all eight trainers.
+ const seen=[],cupGold={};
+ const picker=game.sideSupplyPicker('tactics',['Stage 2','Stage 3','Stage 4']),select=picker.children[0].children[0];
+ select.value='development';select.onchange();assert.match(picker.children[1].textContent,/IV Booster/);
+ for(let i=0;i<7;i++){
+  const rotation=game.cupSchedule();assert.equal(new Set(rotation).size,rotation.length);
+  const next=rotation[0];game.start();const cupRun=getRun();
+  assert.equal(cupRun.cup,next);assert.equal(cupRun.focus,'development');assert.notEqual(cupRun.challenges[0].key,'veterans');assert.equal(new Set(cupRun.challenges.map(t=>t.key)).size,3);
+  assert.notEqual(seen.at(-1),next);seen.push(next);
+  if(next==='workshop'){
+   assert.equal(new Set(cupRun.trainers[0].items).size,2);
+   assert(cupRun.trainers.every(t=>JSON.stringify(t.items)===JSON.stringify(cupRun.trainers[0].items)));
+  }
+  cupGold[next]=game.goldInterest(24);assert.equal(game.goldInterest(1000),5);
+  const [pa,op]=cupRun.trainers;game.setRound(6);const before=pa.xp;
+  game.result(pa,op,[],1);assert.equal(pa.xp-before,next==='academy'?3:2);
+ }
+ // The last cup before this block may have used part of its rotation. Each new complete block sees all three.
+ assert.deepEqual(new Set(seen),new Set(['academy','market','workshop']));
+ assert.deepEqual(cupGold,{academy:2,workshop:2,market:3});
+ const event=getRun(),p=event.trainers[0];select.value='catching';select.onchange();
+ assert.equal(event.focus,'development');assert.equal(game.sideSupplyFocus('tactics'),'catching');
+ event.challenges=[{key:'formation',count:0},{key:'equipment',count:0},{key:'veterans',count:0}];
+ p.units=[mon('Abra',front),mon('Bulbasaur',back),mon('Eevee')];p.units[2].items=['Claw'];
+ const credit=(round,ticks=2)=>{game.setRound(round);game.creditBoardChallenge(event,ticks);};
+ credit(3);credit(5,0);credit(8);credit(11);assert.equal(event.challenges[0].count,0);
+ credit(5);credit(5);assert.equal(event.challenges[0].count,1);credit(6);credit(7);assert.equal(event.challenges[0].count,2);
+ p.units[0].items=['Wing'];credit(12);assert.equal(event.challenges[1].count,0,'Bench items do not qualify');
+ p.units[1].items=['Claw'];credit(13);credit(14);assert.equal(event.challenges[1].count,2);
+ p.units[0].star=2;credit(19);assert.equal(event.challenges[2].count,0);
+ p.units[2].position={x:2,y:6};credit(20);credit(21);assert.equal(event.challenges[2].count,2);
+ assert(game.boardChallenges.synergy.met([mon('Venusaur',back,3),mon('Blastoise',front,3),mon('Charizard',{x:1,y:6},3)]));
+ assert(!game.boardChallenges.synergy.met([]));
+ for(const stage of [5,19]){
+  game.setRound(stage);game.beginChoices();const choice=event.choice;assert.equal(choice.kind,'augment');
+  assert(choice.offers.every(([name])=>!p.augments.includes(name)));
+  const [name]=choice.offers[0];p.augments.push(name);event.choice=null;
+ }
+ assert.equal(new Set(p.augments).size,2);assert(event.trainers.slice(1).every(t=>new Set(t.augments).size===2));
+ const received=[];context.giveArenaItem=(...item)=>received.push(item);
+ const paid=context.wildProgress.coins;game.awardPlacement(event);game.awardPlacement(event);
+ assert(context.wildProgress.coins>paid);
+ assert.deepEqual(received.filter(([kind,name])=>kind==='capsules' || name.startsWith('IV ')).map(x=>JSON.stringify(x)).sort(),
+  [['vitamins','IV Reducer',1],['vitamins','IV Booster',2],['capsules','Ability Capsule',1]].map(x=>JSON.stringify(x)).sort());
+ console.log('Tactics cups, double augments, unique board challenges, actual field requirements and main-bag placement bonuses passed.');
 };

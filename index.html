@@ -950,6 +950,10 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .arena-evolution-controls>small{display:block;font-size:11px;line-height:1.6}.arena-evolution-route{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;padding:12px 0;border-bottom:1px solid #c5d8ca;font-size:12px}.arena-evolution-route:last-child{border-bottom:0}.arena-evolution-route strong{grid-column:1}.arena-evolution-route ul{grid-column:1;margin:0;padding:0;list-style:none;line-height:1.7}.arena-evolution-route button{grid-column:2;grid-row:1/span 2;align-self:center;padding:8px;font-size:12px}.arena-evolution-route .is-ready{color:#316b27}.arena-evolution-route .is-pending{color:#52675d}.arena-evolution-route small{grid-column:1/-1;line-height:1.6}
 @media(max-width:460px){.arena-evolution-route{grid-template-columns:1fr}.arena-evolution-route button{grid-column:1;grid-row:auto;justify-self:start}}
 
+.mode-supplies{display:grid;gap:.45rem;padding:.65rem .8rem;margin:.4rem 0;border:1px solid #82978b;border-radius:.55rem}
+.mode-supplies label{font-weight:700}.mode-supplies select{margin-inline-start:.3rem;max-width:100%}
+.mode-supplies small,.mode-objective small{display:block}.mode-objective{margin:.4rem 0;padding:.45rem .65rem;border-inline-start:3px solid #ba9148}
+.tactics-stage .mode-objective{flex-basis:100%;text-align:start;margin:0;padding:.2rem .6rem}
 </style>
 <link rel="stylesheet" href="./social.css?v=0.22.92">
 <link rel="stylesheet" href="./trainer-card.css?v=0.22.92">
@@ -3159,6 +3163,7 @@ function pvpLoanerFor(name,roster,choices){
 const wildProgress={battlePlan:'Balanced',battleCarry:'',favorites:[],pvpLoaners:{},autoCaptureRare:true,autoCaptureRareBall:6,autoCaptureRareFallback:-1,autoCaptureBall:0,autoCaptureFallback:'standard',reservePremiumBalls:true,battlePass:{xp:0,claimed:[]},capsules:0,vitamins:{},copies:{},ai:{},owned:{},registered:[],coins:0,megaRaidRewards:[],items:{},held:{},skills:{},balls:[12,1,3,1,1,0,1,0,0],wins:0,autoCapture:false,autoRepeat:false,autoReserve:false,speed:1};
 try {
  const saved=decodePCEntry(progressKey,playerStorage.getItem(progressKey));
+ if(Array.isArray(saved?.tacticsPrizeIds))wildProgress.tacticsPrizeIds=saved.tacticsPrizeIds.filter(id=>typeof id==='string').slice(-32);
  if(typeof saved?.rogueDeliveryId==='string')wildProgress.rogueDeliveryId=saved.rogueDeliveryId;
  if(saved?.trainerCard && typeof saved.trainerCard==='object' && !Array.isArray(saved.trainerCard))wildProgress.trainerCard=saved.trainerCard;
  if(saved?.trainerRecords && typeof saved.trainerRecords==='object' && !Array.isArray(saved.trainerRecords))wildProgress.trainerRecords=saved.trainerRecords;
@@ -5688,6 +5693,38 @@ function arenaAccountCoinRate() {
  const baseRate=20+60*Math.min(level,50)+52*Math.max(0,Math.min(level,100)-50);
  return Math.round(baseRate*(1+.7*(maximumBattleSpeed()-1))/10)*10;
 }
+const sideSupplyTracks={
+ training:{name:'EXP Candy',bundles:[[['vitamins','EXP Candy 100',2]],[['vitamins','EXP Candy 250',2]],[['vitamins','EXP Candy 500',2]]]},
+ catching:{name:'Poké Balls',bundles:[[['balls','Great Ball',3]],[['balls','Luxury Ball',2]],[['balls','Ultra Ball',2]]]},
+ development:{name:'IVs & abilities',bundles:[[['vitamins','IV Reducer',1]],[['vitamins','IV Booster',1]],[['vitamins','IV Booster',1],['capsules','Ability Capsule',1]]]}
+};
+const modePreferences=new Map();
+function sidePreference(key,value) {
+ const storageKey='pokemon-arena-mode-pref-'+key;
+ if(value!==undefined){
+  modePreferences.set(key,value);
+  try{playerStorage.setItem(storageKey,value);}catch{}
+ }
+ if(modePreferences.has(key))return modePreferences.get(key);
+ try{return playerStorage.getItem(storageKey);}catch{return null;}
+}
+function sideSupplyFocus(mode) {
+ const focus=sidePreference(mode);
+ return Object.hasOwn(sideSupplyTracks,focus)?focus:'training';
+}
+function sideSupplyText(items) {
+ return items.map(([,name,count])=>count+' × '+experienceCandyName(name)).join(' · ');
+}
+function sideSupplyPicker(mode,steps) {
+ const box=element('section',null,'mode-supplies'),label=element('label','Main-game supplies '),select=element('select'),preview=element('small');
+ for(const [id,track] of Object.entries(sideSupplyTracks)){
+  const option=element('option',track.name);option.value=id;select.append(option);
+ }
+ select.value=sideSupplyFocus(mode);
+ const show=()=>{preview.textContent=sideSupplyTracks[select.value].bundles.map((items,i)=>steps[i]+' · '+sideSupplyText(items)).join('  /  ');};
+ select.onchange=()=>{sidePreference(mode,select.value);show();};show();
+ label.append(select);box.append(label,preview);return box;
+}
 function maximumBattleSpeed() {
  if(clearedGyms.length===gymTeams.length) return 4;
  return clearedGyms.length>=halfBadgeCount?3:2;
@@ -6013,6 +6050,14 @@ function drawRogueChoices(pool,count) {
  const available=[...pool];
  return Array.from({length:Math.min(count,available.length)},()=>available.splice(Math.floor(Math.random()*available.length),1)[0]);
 }
+const expeditionRelics={
+ prism:{name:'Prism Lens',detail:'+15% Attack and Sp. Atk for each Pokémon with damaging moves of three different types.',stats:[1,5],
+  active:mon=>new Set(mon.moves.filter(move=>moveCatalog[move]?.[1]>0).map(move=>moveCatalog[move][0])).size>=3},
+ relay:{name:'Relay Ribbon',detail:'+15% Speed for Pokémon whose primary type is unique on a team of two or more.',stats:[3],
+  active:(mon,team)=>team.length>=2 && team.filter(other=>dex[other.name][1]===dex[mon.name][1]).length===1},
+ iron:{name:'Iron Buckle',detail:'+15% Defense and Sp. Def for Pokémon carrying a held item.',stats:[2,4],active:mon=>Boolean(mon.heldItem)},
+ rations:{name:'Trail Rations',detail:'+15% HP for Pokémon with an empty held item slot.',stats:[0],active:mon=>!mon.heldItem && mon.name!=='Shedinja'}
+};
 const rogueProgressKey='pokemon-arena-roguelit-progress';
 const rogueUpgrades=[
  {key:'health',label:'Endurance',detail:'+5% max HP per rank',cost:12,cap:10},
@@ -6022,6 +6067,7 @@ const rogueUpgrades=[
  {key:'study',label:'Move Studies',detail:'+1 option per starter move draft and tutor visit per rank',cost:28,cap:2},
  {key:'supply',label:'Quartermaster',detail:'+1 held item to choose from at supply stops per rank',cost:26,cap:2},
  {key:'kit',label:'Field Kit',detail:'Start with an Oran Berry at rank 1 or a Sitrus Berry at rank 2',cost:36,cap:2},
+ {key:'curator',label:'Relic Appraisal',detail:'Choose from three expedition relics at a relic hunt',cost:55,cap:1},
  {key:'bounty',label:'Bounty Hunter',detail:'+5% main-game coins per expedition win per rank',cost:35,cap:3}
 ];
 function readRogueProgress() {
@@ -6033,8 +6079,11 @@ function readRogueProgress() {
    const rank=saved?.ranks?.[key];
    if(Number.isInteger(rank) && rank>0 && rank<=cap)progress.ranks[key]=rank;
   }
+  if(Array.isArray(saved?.siteDecks))progress.siteDecks=saved.siteDecks;
   if(Array.isArray(saved?.firstClears))progress.firstClears=[...new Set(saved.firstClears.filter(r=>['Kanto','Johto','Hoenn'].includes(r)))];
-  if(saved?.delivery && typeof saved.delivery.id==='string' && Number.isSafeInteger(saved.delivery.coins) && saved.delivery.coins>=0 && Array.isArray(saved.delivery.items))progress.delivery=saved.delivery;
+  const validPrize=bundle=>bundle && typeof bundle.id==='string' && Number.isSafeInteger(bundle.coins) && bundle.coins>=0 && Array.isArray(bundle.items);
+  if(validPrize(saved?.delivery))progress.delivery=saved.delivery;
+  if(progress.delivery && Array.isArray(saved?.tacticsQueue))progress.tacticsQueue=saved.tacticsQueue.filter(prize=>validPrize(prize) && prize.mode==='tactics');
   const run=saved?.expedition;
   if(run?.version===1 && typeof run.id==='string' && Number.isSafeInteger(run.revision) && run.revision>0 &&
    Number.isSafeInteger(run.round) && run.round>0 && Array.isArray(run.members) &&
@@ -6049,6 +6098,50 @@ function storeRogueProgress(progress) {
   rogueProgress=progress;
   return true;
  } catch {return false;}
+}
+// A checkpoint and its wallet receipt make game rewards recoverable across a reload.
+function depositModeReward(bundle) {
+ if(window.isArenaMarketBusy?.())return false;
+ let source;
+ try{source=JSON.parse(playerStorage.getItem(progressKey)) ?? wildProgress;}catch{return false;}
+ const tactics=bundle.mode==='tactics';
+ const received=wallet=>tactics?wallet.tacticsPrizeIds?.includes(bundle.id):wallet.rogueDeliveryId===bundle.id;
+ if(!received(source)){
+  const next={...wildProgress,...source,coins:(source.coins ?? wildProgress.coins)+bundle.coins,
+   capsules:source.capsules ?? wildProgress.capsules,vitamins:{...(source.vitamins ?? wildProgress.vitamins)},
+   balls:[...(source.balls ?? wildProgress.balls)],battlePass:structuredClone(source.battlePass ?? wildProgress.battlePass)};
+  if(tactics)next.tacticsPrizeIds=[...(source.tacticsPrizeIds ?? []).slice(-31),bundle.id];
+  else next.rogueDeliveryId=bundle.id;
+  for(const [kind,name,count] of bundle.items)giveArenaItem(kind,name,count,next);
+  const events={battles:1,wins:bundle.won?1:0};
+  if(tactics)events.tacticsMatches=1;
+  const note=recordBattlePass(events,null,next);
+  if(!saveWildProgress(next))return false;
+  Object.assign(wildProgress,next);
+  if(note && ['win','loss','draw','roguelit','tactics'].includes(phase))showPassBattleNotice(note+' · '+battlePassProgressText());
+ }else if(!received(wildProgress))Object.assign(wildProgress,source);
+ return true;
+}
+function settleModeReward(progress) {
+ while(progress.delivery){
+  const current=progress.delivery,queue=progress.tacticsQueue ?? [];
+  if(!depositModeReward(current))return false;
+  if(queue.length)progress.delivery=queue[0];else delete progress.delivery;
+  if(queue.length>1)progress.tacticsQueue=queue.slice(1);else delete progress.tacticsQueue;
+  if(!storeRogueProgress(progress)){
+   progress.delivery=current;if(queue.length)progress.tacticsQueue=queue;
+   return queue.length===0;
+  }
+ }
+ return true;
+}
+function bankTacticsPrize(bundle) {
+ const progress=readRogueProgress();
+ if(progress.delivery?.id!==bundle.id && !progress.tacticsQueue?.some(prize=>prize.id===bundle.id)){
+  if(progress.delivery)(progress.tacticsQueue ??= []).push(bundle);else progress.delivery=bundle;
+  if(!storeRogueProgress(progress))return false;
+ }
+ return settleModeReward(progress);
 }
 byId('battle-settings-button').onclick=()=>{
  byId('battle-volume-controls').replaceChildren(...audioVolumeControls());
@@ -6922,6 +7015,10 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
    stats[0]=Math.round(stats[0]*rogueRun.health);
    stats[1]=Math.round(stats[1]*rogueRun.offense);
    stats[5]=Math.round(stats[5]*rogueRun.offense);
+   const relic=expeditionRelics[rogueRun.relic];
+   if(relic && runMember && relic.active(runMember,rogueRun.members)){
+    for(const index of relic.stats)stats[index]=Math.round(stats[index]*1.15);
+   }
   }
  }
  const hp=stats[0];
@@ -11626,6 +11723,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.96',changes:['Roguelit expeditions can visit nine boss sites. Take a relic hunt, build around a team relic and complete a regional field study for main-game supplies.','Poke Fight Tactics rotates three cup rules, offers a second augment at stage 4 and rewards board challenges in stages 2–4.','Choose EXP Candy, Poké Balls or stat-training items before entering either mode. Bonus supplies go to your main bag alongside the usual rewards.']},
  {version:'0.22.95',changes:['Roguelit is now a three-region expedition with branching encounters, regional bosses, recruits, gear and optional endless play.','Expeditions save at each choice and before each fight. Shards and permanent upgrades carry between runs.','Five new permanent upgrade paths expand drafts, starting gear and coin rewards. Every victory banks main-game coins, and regional bosses deliver bag items and first-clear bonuses.']},
  {version:'0.22.94',changes:['Poke Fight Tactics trainers now draft for trait breakpoints, evolutions and stronger boards, spend on levels and rerolls, and compete for a finite shared pool.','Finishing a Tactics match pays account coins for completed rounds as well as placement and items. Round coins scale with PC level and unlocked Arena speed.']},
  {version:'0.22.93',changes:['PC Pokémon can have 93 total IVs and up to 31 per stat. Every existing active Pokémon and stored copy above 93 gets a one-time random 93-point spread.','Speed above 210 now improves movement and skill recovery with diminishing returns. Move menus use category icons, and personality tooltips use plain text.']},
@@ -11963,5 +12061,5 @@ requestAnimationFrame(frame);
 byId('home-events').onclick=()=>{phase='events';showScreen('events');selectedPassReward=null;renderBattlePass();};
 byId('events-back').onclick=openMenu;
 </script>
-<script src="./roguelit.js?v=0.22.95"></script><script src="./tactics.js?v=0.22.95"></script><script src="./multiplayer.js?v=0.22.92"></script>
+<script src="./roguelit.js?v=0.22.96"></script><script src="./tactics.js?v=0.22.96"></script><script src="./multiplayer.js?v=0.22.92"></script>
 <script src="./trade-hub.js?v=0.22.93"></script><script src="./campaign-progression.js?v=0.22.82"></script><script src="./trainer-card.js?v=0.22.91"></script><script src="./social.js?v=0.22.92"></script></html>

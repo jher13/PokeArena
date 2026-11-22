@@ -817,6 +817,61 @@
   ['Weather Surge','While Weather Trio is active, its storm deals an extra 1% of enemy max HP each second.','weatherSurge']
  ];
  const randomComponent=()=>drawRogueChoices(Object.keys(components),1)[0];
+ const cups={
+  academy:{name:'Academy Cup',rule:'All trainers earn 3 XP per trainer duel.'},
+  workshop:{name:'Workshop Cup',rule:'All trainers start with the same two different item components.'},
+  market:{name:'Market Cup',rule:'Earn 1 interest per 8 gold held, up to 5 each round.'}
+ };
+ const boardChallenges={
+  synergy:{name:'Double synergy',task:'Activate two different trait bonuses.',met:board=>
+   Object.entries(traits(board)).filter(([label,count])=>count>=collectionTraits[label].tiers[0][0]).length>=2},
+  formation:{name:'Battle lines',task:'Field two different families, one in the front row and one in the back row.',met:board=>
+   board.some(front=>front.position.y===4 && board.some(back=>back.position.y===7 && familyOf(back)!==familyOf(front)))},
+  equipment:{name:'Gear partners',task:'Field two different families each carrying an item.',met:board=>
+   new Set(board.filter(unit=>unit.items?.length).map(familyOf)).size>=2},
+  veterans:{name:'Veteran squad',task:'Field three different families, including a two-star or stronger Pokémon.',met:board=>
+   new Set(board.map(familyOf)).size>=3 && board.some(unit=>unit.star>=2)}
+ };
+ let scheduledCups=null,unpaidPlacement=null;
+ function cupSchedule(){
+  if(scheduledCups)return scheduledCups;
+  const [last,...remaining]=(sidePreference('cup-calendar') ?? '').split(',');
+  scheduledCups=[...new Set(remaining.filter(key=>Object.hasOwn(cups,key) && key!==last))];
+  if(!scheduledCups.length){
+   const all=Object.keys(cups);
+   const first=drawRogueChoices(all.filter(key=>key!==last),1)[0];
+   scheduledCups=[first,...drawRogueChoices(all.filter(key=>key!==first),all.length-1)];
+  }
+  return scheduledCups;
+ }
+ function cupRules(match){
+  const cup=match.cup;
+  if(cup==='workshop'){
+   const kit=drawRogueChoices(ordinaryComponents,2);
+   for(const trainer of match.trainers)trainer.items.push(...kit);
+  }
+ }
+ function activeChallenge(match){
+  return match.challenges?.[stageRound(match.round).stage-2];
+ }
+ function creditBoardChallenge(match,ticks){
+  const trial=activeChallenge(match);
+  if(!trial || !ticks || neutralRound(match.round) || carouselRound(match.round) || trial.round===match.round || trial.count>=2)return;
+  trial.round=match.round;
+  if(boardChallenges[trial.key].met(field(match.trainers[0])))trial.count++;
+ }
+ function challengeBrief(match){
+  const {stage}=stageRound(match.round),next=stage===1;
+  const trial=next?match.challenges[0]:activeChallenge(match);
+  const box=element('div',null,'mode-objective'),cup=cups[match.cup];
+  box.append(element('strong',cup.name),element('small',cup.rule));
+  if(trial){
+   const brief=boardChallenges[trial.key],i=next?0:stage-2;
+   box.append(element('small',(next?'Next stage · ':'')+brief.name+' · '+trial.count+'/2 duels · '+brief.task+
+    ' '+(trial.count===2?'Earned for placement':'Stage '+(i+2)+' prize')+' · '+sideSupplyText(sideSupplyTracks[match.focus].bundles[i])));
+  }
+  return box;
+ }
  const finalStage=18;
  const finalRound=4+(finalStage-1)*7;
  function stageRound(round){
@@ -827,7 +882,7 @@
  const wildRound=round=>round>=2 && round<=4;
  const megaRound=round=>round>=5 && stageRound(round).step===7;
  const neutralRound=round=>wildRound(round) || megaRound(round);
- const augmentRound=round=>round===5;
+ const augmentRound=round=>round===5 || round===19;
  const carouselRound=round=>round>=5 && stageRound(round).step===4;
  const megaRewardTier=round=>Math.min(5,stageRound(round).stage);
  const megaBosses=[['Charizard','Mega Charizard X'],['Gengar','Mega Gengar'],['Rayquaza','Mega Rayquaza']];
@@ -1099,7 +1154,8 @@
    name,star:1,position:cells[28+index]
   }))};
  }
- function goldInterest(gold){return Math.min(5,Math.floor(gold/10));}
+ function interestStep(){return run?.cup==='market'?8:10;}
+ function goldInterest(gold){return Math.min(5,Math.floor(gold/interestStep()));}
  function streakGold(streak){
   const count=Math.abs(streak);
   return count>=6?3:count===5?2:count>=2?1:0;
@@ -1156,9 +1212,25 @@
  const heading=title=>element('h3',title,'bag-section-title');
  function openTactics(){
   clearInterval(planningTimer);run=null;phase='tactics';showScreen('tactics');
+  const progress=readRogueProgress(),pending=progress.delivery?.mode==='tactics'?progress.delivery:progress.tacticsQueue?.[0];
+  const unpaid=unpaidPlacement ?? (pending?{prize:pending}:null);
+  if(unpaid){
+   const retry=async()=>{
+    if(await deliverPlacement(unpaid) && phase==='tactics' && !run)showTacticsLobby();
+   };
+   content.replaceChildren(heading('Poke Fight Tactics'),element('p','Your last placement has rewards waiting for your main-game bag.'),
+    button('Retry reward delivery',retry));void retry();return;
+  }
+  showTacticsLobby();
+ }
+ function showTacticsLobby(){
+  const cup=cups[cupSchedule()[0]];
   content.replaceChildren(heading('Poke Fight Tactics'),
    element('p','Draft from a shared shop, position your Pokémon, and outlast seven AI trainers.'),
    element('p','At your progression, fourth place earns '+earnedCoins(tacticsCoinRate()).toLocaleString()+' account coins per credited minute, plus a placement bonus and items.'),
+   element('p',cup.name+' · '+cup.rule),
+   sideSupplyPicker('tactics',['Stage 2','Stage 3','Stage 4']),
+   element('p','Meet a different board challenge in two trainer duels per stage to earn these supplies at placement. Pick augments at stages 2 and 4.'),
    button('Start match',start));
   const guide=element('details');
   guide.append(element('summary','How to play'),element('p','Buy Pokémon from the shop, then select one and choose a hex on your half of the board. Fusing copies stars up and evolves the Pokémon. Select a branching Pokémon and pick its evolution path before it fuses. Drag items from the left rail to equip them. Focus or hover an item to see its recipes. Lock offers you want to keep for next round. Select a Pokémon to sell it and recover its items. All eight trainers draw from the same supply. Tiers 1 through 5 start with '+familyStock.join(', ')+' copies per Pokémon family, respectively. Shops reserve cards. Selling and elimination return their copies. Mega wins award two components, 15 Tactics gold and a Pokémon from the highest stocked tier up to the stage reward tier.'));
@@ -1183,29 +1255,54 @@
   match.rewardSeconds=(match.rewardSeconds ?? 0)+planning+Math.min(ticks,combatTicks)*combatStepMs/1000;
   match.lastCreditedRound=match.round;
  }
- function awardPlacement(match){
-  if(match.placementReward)return;
+ function placementPrize(match){
   const rank=(match.place ?? 1)-1;
   const [baseCoins,placementItems]=placementRewards[rank];
   const roundCoins=Math.round((match.rewardSeconds ?? 0)*(match.coinRate ?? 0)*placementRates[rank]/60);
   const coins=earnedCoins(baseCoins+roundCoins);
   const items=placementItems.map(item=>[...item]);
+  for(const [i,trial] of (match.challenges ?? []).entries()){
+   if(trial.count<2)continue;
+   for(const [kind,name,count] of sideSupplyTracks[match.focus].bundles[i]){
+    const entry=items.find(item=>item[0]===kind && item[1]===name);
+    if(entry)entry[2]+=count;else items.push([kind,name,count]);
+   }
+  }
   const stageBonus=Math.min(3,Math.max(0,(match.completedStage ?? 0)-3));
   if(stageBonus){
    const candy=items.find(([,name])=>name==='EXP Candy 250');
    if(candy)candy[2]+=stageBonus;
    else items.push(['vitamins','EXP Candy 250',stageBonus]);
   }
-  for(const item of items)giveArenaItem(...item);
-  wildProgress.coins+=coins;
   const breakdown=roundCoins?' ('+earnedCoins(roundCoins).toLocaleString()+' from rounds + '+earnedCoins(baseCoins).toLocaleString()+' placement bonus)':'';
-  match.placementReward=[coins.toLocaleString()+' coins'+breakdown,...items.map(([,name,count])=>count+' × '+experienceCandyName(name))].join(' · ');
-  saveWildProgress();
+  const summary=[coins.toLocaleString()+' coins'+breakdown,...items.map(([,name,count])=>count+' × '+experienceCandyName(name))].join(' · ');
+  const id='pft/'+(globalThis.crypto?.randomUUID?.() ?? Date.now()+'-'+Math.random());
+  return {mode:'tactics',id,won:rank===0,coins,items,summary};
+ }
+ function awardPlacement(match){
+  if(match.placementReward)return true;
+  const bundle=match.prize ??= placementPrize(match);
+  if(!bankTacticsPrize(bundle)){unpaidPlacement=match;return false;}
+  if(unpaidPlacement===match)unpaidPlacement=null;
+  match.placementReward=bundle.summary;return true;
+ }
+ async function deliverPlacement(match){
+  const locks=globalThis.navigator?.locks;
+  if(!locks)return awardPlacement(match);
+  try{return await locks.request(playerSaveKey(rogueProgressKey),()=>awardPlacement(match));}
+  catch(error){if(error.name==='SecurityError')return awardPlacement(match);throw error;}
  }
  function start(){
   const tiers=roster;
   const pool=new Map(tiers.flatMap((names,tier)=>names.map(name=>[name,{tier,copies:familyStock[tier]}])));
-  run={round:1,coinRate:tacticsCoinRate(),rewardSeconds:0,trainers:[makeTrainer('You'),...Array.from({length:7},(_,i)=>makeTrainer('Trainer '+(i+1)))],tiers,pool,selected:null,busy:false,result:''};
+  const schedule=cupSchedule(),cup=schedule[0];
+  sidePreference('cup-calendar',schedule.join(','));scheduledCups=null;
+  const keys=Object.keys(boardChallenges);
+  // Give trainers time to find and fuse a family before offering the veteran objective.
+  const first=drawRogueChoices(keys.filter(key=>key!=='veterans'),1)[0];
+  const challenges=[first,...drawRogueChoices(keys.filter(key=>key!==first),2)].map(key=>({key,count:0}));
+  run={round:1,cup,focus:sideSupplyFocus('tactics'),challenges,coinRate:tacticsCoinRate(),rewardSeconds:0,trainers:[makeTrainer('You'),...Array.from({length:7},(_,i)=>makeTrainer('Trainer '+(i+1)))],tiers,pool,selected:null,busy:false,result:''};
+  cupRules(run);
   for(const [index,trainer] of run.trainers.entries()){
    const name=drawPoolCard(pool,tiers[0]);
    trainer.units.push({name,star:1,position:index===0?null:cells[31]});
@@ -1618,7 +1715,7 @@
    if(round===run.round)marker.setAttribute('aria-current','step');
    timeline.append(marker);
   }
-  header.append(timeline);
+  header.append(timeline,challengeBrief(run));
   return header;
  }
  function damageChart(report){
@@ -1768,7 +1865,13 @@
  function render(){
   const player=run.trainers[0];
   if(run.finished || player.hp<=0 || run.trainers.every(t=>t===player || !t.hp)){
-   content.replaceChildren(heading((run.place ?? 1)===1?'First place':'Place '+run.place),element('p',run.result),element('p','Placement rewards · '+run.placementReward),standingsPanel(),...(run.damageReport?[damageChart(run.damageReport).panel]:[]),button('Play again',start),button('Back to Poke Fight Tactics',openTactics));
+   const match=run;
+   const actions=match.placementReward?[button('Play again',start),button('Back to Poke Fight Tactics',openTactics)]:
+    [button('Retry reward delivery',async()=>{await deliverPlacement(match);if(run===match)render();})];
+   content.replaceChildren(heading((match.place ?? 1)===1?'First place':'Place '+match.place),element('p',match.result),
+    element('p',cups[match.cup].name+' · '+match.challenges.filter(trial=>trial.count===2).length+'/3 supply challenges completed'),
+    element('p',match.placementReward?'Placement rewards · '+match.placementReward:'Your rewards are waiting for your main-game bag to sync.'),
+    standingsPanel(),...(match.damageReport?[damageChart(match.damageReport).panel]:[]),...actions);
    return;
   }
   if(run.choice){renderChoice(run.choice);return;}
@@ -1799,7 +1902,7 @@
   const nextLossBonus=neutralRound(run.round)?bonus:streakGold(Math.min(-1,player.streak-1));
   const possible=Math.max(nextWinBonus+win,nextLossBonus);
   const gold=economyTooltip(player.gold+' gold','Total income possible · '+(base+interest+possible),[
-   'Passive income +'+base,'Interest (max 5) +'+interest,
+   'Passive income +'+base,'Interest +'+interest+' (1 per '+interestStep()+' gold, max 5)',
    'Win/loss streak · +'+nextWinBonus+' on a win / +'+nextLossBonus+' on a loss','Gold per win +'+win
   ]);
   gold.classList.add('tactics-shop-gold');
@@ -2098,7 +2201,7 @@
  }
  function planAI(trainer){
   const stage=stageRound(run.round).stage;
-  const reserve=trainer.hp<=35?0:Math.min(30,10*(stage-1));
+  const reserve=trainer.hp<=35?0:interestStep()*Math.min(3,stage-1);
   trainer.lockedOffers?.clear();
   deployAI(trainer);clearAIBench(trainer);
   if(trainer.bossRewards?.length){
@@ -2650,7 +2753,7 @@
    const lost=losers.includes(trainer);
    trainer.streak=lost?Math.min(-1,trainer.streak-1):Math.max(1,trainer.streak+1);
    payRound(trainer,passiveGold(),lost?0:1);
-   xp(trainer,2);
+   xp(trainer,run.cup==='academy'?3:2);
    if(lost)trainer.hp=Math.max(0,trainer.hp-damage);
    if(!trainer.hp){
     trainer.eliminated=run.round;
@@ -2905,6 +3008,7 @@
     if(match.a===player)loot=reward;
    }
   }else{
+   creditBoardChallenge(run,matches[0].ticks);
    for(const match of matches){
     const enemy=match.mirror?{units:[],shop:[],hp:100,gold:0,level:maxLevel,streak:0}:match.b;
     result(match.a,enemy,match.units,match.sign ?? 0);
@@ -2921,9 +3025,8 @@
   if(megaRound(run.round))run.completedStage=stageRound(run.round).stage;
   if(run.finished || !player.hp || run.trainers.filter(t=>t.hp>0).length<=1){
    run.finished=true;
-   awardPlacement(run);
-   const note=recordBattlePass({battles:1,wins:!run.place || run.place===1?1:0,tacticsMatches:1});
-   if(note)showPassBattleNotice(note+' · '+battlePassProgressText());
+   await deliverPlacement(current);
+   if(run!==current || phase!=='tactics')return;
    run.busy=false;
    run.spectate=null;
    render();

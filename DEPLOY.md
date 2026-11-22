@@ -1,3 +1,9 @@
+# Update to 0.22.96
+
+Extract the changed files over **0.22.95** and publish them together. The hosted and local pages load the updated Roguelit and Tactics scripts. The existing backend workflow includes the matching generated Arena engine. This update uses the existing save format and requires no database migration.
+
+Regional field studies and Tactics board challenges earn the selected main-game supplies. New expeditions also offer alternate sites and relic hunts. Existing expedition checkpoints keep their opponents and pending rewards. Three tournament rules rotate between Tactics matches, and stage 4 offers a second augment. Tactics placement saves its coins, items and Battle Pass credit together and retries pending deliveries on reload.
+
 # Update to 0.22.95
 
 Extract the changed files over **0.22.94** and push them together. Both game pages load the new `roguelit.js` script. The existing backend deployment includes the matching Arena engine. This update uses the existing per-player cloud save entry and requires no database migration.

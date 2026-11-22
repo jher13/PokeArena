@@ -4,12 +4,57 @@
   {name:'Johto',site:'Burned Tower',types:['Fire','Ghost'],boss:'Typhlosion',guards:['Misdreavus'],moves:['Flame Wheel','Swift','Flamethrower','Will-O-Wisp']},
   {name:'Hoenn',site:'Sky Pillar',types:['Dragon','Flying'],boss:'Rayquaza',guards:['Altaria','Claydol'],moves:['Dragon Claw','Air Slash','Extreme Speed','Dragon Dance']}
  ];
+ const sites=[
+  [regions[0],
+   {name:'Kanto',site:'Mt. Moon',types:['Rock','Fairy'],boss:'Clefable',guards:[],moves:['Moonblast','Swift','Draining Kiss','Cosmic Power']},
+   {name:'Kanto',site:'Seafoam Islands',types:['Ice','Water'],boss:'Lapras',guards:[],moves:['Water Pulse','Ice Beam','Ice Shard','Sing']}],
+  [regions[1],
+   {name:'Johto',site:'Olivine Lighthouse',types:['Electric','Steel'],boss:'Ampharos',guards:['Magnemite'],moves:['Discharge','Power Gem','Thunder Wave','Thunder Punch']},
+   {name:'Johto',site:'Lake of Rage',types:['Water','Flying'],boss:'Gyarados',guards:['Quagsire'],moves:['Waterfall','Crunch','Ice Fang','Dragon Dance']}],
+  [regions[2],
+   {name:'Hoenn',site:'Cave of Origin',types:['Ground','Fire'],boss:'Groudon',guards:['Camerupt','Solrock'],moves:['Earthquake','Lava Plume','Ancient Power','Bulk Up']},
+   {name:'Hoenn',site:'Seafloor Cavern',types:['Water','Dark'],boss:'Kyogre',guards:['Sharpedo','Lunatone'],moves:['Water Pulse','Ice Beam','Ancient Power','Calm Mind']}]
+ ];
+ // Finish a shuffled set of three sites in each region before starting the next set.
+ function drawCourse(progress){
+  const decks=progress.siteDecks ??= [];
+  return sites.map((group,i)=>{
+   const prior=decks[i];
+   let left=Array.isArray(prior?.left)?prior.left.filter(n=>Number.isInteger(n) && group[n]):[];
+   if(!left.length)left=group.map((_,n)=>n);
+   const candidates=left.filter(n=>n!==prior?.last);
+   const chosen=prior?sample(candidates.length?candidates:left,1)[0]:0;
+   decks[i]={last:chosen,left:left.filter(n=>n!==chosen)};return chosen;
+  });
+ }
+ const studies={
+  relay:{name:'Relay team',detail:'Win with two different lead Pokémon.',goal:2},
+  coverage:{name:'Type coverage',detail:'Win twice with a lead that knows damaging moves of at least two types.',goal:2},
+  gear:{name:'Equipment trial',detail:'Win with a lead carrying a held item.',goal:1},
+  elite:{name:'Elite research',detail:'Defeat an elite encounter.',goal:1}
+ };
+ function beginStudy(run){
+  const last=run.study?.key,keys=Object.keys(studies).filter(key=>key!==last);
+  run.study={key:sample(keys,1)[0],count:0,leads:[],leg:segment(run),relicFork:sample([0,1,2],1)[0]};
+ }
+ function recordStudyWin(run){
+  const study=run.study;
+  if(!study || study.leg!==segment(run) || study.count>=studies[study.key].goal)return;
+  const lead=run.members[0];
+  if(study.key==='relay'){
+   if(!study.leads.includes(lead.name))study.leads.push(lead.name);
+   study.count=study.leads.length;return;
+  }
+  if(study.key==='gear' && lead.heldItem || study.key==='elite' && run.node.kind==='elite' ||
+   study.key==='coverage' && new Set(lead.moves.filter(move=>moveCatalog[move]?.[1]>0).map(move=>moveCatalog[move][0])).size>=2)study.count++;
+ }
  const legLength=4,expeditionLength=regions.length*legLength;
  const trails={
   recruit:{label:'Recruit trail',detail:'Choose a regional Pokémon to join your team.'},
   gear:{label:'Supply trail',detail:'Choose a held item and who carries it.'},
   tutor:{label:'Move tutor',detail:'Teach a teammate a move from its Arena learnset.'},
   training:{label:'Training trail',detail:'Choose a stat bonus for your team.'},
+  relic:{label:'Relic hunt',detail:'Face a stronger opponent and choose one team relic for this expedition.'},
   elite:{label:'Elite encounter',detail:'Earn double shards and choose gear or training.'},
   boss:{label:'Regional boss',detail:'Knock out the boss team to earn triple shards and choose a recruit, gear or training.'}
  };
@@ -19,7 +64,6 @@
   Johto:{repeat:[['vitamins','EXP Candy 250',1],['balls','Ultra Ball',1]],first:['vitamins','IV Booster',1]},
   Hoenn:{repeat:[['vitamins','EXP Candy 500',1],['vitamins','Rare Candy',1],['balls','Ultra Ball',2]],first:['capsules','Ability Capsule',1]}
  };
- const lootText=loot=>loot.map(([,name,n])=>n+' × '+experienceCandyName(name)).join(' · ');
  function bounty(run,kind){
   const leg=segment(run)%regions.length;
   // Fixed encounter credit rewards clearing the route quickly and never counts idle time.
@@ -34,7 +78,8 @@
  const choiceBox=byId('rogue-choices');
  let writing=false;
  const segment=run=>Math.floor((run.round-1)/legLength);
- const regionFor=run=>regions[segment(run)%regions.length];
+ const siteFor=(run,i)=>sites[i][run.course?.[i]] ?? regions[i];
+ const regionFor=run=>siteFor(run,segment(run)%regions.length);
  const typesOf=name=>dex[name].slice(1,3).filter(Boolean);
  const basePool=()=>dexNames.filter(name=>!isLegendaryEncounter(name) && minimumEncounterLevel(dex[name][0])<=1);
  const sample=(list,count)=>drawRogueChoices(list,count);
@@ -51,7 +96,8 @@
   if(!run)return;
   const path=element('ol',null,'rogue-itinerary');path.setAttribute('aria-label','Expedition route');
   const current=segment(run)%regions.length;
-  for(const [i,region] of regions.entries()){
+  for(const i of regions.keys()){
+   const region=siteFor(run,i);
    const done=i<current || run.step==='clear';
    const lap=Math.floor((run.round-1)/expeditionLength);
    const li=element('li');
@@ -61,6 +107,16 @@
    path.append(li);
   }
   map.append(path);
+  if(run.study){
+   const study=studies[run.study.key],box=element('div',null,'mode-objective');
+   box.append(element('strong',study.name+' · '+run.study.count+'/'+study.goal),
+    element('small',study.detail+' Regional boss bonus · '+sideSupplyText(sideSupplyTracks[run.focus].bundles[current])));
+   map.append(box);
+  }
+  if(run.relic){
+   const relic=expeditionRelics[run.relic];
+   party.append(element('p',relic.name+' · '+relic.detail,'rogue-team-bonuses'));
+  }
   if(!run.members.length)return;
   const row=element('div',null,'rogue-party');
   for(const [i,mon] of run.members.entries()){
@@ -116,30 +172,8 @@
    writing=false;throw error;
   });
  }
- // A saved delivery survives a reload between the expedition checkpoint and the main inventory write.
- // The receipt and all wallet, item and Battle Pass changes share the same inventory write.
- function settleDelivery(progress){
-  const bundle=progress.delivery;
-  if(!bundle)return true;
-  if(window.isArenaMarketBusy?.())return false;
-  let source;
-  try{source=JSON.parse(playerStorage.getItem(progressKey)) ?? wildProgress;}catch{return false;}
-  if(source.rogueDeliveryId!==bundle.id){
-   const next={...wildProgress,...source,coins:(source.coins ?? wildProgress.coins)+bundle.coins,
-    capsules:source.capsules ?? wildProgress.capsules,vitamins:{...(source.vitamins ?? wildProgress.vitamins)},
-    balls:[...(source.balls ?? wildProgress.balls)],battlePass:structuredClone(source.battlePass ?? wildProgress.battlePass),rogueDeliveryId:bundle.id};
-   for(const [kind,name,count] of bundle.items)giveArenaItem(kind,name,count,next);
-   const note=recordBattlePass({battles:1,wins:bundle.won?1:0},null,next);
-   if(!saveWildProgress(next))return false;
-   Object.assign(wildProgress,next);
-   if(note && ['win','loss','draw','roguelit'].includes(phase))showPassBattleNotice(note+' · '+battlePassProgressText());
-  }else if(wildProgress.rogueDeliveryId!==bundle.id)Object.assign(wildProgress,source);
-  delete progress.delivery;
-  if(!storeRogueProgress(progress))progress.delivery=bundle;
-  return true;
- }
  function pendingDelivery(){
-  screen('Your expedition result is saved. The main-game reward is waiting for your bag to sync.',[
+  screen('Your reward is saved and waiting for your bag to sync.',[
    {label:'Retry delivery',action:()=>lobby()},{label:'Main menu',action:openMenu}
   ],null);
  }
@@ -147,7 +181,7 @@
   const origin=phase;
   return locked(()=>{
    const progress=readRogueProgress(),current=progress.expedition;
-   if(!settleDelivery(progress)){pendingDelivery();return false;}
+   if(!settleModeReward(progress)){pendingDelivery();return false;}
    if(current?.id!==expected?.id || current?.revision!==expected?.revision){
     lobby('The saved expedition changed. Open the latest checkpoint.');return false;
    }
@@ -157,28 +191,28 @@
     screen('Could not save this checkpoint.',[{label:'Retry save',action:()=>update(expected,mutate,after)},{label:'Back to Roguelit',action:()=>lobby()}],expected);
     return false;
    }
-   if(!settleDelivery(progress)){pendingDelivery();return false;}
+   if(!settleModeReward(progress)){pendingDelivery();return false;}
    if(phase==='home' && origin!=='home')return true;
    rogueRun=progress.expedition ?? null;after();return true;
   });
  }
  function edit(change,after=showRun){
   const expected=rogueRun;
-  return update(expected,progress=>change(progress.expedition),after);
+  return update(expected,progress=>change(progress.expedition,progress),after);
  }
  function lobby(message=''){
   rogueRun=null;rogueProgress=readRogueProgress();const saved=rogueProgress.expedition;
   if(rogueProgress.delivery && !writing)return locked(()=>{
    const current=readRogueProgress();
-   if(settleDelivery(current))lobby(message);else pendingDelivery();
+   if(settleModeReward(current))lobby(message);else pendingDelivery();
   });
   const choices=saved?[{label:'Resume expedition',detail:regionFor(saved).site+' · Battle '+saved.round+' · '+saved.cleared+' wins'+(saved.step==='battle'?' · Restart this encounter.':''),
    action:()=>{rogueRun=saved;showRun();}}]:
-   [{label:'Start expedition',detail:'Draft a starter and up to four moves. Three regions, twelve fights.',action:start}];
+   [{label:'Start expedition',detail:'Draft a starter and up to four moves for twelve fights. Finish a field study and defeat its regional boss to earn your selected supplies.',action:start}];
   choices.push({label:'Permanent upgrades',detail:'Spend shards on future expeditions.',action:upgrades});
   choices.push({label:'Boss rewards',detail:'View main-game loot and your first-clear bonuses.',action:()=>{
    screen('Every victory deposits coins in your main-game wallet. Payouts use your highest PC level and unlocked Arena speed when you start. The Lucky Coin doubles them. Boss items go to your bag.',[
-    ...regions.map(r=>({label:r.boss,portrait:r.boss,detail:r.site+' · '+lootText(bossLoot[r.name].repeat)+'\nFirst clear · '+lootText([bossLoot[r.name].first])+(rogueProgress.firstClears.includes(r.name)?' · Obtained':'')})),
+    ...regions.map((r,i)=>({label:r.name,portrait:r.boss,detail:sites[i].map(s=>s.boss).join(' / ')+' · '+sideSupplyText(bossLoot[r.name].repeat)+'\nFirst clear · '+sideSupplyText([bossLoot[r.name].first])+(rogueProgress.firstClears.includes(r.name)?' · Obtained':'')})),
     {label:'Back to Roguelit',action:()=>lobby()}
    ],null);
   }});
@@ -188,6 +222,7 @@
    ],saved);
   }});
   screen((message?message+' ':'')+rogueProgress.shards+' shards · Best run: '+rogueProgress.best+' wins',choices,null);
+  if(!saved?.focus)byId('rogue-route-map').append(sideSupplyPicker('roguelit',['Kanto','Johto','Hoenn']));
  }
  function upgrades(){
   const progress=readRogueProgress();
@@ -205,9 +240,10 @@
  function start(){
   return update(null,p=>{
    p.expedition={version:1,id:globalThis.crypto?.randomUUID?.() ?? Date.now()+'-'+Math.random(),revision:0,
-    round:1,cleared:0,step:'starter',region:regions[0].name,members:[],options:sample(basePool(),5+(p.ranks.scout ?? 0)),enemyRoster:[],autoReserve:true,
+    round:1,cleared:0,focus:sideSupplyFocus('roguelit'),course:drawCourse(p),step:'starter',region:regions[0].name,members:[],options:sample(basePool(),5+(p.ranks.scout ?? 0)),enemyRoster:[],autoReserve:true,
     perks:{...p.ranks},coinRate:arenaAccountCoinRate(),travelSpeed:maximumBattleSpeed(),speed:1,coinsEarned:0,
     power:1,enemyPower:1,health:1+(p.ranks.health ?? 0)*.05,offense:1+(p.ranks.offense ?? 0)*.04,startLevel:10+(p.ranks.level ?? 0)};
+   beginStudy(p.expedition);
   });
  }
  function draftMoves(run){
@@ -221,8 +257,12 @@
  function route(run,kind,type){
   const region=regionFor(run),boss=kind==='boss',elite=kind==='elite';
   const leg=segment(run)%regions.length;
-  const level=Math.min(100,run.round===1?6:7+run.round*2+(elite?2:boss?1+leg:0));
-  const pool=eligibleWildPokemon(region.name,level).filter(name=>!isLegendaryEncounter(name));
+  const level=Math.min(100,run.round===1?(kind==='relic'?7:6):7+run.round*2+(elite?2:kind==='relic'?1:boss?1+leg:0));
+  let pool=eligibleWildPokemon(region.name,level).filter(name=>!isLegendaryEncounter(name));
+  if(run.focus && run.round===1 && kind!=='relic'){
+   const starters=pool.filter(name=>dexStats[dex[name][0]-1].reduce((sum,stat)=>sum+stat,0)<=400);
+   if(starters.length)pool=starters;
+  }
   const themed=pool.filter(name=>typesOf(name).includes(type));
   const size=Math.min(3,1+Math.floor((run.round-1)/6)+(elite?1:0));
   const names=boss?[...region.guards,region.boss]:sample(themed,size);
@@ -235,6 +275,10 @@
   run.step='route';run.region=region.name;run.enemyRoster=[];
   delete run.node;delete run.rewards;delete run.options;
   const kinds=[['recruit','training'],['gear','elite'],['tutor','recruit'],['boss']][offset];
+  if(run.focus){
+   if(run.study?.leg!==segment(run))beginStudy(run);
+   if(offset===run.study.relicFork)kinds.push('relic');
+  }
   run.routes=kinds.map((kind,i)=>route(run,kind,region.types[i%region.types.length]));
  }
  function enterCombat(){
@@ -247,9 +291,11 @@
   return edit(run=>{
    run.node=run.routes[index];delete run.routes;
    run.enemyRoster=run.node.foes;run.step='battle';
-   const bonus=run.node.kind==='elite'?.05:run.node.kind==='boss'?.05*(segment(run)%regions.length):0;
+   const bonus=run.node.kind==='relic'?.08:run.node.kind==='elite'?.05:run.node.kind==='boss'?.05*(segment(run)%regions.length):0;
    const laps=Math.floor((run.round-1)/expeditionLength),pastLevelCap=Math.max(0,run.round-46)/30;
-   run.enemyPower=(1+bonus)*(1+.08*laps+pastLevelCap*(1+.15*pastLevelCap));
+   // Ease the opening while players have only a drafted starter. Boss and endless scaling start at full strength.
+   const opening=run.focus && run.round===1?.78:run.focus && run.round===2?.93:1;
+   run.enemyPower=opening*(1+bonus)*(1+.08*laps+pastLevelCap*(1+.15*pastLevelCap));
   },enterCombat);
  }
  function prepareRewards(run){
@@ -263,6 +309,7 @@
    prizes.recruits=picks.map(name=>member(name,run.members[0].level,legalLoadout(name,wildMoves(name))));
   }
   if(gear)prizes.items=sample(items,3+(run.perks.supply ?? 0));
+  if(kind==='relic')prizes.relics=sample(Object.keys(expeditionRelics).filter(key=>key!==run.relic),2+(run.perks.curator ?? 0));
   if(kind==='tutor')prizes.tutors=run.members.map(mon=>sample(movePool(mon),3+(run.perks.study ?? 0)));
  }
  function finish(won){
@@ -273,8 +320,12 @@
    const payout={id:run.id+'/'+run.round,won,coins:won?bounty(run,run.node.kind):0,items:[]};
    p.delivery=payout;
    if(!won){delete p.expedition;return;}
+   recordStudyWin(run);
    if(run.node.kind==='boss'){
     const loot=bossLoot[run.region];payout.items=[...loot.repeat];
+    if(run.study && run.study.count>=studies[run.study.key].goal){
+     payout.items.push(...sideSupplyTracks[run.focus].bundles[segment(run)%regions.length]);payout.study=studies[run.study.key].name;
+    }
     if(!p.firstClears.includes(run.region)){payout.items.push(loot.first);p.firstClears.push(run.region);payout.first=true;}
    }
    run.lastPayout=payout;run.coinsEarned+=payout.coins;run.speed=expected.speed;
@@ -288,12 +339,22 @@
    void checkGameVersion();
   });
  }
+ function nextBattle(run,progress){
+  run.round++;
+  if(!run.focus && (run.round-1)%legLength===0){
+   // Adopt field studies at the next regional boundary on older saves. Honor the original boss itinerary for this lap.
+   run.focus=sideSupplyFocus('roguelit');run.course=regions.map(()=>0);
+   progress.siteDecks ??= sites.map(()=>({last:0,left:[1,2]}));
+  }
+  if((run.round-1)%expeditionLength===0 && run.focus)run.course=drawCourse(progress);
+  prepareRoutes(run);
+ }
  function takeReward(effect){
-  return edit(run=>{
+  return edit((run,p)=>{
    if(run.step!=='reward')return false;
    effect(run);
    if(run.round===expeditionLength){run.step='clear';delete run.rewards;return;}
-   run.round++;prepareRoutes(run);
+   nextBattle(run,p);
   });
  }
  function trainingChoices(){
@@ -344,13 +405,17 @@
  function rewards(run){
   const {recruits,items,tutors}=run.rewards;
   const choices=[];
+  if(run.rewards.relics)for(const key of run.rewards.relics){
+   const relic=expeditionRelics[key];choices.push({label:relic.name,detail:relic.detail+(run.relic?' Replaces '+expeditionRelics[run.relic].name+'.':''),
+    action:()=>takeReward(r=>{r.relic=key;})});
+  }
   if(recruits?.length)choices.push({label:'Recruit a teammate',portrait:recruits[0].name,detail:recruits.map(mon=>mon.name).join(' · '),action:showRecruits});
   if(items?.length)choices.push({label:'Choose held gear',item:items[0],detail:items.join(' · '),action:showGear});
   if(tutors?.some(moves=>moves.length))choices.push({label:'Visit the move tutor',detail:'Choose a teammate, a new move and the slot to replace.',action:showTutor});
   if(!choices.length || run.node.kind==='boss' || run.node.kind==='elite')choices.push(...trainingChoices());
   else choices.push({label:'Train the team instead',detail:'Choose endurance, power or balanced training.',action:showTraining});
   const payout=run.lastPayout;
-  screen(run.node.label+' cleared · +'+run.node.shards+' shards. Sent to your main game: '+payout.coins.toLocaleString()+' coins'+(payout.items.length?' · '+lootText(payout.items):'')+(payout.first?' (first-clear bonus included)':'')+'. Your team heals and gains up to 2 levels. Choose one expedition reward.',choices);
+  screen(run.node.label+' cleared · +'+run.node.shards+' shards. Sent to your main game: '+payout.coins.toLocaleString()+' coins'+(payout.items.length?' · '+sideSupplyText(payout.items):'')+(payout.first?' (first-clear bonus included)':'')+(payout.study?' · Field study completed: '+payout.study:'')+'. Your team heals and gains up to 2 levels. Choose one expedition reward.',choices);
  }
  function showRun(){
   const run=rogueRun,region=regionFor(run);
@@ -376,12 +441,12 @@
    case 'clear':
     screen('Expedition cleared · '+run.cleared+' wins · '+run.coinsEarned.toLocaleString()+' main-game coins earned this run · '+rogueProgress.shards+' banked shards.',[
      {label:'Finish expedition',detail:'Return to Roguelit with your banked shards.',action:()=>update(run,p=>{delete p.expedition;},()=>lobby('Expedition complete.'))},
-     {label:'Continue into endless',detail:'Keep your team, held items and training. The regional route repeats with stronger opponents.',
-      action:()=>edit(r=>{r.round++;prepareRoutes(r);})}
+     {label:'Continue into endless',detail:'Keep your team, held items and training. Explore a new regional itinerary with stronger opponents.',
+      action:()=>edit((r,p)=>nextBattle(r,p))}
     ]);break;
   }
  }
  window.ArenaRoguelit={finish};
  byId('home-roguelit').onclick=()=>lobby();byId('rogue-back').onclick=openMenu;
- if(rogueProgress.delivery)locked(()=>settleDelivery(readRogueProgress()));
+ if(rogueProgress.delivery)locked(()=>settleModeReward(readRogueProgress()));
 })();
