@@ -1949,6 +1949,7 @@ function pvpLoanerFor(name,roster,choices){
 const wildProgress={battlePlan:'Balanced',battleCarry:'',favorites:[],pvpLoaners:{},autoCaptureRare:true,autoCaptureRareBall:6,autoCaptureRareFallback:-1,autoCaptureBall:0,autoCaptureFallback:'standard',reservePremiumBalls:true,battlePass:{xp:0,claimed:[]},capsules:0,vitamins:{},copies:{},ai:{},owned:{},registered:[],coins:0,megaRaidRewards:[],items:{},held:{},skills:{},balls:[12,1,3,1,1,0,1,0,0],wins:0,autoCapture:false,autoRepeat:false,autoReserve:false,speed:1};
 try {
  const saved=decodePCEntry(progressKey,playerStorage.getItem(progressKey));
+ if(typeof saved?.rogueDeliveryId==='string')wildProgress.rogueDeliveryId=saved.rogueDeliveryId;
  if(saved?.trainerCard && typeof saved.trainerCard==='object' && !Array.isArray(saved.trainerCard))wildProgress.trainerCard=saved.trainerCard;
  if(saved?.trainerRecords && typeof saved.trainerRecords==='object' && !Array.isArray(saved.trainerRecords))wildProgress.trainerRecords=saved.trainerRecords;
  if(saved?.campaign && typeof saved.campaign==='object' && !Array.isArray(saved.campaign))wildProgress.campaign=saved.campaign;
@@ -2042,8 +2043,8 @@ const passQuests={
  daily:[['battles','Finish 3 battles',3,50],['wins','Win 2 battles',2,50],['catches','Catch a Pokémon',1,40],['trainerWins','Win a Trainer Battle',1,40]],
  weekly:[['battles','Finish 20 battles',20,220],['wins','Win 12 battles',12,220],['catches','Catch 5 Pokémon',5,160],['tacticsMatches','Finish a Tactics match',1,160],['raidWins','Clear a co-op raid',1,160]]
 };
-function battlePassState(now=new Date()) {
- const pass=wildProgress.battlePass;
+function battlePassState(now=new Date(),recipient=wildProgress) {
+ const pass=recipient.battlePass;
  const day=now.toISOString().slice(0,10);
  const monday=new Date(now);
  monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);
@@ -2071,8 +2072,8 @@ function battlePassProgressText() {
  });
  return pending.length?'Next quests · '+pending.join(' · '):'All daily and weekly quests complete.';
 }
-function recordBattlePass(events,raidId=null) {
- const pass=battlePassState();
+function recordBattlePass(events,raidId=null,recipient=null) {
+ const pass=recipient?battlePassState(new Date(),recipient):battlePassState();
  const limit=passRewards.length*passTierXP;
  if(pass.xp>=limit)return '';
  if(raidId!==null){
@@ -2092,14 +2093,14 @@ function recordBattlePass(events,raidId=null) {
  }
  const added=Math.min(limit-pass.xp,earned);
  pass.xp+=added;
- saveWildProgress();
+ if(!recipient)saveWildProgress();
  return added?'Battle Pass +'+added+' XP'+(completed.length?' · Quests completed: '+completed.join(', '):''):'';
 
 }
-function giveArenaItem(kind,name,amount) {
- if(kind==='capsules')wildProgress.capsules+=amount;
- else if(kind==='balls')wildProgress.balls[ballTypes.findIndex(ball=>ball.name===name)]+=amount;
- else wildProgress[kind][name]=(wildProgress[kind][name] ?? 0)+amount;
+function giveArenaItem(kind,name,amount,progress=wildProgress) {
+ if(kind==='capsules')progress.capsules+=amount;
+ else if(kind==='balls')progress.balls[ballTypes.findIndex(ball=>ball.name===name)]+=amount;
+ else progress[kind][name]=(progress[kind][name] ?? 0)+amount;
 }
 function claimPassReward(index,refresh=true) {
  const pass=battlePassState();
@@ -4468,6 +4469,15 @@ function awardBadge(gym) {
 const halfBadgeCount=Math.ceil(gymTeams.length/2);
 function hasLuckyCoin() {return masterGymClears.size===gymTeams.length;}
 function earnedCoins(base) {return base*(hasLuckyCoin()?2:1);}
+function arenaAccountCoinRate() {
+ let level=1;
+ for(const mon of Object.values(wildProgress.owned ?? {}))level=Math.max(level,mon.level ?? 1);
+ for(const group of Object.values(wildProgress.copies ?? {}))
+  for(const copy of group)level=Math.max(level,copy.level ?? 1);
+ // Match the measured coin pace of 3v3 Trainer auto-repeat at levels 10, 50 and 100.
+ const baseRate=20+60*Math.min(level,50)+52*Math.max(0,Math.min(level,100)-50);
+ return Math.round(baseRate*(1+.7*(maximumBattleSpeed()-1))/10)*10;
+}
 function maximumBattleSpeed() {
  if(clearedGyms.length===gymTeams.length) return 4;
  return clearedGyms.length>=halfBadgeCount?3:2;
@@ -4789,48 +4799,36 @@ function drawRogueChoices(pool,count) {
  const available=[...pool];
  return Array.from({length:Math.min(count,available.length)},()=>available.splice(Math.floor(onlineRandom()*available.length),1)[0]);
 }
-function rogueChoiceScreen(status,choices,knownMoves=[]) {
- phase='roguelit';
- showScreen('roguelit');
- const heading=byId('rogue-status');heading.textContent=status;
- knownMoves.forEach((move,i)=>heading.append(i?', ':' · ',skillTitle('span',move)));
- byId('rogue-choices').replaceChildren(...choices.map(({label,detail,portrait,move,choose,disabled=false})=>{
-  const card=element('button',null,'gym-card');
-  card.disabled=disabled;
-  if(portrait) card.append(pokemonPortrait(portrait));
-  card.append(move?skillTitle('strong',move):element('strong',label));
-  if(detail) card.append(element('small',detail));
-  card.onclick=()=>{
-   if(card.disabled) return;
-   for(const choice of byId('rogue-choices').children) choice.disabled=true;
-   choose();
-  };
-  return card;
- }));
-}
-function rogueMovePool(member) {
- return legalMoves(member.name).filter(move=>isVisibleArenaMove(move) && !member.moves.includes(move));
-}
-function rogueMember(name,level,moves=[]) {
- return {name,level,moves,profile:rollProfile()};
-}
 const rogueProgressKey='pokemon-arena-roguelit-progress';
 const rogueUpgrades=[
  {key:'health',label:'Endurance',detail:'+5% max HP per rank',cost:12,cap:10},
  {key:'offense',label:'Power',detail:'+4% Attack and Sp. Atk per rank',cost:15,cap:10},
- {key:'level',label:'Head Start',detail:'+1 starting level per rank',cost:18,cap:5}
+ {key:'level',label:'Head Start',detail:'+1 starting level per rank',cost:18,cap:5},
+ {key:'scout',label:'Scouting',detail:'+1 starter and recruit offer per rank',cost:24,cap:2},
+ {key:'study',label:'Move Studies',detail:'+1 option per starter move draft and tutor visit per rank',cost:28,cap:2},
+ {key:'supply',label:'Quartermaster',detail:'+1 held item to choose from at supply stops per rank',cost:26,cap:2},
+ {key:'kit',label:'Field Kit',detail:'Start with an Oran Berry at rank 1 or a Sitrus Berry at rank 2',cost:36,cap:2},
+ {key:'bounty',label:'Bounty Hunter',detail:'+5% main-game coins per expedition win per rank',cost:35,cap:3}
 ];
-let rogueProgress={shards:0,best:0,ranks:{}};
-try {
- const saved=JSON.parse(playerStorage.getItem(rogueProgressKey));
- for(const key of ['shards','best']) {
-  if(Number.isSafeInteger(saved?.[key]) && saved[key]>=0) rogueProgress[key]=saved[key];
- }
- for(const {key,cap} of rogueUpgrades) {
-  const rank=saved?.ranks?.[key];
-  if(Number.isInteger(rank) && rank>0 && rank<=cap) rogueProgress.ranks[key]=rank;
- }
-} catch {}
+function readRogueProgress() {
+ const progress={shards:0,best:0,ranks:{},firstClears:[]};
+ try {
+  const saved=JSON.parse(playerStorage.getItem(rogueProgressKey));
+  for(const key of ['shards','best'])if(Number.isSafeInteger(saved?.[key]) && saved[key]>=0)progress[key]=saved[key];
+  for(const {key,cap} of rogueUpgrades){
+   const rank=saved?.ranks?.[key];
+   if(Number.isInteger(rank) && rank>0 && rank<=cap)progress.ranks[key]=rank;
+  }
+  if(Array.isArray(saved?.firstClears))progress.firstClears=[...new Set(saved.firstClears.filter(r=>['Kanto','Johto','Hoenn'].includes(r)))];
+  if(saved?.delivery && typeof saved.delivery.id==='string' && Number.isSafeInteger(saved.delivery.coins) && saved.delivery.coins>=0 && Array.isArray(saved.delivery.items))progress.delivery=saved.delivery;
+  const run=saved?.expedition;
+  if(run?.version===1 && typeof run.id==='string' && Number.isSafeInteger(run.revision) && run.revision>0 &&
+   Number.isSafeInteger(run.round) && run.round>0 && Array.isArray(run.members) &&
+   ['starter','moves','route','battle','reward','clear'].includes(run.step))progress.expedition=run;
+ } catch {}
+ return progress;
+}
+let rogueProgress=readRogueProgress();
 function storeRogueProgress(progress) {
  try {
   playerStorage.setItem(rogueProgressKey,JSON.stringify(progress));
@@ -4838,115 +4836,6 @@ function storeRogueProgress(progress) {
   return true;
  } catch {return false;}
 }
-function openRogueLobby() {
- rogueRun=null;
- rogueChoiceScreen(rogueProgress.shards+' shards · Best run: '+rogueProgress.best+' wins',[
-  {label:'Start a new run',choose:openRoguelit},
-  {label:'Permanent upgrades',choose:openRogueUpgrades}
- ]);
-}
-function openRogueUpgrades(message='') {
- const choices=rogueUpgrades.map(({key,label,detail,cost,cap})=>{
-  const rank=rogueProgress.ranks[key] ?? 0;
-  const price=cost*(rank+1);
-  return {
-   label:label+' · '+rank+'/'+cap,
-   detail:detail+' · '+(rank===cap?'Max rank':price+' shards'),
-   disabled:rank===cap || price>rogueProgress.shards,
-   choose:()=>{
-    const saved=storeRogueProgress({...rogueProgress,shards:rogueProgress.shards-price,
-     ranks:{...rogueProgress.ranks,[key]:rank+1}});
-    openRogueUpgrades(saved?label+' upgraded.':'Could not save the upgrade.');
-   }
-  };
- });
- rogueChoiceScreen(rogueProgress.shards+' shards'+(message?' · '+message:''),[
-  ...choices,{label:'Back to Roguelit',choose:openRogueLobby}
- ]);
-}
-function rogueShardReward(round) {
- return 2+round;
-}
-function openRoguelit() {
- const pool=dexNames.filter(name=>!isLegendaryEncounter(name) && minimumEncounterLevel(dex[name][0])<=1);
- rogueRun={round:1,cleared:0,members:[],power:1,enemyPower:1,enemyRoster:[],region:'Kanto',pool,
-  health:1+(rogueProgress.ranks.health ?? 0)*0.05,offense:1+(rogueProgress.ranks.offense ?? 0)*0.04};
- rogueChoiceScreen('Choose one of five Pokémon to start your run.',drawRogueChoices(pool,5).map(name=>({
-  label:name,portrait:name,detail:dex[name].slice(1,3).filter(Boolean).join(' / '),
-  choose:()=>{rogueRun.members.push(rogueMember(name,10+(rogueProgress.ranks.level ?? 0)));draftRogueMove();}
- })));
-}
-function draftRogueMove() {
- const member=rogueRun.members[0];
- const pool=rogueMovePool(member);
- if(!pool.length) {
-  if(!member.moves.length)member.moves.push('Struggle');
-  startRogueRound();return;
- }
- const offensive=pool.filter(move=>!moveCatalog[move][4]);
- const first=drawRogueChoices(!member.moves.length && offensive.length?offensive:pool,4);
- rogueChoiceScreen(member.name+' · Choose move '+(member.moves.length+1)+' of 4',first.map(move=>({
-  move,detail:moveCatalog[move][0]+' · '+(moveCatalog[move][4]?'Status':moveCatalog[move][1]+' power')+
-   ' · '+moveRules(move).cooldown+'s cooldown',
-  choose:()=>{
-   member.moves.push(move);
-   if(member.moves.length===4) startRogueRound();
-   else draftRogueMove();
-  }
- })),member.moves);
-}
-function startRogueRound() {
- const run=rogueRun;
- const level=Math.min(100,7+run.round*2);
- const size=Math.min(6,1+Math.floor((run.round-1)/4));
- const eligible=dexNames.filter(name=>!isLegendaryEncounter(name) && minimumEncounterLevel(dex[name][0])<=level);
- run.enemyRoster=drawRogueChoices(eligible,size).map(name=>({name,level}));
- run.enemyPower=1+Math.max(0,run.round-46)*0.035;
- run.region=wildRegions[generationOf(run.enemyRoster[0].name)-1];
- openBattle(null,null,null,run);
- startBattle();
-}
-function finishRogueRound(won) {
- void checkGameVersion();
- const run=rogueRun;
- if(!won) {
-  rogueChoiceScreen('Run over · '+run.cleared+' battles won · '+rogueProgress.shards+' shards.',[{label:'Back to Roguelit',choose:openRogueLobby},{label:'Start a new run',choose:openRoguelit}]);
-  return;
- }
- run.cleared++;
- const shards=rogueShardReward(run.round);
- const saved=storeRogueProgress({...rogueProgress,shards:rogueProgress.shards+shards,
-  best:Math.max(rogueProgress.best,run.cleared)});
- const reward=saved?' · +'+shards+' shards':' · Shards could not be saved';
- const levelUp=()=>{
-  for(const member of run.members) member.level=Math.min(100,member.level+3);
- };
- const next=upgrade=>()=>{
-  upgrade();
-  run.round++;
-  startRogueRound();
- };
- const reserve=drawRogueChoices(run.pool.filter(name=>!run.members.some(member=>member.name===name)),1)[0];
- const third=run.members.length<6 && reserve?{
-  label:'Recruit '+reserve,portrait:reserve,detail:'Add a reserve with four moves.',
-  choose:next(()=>{
-   const moves=wildMoves(reserve);
-   const extra=drawRogueChoices(legalMoves(reserve).filter(move=>isVisibleArenaMove(move) && !moves.includes(move)),4-moves.length);
-   run.members.push(rogueMember(reserve,run.members[0].level,[...moves,...extra]));
-  })
- }:{label:'Balanced training',detail:'Gain 1 level and 6% to all battle stats.',choose:next(()=>{
-  for(const member of run.members) member.level=Math.min(100,member.level+1);
-  run.power*=1.06;
- })};
- rogueChoiceScreen('Battle '+run.round+' won'+reward+' · Pick one upgrade. Your team heals before the next battle.',[
-  run.members.some(member=>member.level<100)?{label:'Experience boost',detail:'+3 levels for your whole team.',choose:next(levelUp)}:
-   {label:'Endurance training',detail:'+12% max HP for your whole team.',choose:next(()=>{run.health=(run.health ?? 1)*1.12;})},
-  {label:'Stat boost',detail:'+10% to all battle stats for your whole team.',choose:next(()=>{run.power*=1.1;})},
-  third
- ]);
-}
-byId('home-roguelit').onclick=openRogueLobby;
-byId('rogue-back').onclick=openMenu;
 byId('battle-settings-button').onclick=()=>{
  byId('battle-volume-controls').replaceChildren(...audioVolumeControls());
  byId('battle-settings').showModal();
@@ -5520,7 +5409,7 @@ function updateRecallStatus() {
   selectedTrainer.region+' Trainer · Select an active Pokémon to recall, then choose a reserve.') : playerSwitch ? 'Sending out '+playerSwitch.incoming.name+'…' :
   awaitingPlayerReserve() ? activePlayer.name+' fainted. Choose a healthy Pokémon on the left.' :
   recallCooldown>0 ? 'Recall ready in '+Math.ceil(recallCooldown)+'s' :
-  selectedWild ? 'Wild encounter · '+selectedWild.region+' · Difficulty '+selectedWild.tier+' · Tap a healthy teammate to switch.' : selectedTrainer ? selectedTrainer.region+' Trainer · Tap a healthy teammate to switch.' : rogueRun ? 'Roguelit · Battle '+rogueRun.round+' · Tap a healthy teammate to switch.' : 'Tap a healthy teammate on the left to switch Pokémon.';
+  selectedWild ? 'Wild encounter · '+selectedWild.region+' · Difficulty '+selectedWild.tier+' · Tap a healthy teammate to switch.' : selectedTrainer ? selectedTrainer.region+' Trainer · Tap a healthy teammate to switch.' : rogueRun ? 'Roguelit · '+rogueRun.region+' · '+rogueRun.node.label+' · Battle '+rogueRun.round+' · Tap a healthy teammate to switch.' : 'Tap a healthy teammate on the left to switch Pokémon.';
  if(status.textContent!==message) status.textContent=message;
 }
 let trainerPanels=null;
@@ -5819,14 +5708,13 @@ function unit(name,x,y,friendly,level=friendly?(ownedPokemon(name)?.level ?? 5):
    stats[0]=Math.round(stats[0]*rogueRun.health);
    stats[1]=Math.round(stats[1]*rogueRun.offense);
    stats[5]=Math.round(stats[5]*rogueRun.offense);
-
   }
  }
  const hp=stats[0];
  const speedFactor=battleSpeedFactor(stats[3]);
  return {name,teamPlan:friendly && !runMember?normalizeTeamPlan(wildProgress.battlePlan):'Balanced',carryName:friendly && !runMember?wildProgress.battleCarry:'',masterGymCombatant:Boolean(master),gymRole:!friendly?selectedGym?.plan?.team[gymSlot]?.[1]:null,type:primary,level,hp,max:hp,ai:master?master.ai:friendly && !runMember?normalizeBattleAI(wildProgress.ai[name]):
   !friendly && selectedGym?normalizeBattleAI({style:gymRole(name).tank?'Defensive':'Balanced',target:'Type weakness',position:selectedGym.plan?.team[gymSlot]?.[2]}):null,
-  heldItem:master?master.heldItem:friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null,itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor*(master?0.5:1),moves,profile,stats,shiny:profile.shiny===true?true:undefined,
+  heldItem:master?master.heldItem:runMember?.heldItem ?? (friendly && !rogueRun?wildProgress.held[name]:!friendly && selectedGym?(selectedGym.plan.team[gymSlot][4] ?? gymHeldItem(name)):null),itemUsed:false,itemTimer:4,ability:abilityFor(name,profile),abilityTimer:0,entryPending:false,entryUsed:false,flashFire:false,pace:pace*speedFactor,cooldown:cooldown/speedFactor*(master?0.5:1),moves,profile,stats,shiny:profile.shiny===true?true:undefined,
   moveCooldowns:moves.map(skill=>moveRules(skill).cooldown*(master?0.5:1)),moveTimers:moves.map(()=>0),
   stages:[0,0,0,0,0,0,0,0,0,0],ailment:null,ailmentSource:null,ailmentTime:0,dot:0,damagedOpponent:false,lastDamageBy:null,
   x,y,friendly,guard:0,charge:0,gait:null,stride:0,motionTicks:0,attackX:0,attackY:0,attackStyle:'attack',attackSpan:0.36,hitSpan:0.28,hitX:0,hitY:0,moveLabel:null,labelTime:0,attack:0,hit:0,facing:friendly?1:-1,direction:friendly?2:6};
@@ -5904,8 +5792,8 @@ function arenaPatchClusters(seed) {
  return [[-.51,-.23],[0,-.48],[.5,-.22],[.46,.32],[0,.48],[-.48,.3],[0,0]].map(([x,y])=>
   [x+(random()-.5)*.08,y+(random()-.5)*.08,.4+random()*.05,.4+random()*.05]);
 }
-function randomArenaMap() {
- const biome=arenaBiomes[Math.floor(onlineRandom()*arenaBiomes.length)];
+function randomArenaMap(type) {
+ const biome=(type && arenaBiomes.find(entry=>entry.type===type)) || arenaBiomes[Math.floor(onlineRandom()*arenaBiomes.length)];
  const zones=Array.from({length:3},(_,i)=>{
   const x=155+i*325+onlineRandom()*125,y=95+onlineRandom()*290,seed=Math.floor(onlineRandom()*4294967296);
   const w=55+onlineRandom()*35,h=40+onlineRandom()*40;
@@ -6191,7 +6079,7 @@ function prepare() {
  entryHazards=[{},{}];
  fieldMoveExpiry={};
  arenaSkillFields=[];arenaFieldSequence=0;
- arenaMap=randomArenaMap();
+ arenaMap=randomArenaMap(rogueRun?.node?.type);
  if(selectedGym?.plan) {
   const biome=arenaBiomes.find(entry=>entry.type===selectedGym.type) ?? arenaBiomes[0];
   arenaMap={...biome,zones:[],rocks:[]};
@@ -6206,7 +6094,7 @@ function prepare() {
  const difficulty=selectedGym ? gymDifficulty(selectedGym,selectedMasterGym) : null;
  const roster=rogueRun ? rogueRun.enemyRoster.map(member=>member.name) : selectedWild ? [selectedWild.name] : selectedTrainer?.roster.map(member=>member.name) ?? selectedGym?.roster ?? lineup;
  enemies=roster.map((name,index)=>unit(name,sendOut.enemy.x,sendOut.enemy.y,false,
-  difficulty ? (gymAceSlot(selectedGym,index) ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,null,index));
+  difficulty ? (gymAceSlot(selectedGym,index) ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,rogueRun?.enemyRoster[index] ?? null,index));
  effects = [];
  pendingCasts=[];
  clock = 0;
@@ -6222,7 +6110,7 @@ function prepare() {
 }
 function reset() {
  phase = 'setup';
- speed = Math.min(maximumBattleSpeed(),selectedWild ? wildProgress.speed : selectedTrainer ? trainerOptions.speed : 1);
+ speed = Math.min(maximumBattleSpeed(),selectedWild ? wildProgress.speed : selectedTrainer ? trainerOptions.speed : rogueRun?.speed ?? 1);
  selected = 0;
  prepare();
  renderControls();
@@ -6259,7 +6147,7 @@ function renderControls() {
  updateBattleRosters();
  byId('status').textContent = {
   setup:selectedWild ? selectedWild.region+' · Choose one Pokémon to battle.' : selectedTrainer ? selectedTrainer.region+' Trainer · Difficulty '+selectedTrainer.tier.label+' · '+selectedTrainer.format+'v'+selectedTrainer.format+(selectedTrainer.format===1?' · Ready to battle.':' · Choose your lead Pokémon.') : selectedMasterGym ? 'Master Campaign · Choose your lead Pokémon.' : selectedGym ? selectedGym.name+' · Choose your lead Pokémon. '+gymBrief(selectedGym)+' '+arenaMap.name+' · Open arena.'+(clearedGyms.includes(selectedGym.id)?' Rematch challenge: win without losing a Pokémon.':'') : 'Choose your lead Pokémon.',
-  battle:rogueRun?'Roguelit · Battle '+rogueRun.round:'Tap a healthy teammate on the left to switch Pokémon.',
+  battle:rogueRun?'Roguelit · '+rogueRun.region+' · '+rogueRun.node.label+' · Battle '+rogueRun.round:'Tap a healthy teammate on the left to switch Pokémon.',
   draw:'Draw. Neither side won the battle.',
   win:selectedTrainer ? 'Victory! You earned '+selectedTrainer.coins+' coins.' : selectedWild ? 'Wild Pokémon defeated!' : newBadge ? 'Victory! You earned the '+selectedGym.badge+'.'+speedUnlockMessage() : 'Victory! Your team defeated all six opponents.',
   loss:'Your team was knocked out. Return to the main menu to change your moves.'
@@ -6313,6 +6201,7 @@ byId('speed').onclick = () => {
  speed = speed>=maximumBattleSpeed()?1:speed+1;
  if(selectedWild) {wildProgress.speed=speed;saveWildProgress();}
  if(selectedTrainer) setTrainerOption('speed',speed);
+ if(rogueRun)rogueRun.speed=speed;
  byId('speed').textContent = speed + '× speed';
  byId('speed').setAttribute('aria-pressed',String(speed>1));
 };
@@ -9186,7 +9075,7 @@ const reserveBuffTimers=['safeguardUntil','mistUntil','luckyChantUntil','craftyS
 function advanceCombat(dt,realDt,sides) {
  const onField=new Set(sides.flat());
  clock+=dt;
- if(selectedMasterGym && selectedGym){
+ if((selectedMasterGym && selectedGym) || rogueRun){
   const count=allies.filter(actor=>actor.hp>0).length+enemies.filter(actor=>actor.hp>0).length;
   if(count!==masterLivingCount){
    masterLivingCount=count;
@@ -9320,7 +9209,10 @@ function compareTeamHP(first,second) {
 function advance(dt,realDt=dt) {
  refreshBerriesAfterKnockout();
  sendNextTrainerReserve();
- if(awaitingPlayerReserve()) sendNextWildReserve();
+ if(awaitingPlayerReserve()){
+  if(rogueRun?.autoReserve)playerSwitch=startSwitch(activePlayer,allies.find(actor=>actor.hp>0));
+  else sendNextWildReserve();
+ }
  advanceBattleSwitches(dt,realDt);
  const sides=combatSides();
  for(const actor of sides[0])actor.enteredBattle=true;
@@ -9332,18 +9224,19 @@ function advance(dt,realDt=dt) {
  const playerReserve=allies.find(actor=>actor.hp>0);
  const enemyReserve=enemies.find(actor=>actor.hp>0);
  const firstBadge=selectedGym && !clearedGyms.includes(selectedGym.id);
- const requiresClear=firstBadge || Boolean(selectedGym && selectedMasterGym);
- const limit=requiresClear?firstBadgeTimeLimit:battleTimeLimit;
+ const gymClear=firstBadge || Boolean(selectedGym && selectedMasterGym);
+ const requiresClear=gymClear || rogueRun?.node?.kind==='boss';
+ const limit=gymClear?firstBadgeTimeLimit:battleTimeLimit;
  const timedOut=clock>=limit-1e-8 && playerReserve && enemyReserve;
  if(!playerReserve || !enemyReserve || timedOut) {
   const result=timedOut && requiresClear?-1:timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
   phase=result>0?'win':result<0?'loss':'draw';
   if(!rogueRun && (selectedWild || selectedTrainer || selectedGym))window.ArenaTrainerCard?.recordBattle(enemies,Boolean(selectedTrainer && result>0),clock,Boolean(timedOut));
   recordArenaEvolutionBattle(result>0);
-  const passNote=rogueRun || selectedWild || selectedTrainer || selectedGym
+  if(rogueRun) {window.ArenaRoguelit.finish(phase==='win');return;}
+  const passNote=selectedWild || selectedTrainer || selectedGym
    ?recordBattlePass({battles:1,wins:result>0?1:0,trainerWins:selectedTrainer && result>0?1:0}):'';
   if(passNote)showPassBattleNotice(passNote+' · '+battlePassProgressText());
-  if(rogueRun) {finishRogueRound(phase==='win');return;}
   if(phase==='loss') {
    const detail=applyDefeatRewards();
    const gymAdvice=selectedGym && !selectedMasterGym ? [gymSwitchNote,selectedGym.plan?.tip].filter(Boolean).join(' ') : '';
@@ -9755,8 +9648,8 @@ function paintArenaWeather() {
   const time=screenTime({friendly},move);
   return time>0?[(friendly?'Your ':'Enemy ')+damageMarks.status.glyph+' '+move+' '+Math.ceil(time)+'s']:[];
  }));
- const pressureLabel=phase==='battle' && selectedMasterGym && masterPressure>0 ?
-  (masterPressure===1?'Master pressure: healing halved':'Master pressure: healing blocked, +35% attack damage'):'';
+ const pressureLabel=phase==='battle' && (selectedMasterGym || rogueRun) && masterPressure>0 ?
+  (rogueRun?'Expedition':'Master')+' pressure · '+(masterPressure===1?'Healing halved':'Healing blocked, +35% attack damage'):'';
  const label=[arenaLabel,pressureLabel,...screenLabels].filter(Boolean).join(' · ');
  const weatherLabel=weather?weather+': '+Math.ceil(weatherTime)+'s'+(effective?'':' (suppressed)'):'';
  const display=byId('arena-weather');
@@ -10519,6 +10412,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.95',changes:['Roguelit is now a three-region expedition with branching encounters, regional bosses, recruits, gear and optional endless play.','Expeditions save at each choice and before each fight. Shards and permanent upgrades carry between runs.','Five new permanent upgrade paths expand drafts, starting gear and coin rewards. Every victory banks main-game coins, and regional bosses deliver bag items and first-clear bonuses.']},
  {version:'0.22.94',changes:['Poke Fight Tactics trainers now draft for trait breakpoints, evolutions and stronger boards, spend on levels and rerolls, and compete for a finite shared pool.','Finishing a Tactics match pays account coins for completed rounds as well as placement and items. Round coins scale with PC level and unlocked Arena speed.']},
  {version:'0.22.93',changes:['PC Pokémon can have 93 total IVs and up to 31 per stat. Every existing active Pokémon and stored copy above 93 gets a one-time random 93-point spread.','Speed above 210 now improves movement and skill recovery with diminishing returns. Move menus use category icons, and personality tooltips use plain text.']},
  {version:'0.22.92',changes:['Messages shows unread chat counts and includes a mute switch. Settings offers cloud save, load and re-sync.','Personalities now give 1–5 points to their favored stat per ten levels. PC stat labels are visible, move selectors fit on one line, and abilities show their Arena effects on hover.']},
@@ -10722,7 +10616,7 @@ function automaticBattleLoopActive() {
   (typeof repeatTimer!=='undefined' && repeatTimer!==null && repeatTimer!==undefined));
 }
 function canCheckGameVersion() {
- return typeof location!=='undefined' && !automaticBattleLoopActive() && !window.isArenaMarketBusy?.() && !document.querySelector('.trade-hub-dialog[open]') && !window.ArenaCampaign?.isBusy?.() && !window.isPvpVersionContext?.() && !window.hasActiveTacticsRun?.() &&
+ return typeof location!=='undefined' && !automaticBattleLoopActive() && !window.isArenaMarketBusy?.() && !document.querySelector('.trade-hub-dialog[open]') && !window.ArenaCampaign?.isBusy?.() && !window.isPvpVersionContext?.() && !window.hasActiveTacticsRun?.() && !(phase==='roguelit' && typeof rogueRun!=='undefined' && rogueRun) &&
   !['setup','battle','contract-battle'].includes(phase) && !document.querySelector('#trainer-card-dialog[open]') && !document.querySelector('.trainer-reward-dialog[open]') && !document.querySelector('.evolution-dialog[open]') &&
   (phase!=='online-battle' || window.isCompletedRaid?.());
 }

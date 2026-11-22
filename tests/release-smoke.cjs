@@ -87,7 +87,7 @@ for(const file of ['index.html','local-test/PokeArena_Local_Test.html']){
   if(script.trim())new vm.Script(script,{filename:file});
  }
 }
-for(const file of ['cloud.js','multiplayer.js','tactics.js'])new vm.Script(read(file),{filename:file});
+for(const file of ['cloud.js','multiplayer.js','tactics.js','roguelit.js'])new vm.Script(read(file),{filename:file});
 const data=html.split('\n').filter(line=>/^const (dex|dexStats|typeChart)\s*=/.test(line)).join('\n');
 class Node {
  constructor(tag,text,classes=''){this.tagName=tag;this.textContent=text;this.className=classes;this.children=[];this.style={setProperty(){}};this.dataset={};}
@@ -115,7 +115,8 @@ const context=vm.createContext({
 context.button=(label,onclick,disabled)=>Object.assign(element('button',label),{onclick,disabled});
 const source=read('tactics.js');
 const auditExports='globalThis.audit={drawPoolCard,roll,releaseShop,buy,field,teamSize,planAI,beginChoices,result,tacticsCoinRate,creditTacticsRound,makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
-new vm.Script(data+'\n'+source.replace(/\}\)\(\);\s*$/,auditExports+'})();'),{filename:'tactics.js'}).runInContext(context);
+const accountCoinRate=html.slice(html.indexOf('function arenaAccountCoinRate()'),html.indexOf('function maximumBattleSpeed()'));
+new vm.Script(data+'\n'+accountCoinRate+'\n'+source.replace(/\}\)\(\);\s*$/,auditExports+'})();'),{filename:'tactics.js'}).runInContext(context);
 const a=context.audit;
 byId('home-tactics').onclick();
 byId('tactics-content').children.find(node=>node.textContent==='Start match').onclick();
@@ -702,6 +703,6 @@ async function verifyRaidTransform(){
 }
 Promise.all([verifyPendingRecovery(),verifyLoanerGear(),verifyOpenArenaChase(),verifyMasterRaids(),verifyRaidTransform(),verifyRaidRetry()]).then(()=>{
  console.log('Manual Capture, full-bench fusion, pending-save recovery, and server loaner gear checks passed.');
- for(const file of ['shiny-pc.cjs','ability-adaptations.cjs','remaining-abilities.cjs','update-and-trade-client.cjs','arena-evolutions.cjs','arena-tactics.cjs','arena-maps.cjs','arena-move-effects.cjs','arena-move-audio.cjs','arena-status-effects.cjs','regional-progression-client.cjs','regional-contracts.cjs','roster-expansion.cjs','online-combat-turns.mjs'])
+ for(const file of ['roguelit.cjs','shiny-pc.cjs','ability-adaptations.cjs','remaining-abilities.cjs','update-and-trade-client.cjs','arena-evolutions.cjs','arena-tactics.cjs','arena-maps.cjs','arena-move-effects.cjs','arena-move-audio.cjs','arena-status-effects.cjs','regional-progression-client.cjs','regional-contracts.cjs','roster-expansion.cjs','online-combat-turns.mjs'])
   require('node:child_process').execFileSync(process.execPath,[path.join(__dirname,file)],{stdio:'inherit'});
 }).catch(error=>{console.error(error);process.exitCode=1;});

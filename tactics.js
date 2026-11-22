@@ -1176,15 +1176,7 @@
   [250,[['balls','Safari Ball',2]]],
  ];
  const placementRates=[1.25,1.16,1.08,1,.92,.85,.78,.70];
- function tacticsCoinRate(){
-  let level=1;
-  for(const mon of Object.values(wildProgress.owned ?? {}))level=Math.max(level,mon.level ?? 1);
-  for(const group of Object.values(wildProgress.copies ?? {}))
-   for(const copy of group)level=Math.max(level,copy.level ?? 1);
-  // Match the measured coin pace of 3v3 Trainer auto-repeat at levels 10, 50 and 100.
-  const baseRate=20+60*Math.min(level,50)+52*Math.max(0,Math.min(level,100)-50);
-  return Math.round(baseRate*(1+.7*(maximumBattleSpeed()-1))/10)*10;
- }
+ function tacticsCoinRate(){return arenaAccountCoinRate();}
  function creditTacticsRound(match,ticks){
   if(!ticks || openingRound(match.round) || carouselRound(match.round) || match.lastCreditedRound===match.round)return;
   const planning=augmentRound(match.round) || megaRound(match.round)?25:18;

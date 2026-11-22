@@ -1,3 +1,9 @@
+# Update to 0.22.95
+
+Extract the changed files over **0.22.94** and push them together. Both game pages load the new `roguelit.js` script. The existing backend deployment includes the matching Arena engine. This update uses the existing per-player cloud save entry and requires no database migration.
+
+Roguelit now visits Viridian Forest, Burned Tower and Sky Pillar. A win banks shards and saves the next reward choice. Returning to an unfinished battle restarts that encounter with the same team and opponents. Existing shards, best scores and upgrade ranks carry forward. Each win deposits account coins, regional bosses award main-game inventory items, and first clears add a one-time bonus. The checkpoint tracks a pending delivery until the wallet and bag have saved it. Five additional permanent upgrade paths expand expedition draft choices, starting gear and account coin payouts. After the twelfth fight, players can finish the expedition or keep their team for endless play.
+
 # Update to 0.22.94
 
 Extract these changed files over **0.22.93** and push them together. The hosted and local clients both load the new Tactics script. The existing version check waits for an active battle or auto-repeat session to finish. This update requires no database migration.
