@@ -202,17 +202,23 @@
     const lib=await engine(),save=readArenaSave();run={run_id:crypto.randomUUID(),definition:card,match:lib.campaignContractMatch(save.entries,card,crypto.randomUUID()),online:false};
    }
    const lib=await engine();if(run.version && run.version!==lib.campaignEngineVersion)throw Error('The battle server is updating. Retry when the client and server versions match.');
-   busy=false;window.ArenaTrainerCard.closeMissions();openMenu();selectedGym=selectedWild=selectedTrainer=null;selectedMasterGym=false;rogueRun=null;raidBattleBackdrop=null;
+   busy=false;playSavedBattle(run,lib);
+  }catch(error){busy=false;render();message(error.message);}
+ }
+ function playSavedBattle(run,lib){
+   window.ArenaTrainerCard.closeMissions();openMenu();selectedGym=selectedWild=selectedTrainer=null;selectedMasterGym=false;rogueRun=null;raidBattleBackdrop=null;
    activePlayer=activeEnemy=playerSwitch=enemySwitch=null;trainerPanels=null;recallSlot=null;lastDpsRender=-1;setArenaDimensions();
    const out=lib.simulateOnline(run.match,null,0,null,'host');battle={...run,lib,state:out.state,result:null,accumulator:0,done:false,visualActors:new Map(),soundTimeline:globalThis.ArenaMoveAudio?.createTimeline()};
    phase='contract-battle';showScreen('battle');byId('battle').classList.remove('is-mega-raid');
    byId('legendary-intro').hidden=byId('next-gym').hidden=true;byId('start').disabled=true;
-   byId('choices').replaceChildren(button('Abandon contract',()=>{battle=null;byId('reset').disabled=byId('basic-attacks').disabled=byId('speed').disabled=false;stopBattleMusic();openMenu();open('contracts');}));
+   byId('choices').replaceChildren(button(run.exhibition?'Return to gauntlet':'Abandon contract',()=>{
+    battle=null;byId('reset').disabled=byId('basic-attacks').disabled=byId('speed').disabled=false;stopBattleMusic();openMenu();
+    if(run.exhibition)run.exit();else open('contracts');
+   }));
    byId('reset').disabled=true;byId('basic-attacks').disabled=true;byId('speed').disabled=true;byId('speed').textContent='1× speed';
    updateAutoReserveToggle();updateNormalAttackToggle(true,()=>{});
-   byId('status').textContent=(run.definition.kind==='elite'?'Elite Trainer contract':'Regional bounty')+' · '+run.definition.region+' · Saved team and AI · 1×';
+   byId('status').textContent=run.label??((run.definition.kind==='elite'?'Elite Trainer contract':'Regional bounty')+' · '+run.definition.region+' · Saved team and AI · 1×');
    adoptBattle();startBattleMusic();
-  }catch(error){busy=false;render();message(error.message);}
  }
  function adoptBattle(){
   if(!battle)return;const data=battle.state,actors=battle.visualActors;
@@ -256,7 +262,10 @@
   if(!battle)return;visualTime+=dt;if(battle.done)return;
   battle.accumulator+=dt;const steps=Math.min(4,Math.floor(battle.accumulator*60));if(!steps)return;battle.accumulator-=steps/60;
   const out=battle.lib.simulateOnline(battle.match,battle.state,steps,null,'host');battle.state=out.state;battle.result=out.result;adoptBattle();
-  if(out.result)void finishContract();
+  if(out.result && battle.exhibition){
+   const run=battle;battle=null;byId('reset').disabled=byId('basic-attacks').disabled=byId('speed').disabled=false;
+   stopBattleMusic();openMenu();void run.complete(out);
+  } else if(out.result)void finishContract();
  }
  function render(){
   if(!panel)return;for(const [id,node] of tabButtons)node.setAttribute('aria-pressed',String(id===tab));panel.replaceChildren();
@@ -326,7 +335,7 @@
   if(phaseAllowed())return window.ArenaTrainerCard.openMissions(selected,notice);
  }
  function entrance(target){target.append(button('Regional missions',()=>open('regions')));}
- window.ArenaCampaign={isBusy:()=>busy,open,entrance,mountMissions,unmountMissions,renderPresets,capacity,savePreset,loadPreset,pickEncounter,family,reward,titles,appearance,refreshCosmetics,paintTrim,advanceBattle,
+ window.ArenaCampaign={playSavedBattle,isBusy:()=>busy,open,entrance,mountMissions,unmountMissions,renderPresets,capacity,savePreset,loadPreset,pickEncounter,family,reward,titles,appearance,refreshCosmetics,paintTrim,advanceBattle,
   regionComplete(region,master){showPassBattleNotice(region+(master?' Master collection complete!':' region complete!')+' Claim your rewards in Profile → Missions.');}};
  refreshCosmetics();
 })();

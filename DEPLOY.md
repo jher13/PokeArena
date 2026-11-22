@@ -1,3 +1,9 @@
+# Update to 0.22.100
+
+Extract the changed files at the repository root over 0.22.99, preserving the directories. Deploy the Pages client, the `20261122010000_champion_and_friend_challenges.sql` migration and the `arena-combat` function with the existing workflows. Gauntlet verification and saved-team challenges use the matching combat engine. Run `npm ci` and `npm test` to verify the release locally.
+
+This release adds the Road to Brock, gym practice, PC build goals, the weekly Champion Gauntlet, friend sparring, guild raid marks and flame vent calls in both Mega Charizard X raids. The gauntlet and guild week starts Monday at 00:00 UTC.
+
 # Update to 0.22.99
 
 Extract the changed files over **0.22.98**. Publish both pages, the Roguelit and Tactics scripts, version manifest and Supabase combat engine together using the existing workflows. The six new held items use the existing inventory and equipment save format.

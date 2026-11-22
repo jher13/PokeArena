@@ -47,7 +47,7 @@ const Image=class {};
 const requestAnimationFrame=()=>{};
 """
 source = "\n".join(lines)
-source = source.replace("Math.random()", "onlineRandom()")
+source = source.replace("Math.random()", "onlineRandom()").replace("globalThis.ArenaJourney", "window.ArenaJourney")
 # The server records combat cues. Only the browser loads the audio bank and plays it.
 start = source.index("function playSkillSound(")
 body = source.index("{", start)

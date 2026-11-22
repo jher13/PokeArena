@@ -1028,6 +1028,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 .rogue-claimed{font-size:.78rem;font-weight:600;color:#285f42}
 </style>
 <link rel="stylesheet" href="../social.css?v=0.22.92">
+<link rel="stylesheet" href="../arena-journey.css?v=0.22.100">
 <link rel="stylesheet" href="../trainer-card.css?v=0.22.92">
 <main><header id="arena-header"><div class="arena-brand"><h1>Pokemon Arena</h1><button id="battle-settings-button" type="button" aria-haspopup="dialog" aria-controls="battle-settings" hidden>Settings</button></div><span id="score"></span></header>
 <section id="account-gate" aria-label="Account access">
@@ -1097,6 +1098,7 @@ dialog:is(#home-dialog,#battle-settings,#shop-purchase,#bag-craft-results,.gambi
 
 
 <p id="campaign-player-title" class="campaign-player-title" hidden></p>
+<section id="journey-home" aria-label="Trainer goals" hidden></section>
 <div class="home-grid">
 <nav class="home-links" aria-label="Battle and team">
 <button id="home-dex" class="home-link"><span class="menu-pixel" aria-hidden="true"></span><span><strong>Pokédex</strong><small>Browse 1,025 Pokémon and regional forms</small></span></button>
@@ -2877,6 +2879,8 @@ badges,element('p',height/10+' m · '+weight/10+' kg'),
  if(owned){
   const equipment=element('div',null,'pokemon-equipment-controls');
   equipment.append(heldItemPicker(name),capsuleControl(name));
+  const buildGoal=globalThis.ArenaJourney?.goalControl(name);
+  if(buildGoal)body.append(buildGoal);
   body.append(equipment,vitaminControls(name,'evs',trainingSelection),vitaminControls(name,'ivs',trainingSelection),experienceCandyControls(name),battleAIControls(name));
  }
  body.append(element('h4','Moves','move-heading'));
@@ -5009,7 +5013,7 @@ function finishWildBattle(timedOut=false) {
  });
  const growth=awards.flatMap(award=>gainWildExperience(award.name,award.xp));
  growth.push(...evolveStoneHolders());
- wildResult={name:wildName,profile:structuredClone(enemy.originalProfile ?? enemy.profile),level:enemy.level,duration:clock,region:selectedWild.region,tier:selectedWild.tier,
+ wildResult={name:wildName,journeyRoute:selectedWild.journeyRoute===true,profile:structuredClone(enemy.originalProfile ?? enemy.profile),level:enemy.level,duration:clock,region:selectedWild.region,tier:selectedWild.tier,
   message:[finisher.name+' earned '+finisherXP+' XP.',rewardMessage,...allies.flatMap(actor=>actor.evRewards ?? []),...growth].filter(Boolean).join(' '),awards,timedOut,resolved:timedOut};
  captureMenu=false;
  difficultyMenu=false;
@@ -5135,7 +5139,7 @@ function renderWildResult() {
  difficulty.onclick=()=>{difficultyMenu=!difficultyMenu;captureMenu=false;runWildResultOptions();};
  const repeat=element('button','Next Encounter');
  repeat.onclick=repeatWildBattle;
- const home=element('button','Main menu');
+ const home=element('button',wildResult.journeyRoute?'Return to Road to Brock':'Main menu');
  home.onclick=openMenu;
  actions.append(capture,regions,difficulty,repeat,home);
  panel.append(actions);
@@ -6378,6 +6382,7 @@ function openMenu() {
  showScreen('home');
  window.ArenaCampaign?.refreshCosmetics();
  animateHomeSprite(lead);
+ globalThis.ArenaJourney?.home();
 }
 function openTeamBuilder() {
  phase='menu';
@@ -6390,6 +6395,7 @@ function openBattle(gym=null,wild=null,trainer=null,run=null,master=false) {
  setArenaDimensions();
  byId('battle').classList.remove('is-mega-raid');
  if(master && (!gym || !masterGymsUnlocked(gym)))return;
+ globalThis.ArenaJourney?.enterBattle();
  selectedMasterGym=master;
  rogueRun=run;
  cancelWildRepeat();
@@ -6430,6 +6436,7 @@ function renderCampaign(collection) {
   ' · Master Collection '+masterGymClears.size+' / '+gymTeams.length+' · '+(hasLuckyCoin()?'Lucky Coin active':'Lucky Coin at 68 Master badges');
  list.replaceChildren();
  window.ArenaCampaign?.entrance(list);
+ if(!collection)globalThis.ArenaJourney?.campaign(list);
  if(!collection && clearedGyms.length<gymTeams.length){
   const next=element('button','Continue Campaign · '+gymTeams[clearedGyms.length].name);
   next.type='button';
@@ -7074,6 +7081,7 @@ function updateBattleRosters() {
  }
 }
 function startSwitch(outgoing,incoming) {
+ if(outgoing?.friendly && outgoing.hp>0)globalThis.ArenaJourney?.swapped(incoming.name);
  if(outgoing) {
   if(activeAbility(outgoing)==='Zero to Hero')outgoing.heroReady=true;
   outgoing.illusionName=null;outgoing.puppetUntil=0;
@@ -7543,6 +7551,7 @@ function prepare() {
  const roster=rogueRun ? rogueRun.enemyRoster.map(member=>member.name) : selectedWild ? [selectedWild.name] : selectedTrainer?.roster.map(member=>member.name) ?? selectedGym?.roster ?? lineup;
  enemies=roster.map((name,index)=>unit(name,sendOut.enemy.x,sendOut.enemy.y,false,
   difficulty ? (gymAceSlot(selectedGym,index) ? difficulty.aceLevel : difficulty.level) : rogueRun?.enemyRoster[index].level ?? selectedTrainer?.roster[index].level ?? selectedWild?.level ?? 5,rogueRun?.enemyRoster[index] ?? null,index));
+ globalThis.ArenaJourney?.prepared();
  effects = [];
  pendingCasts=[];
  clock = 0;
@@ -7600,6 +7609,8 @@ function renderControls() {
   win:selectedTrainer ? 'Victory! You earned '+selectedTrainer.coins+' coins.' : selectedWild ? 'Wild Pokémon defeated!' : newBadge ? 'Victory! You earned the '+selectedGym.badge+'.'+speedUnlockMessage() : 'Victory! Your team defeated all six opponents.',
   loss:'Your team was knocked out. Return to the main menu to change your moves.'
  }[phase];
+ if(globalThis.ArenaJourney?.isPractice())byId('status').textContent='Practice · '+byId('status').textContent;
+ if(selectedTrainer?.journeyLesson && phase==='battle')byId('status').textContent='Practice a switch · Tap a healthy teammate on the left while your lead is still fighting.';
  if(phase==='win' && (selectedGym || selectedTrainer)) {
   const rewards=allies.flatMap(actor=>actor.evRewards ?? []);
   if(rewards.length)byId('status').textContent+=' '+rewards.join(' ');
@@ -7625,6 +7636,7 @@ function startBattle() {
  if(window.isArenaMarketBusy?.())return;
  if(phase!=='setup') return;
  phase='battle';
+ globalThis.ArenaJourney?.started(allies[selected]?.name);
  unlockSkillSound();
  startBattleMusic();
  if(selectedTrainer?.format>1) {
@@ -8498,6 +8510,7 @@ function calculateBattleDamage(actor,victim,power,multiplier,physical,element,mo
  defense*=abilityDefenseMultiplier(victim,defender)*advancedAbilityDefense(victim,actor,physicalDefense,element,move);
  const item=heldItems[effectiveHeldItem(actor)];
  if(item?.superEffective && element && arenaAbilityMatchup(actor,victim,move,element)>1)multiplier*=item.superEffective;
+ if(victim.side==='boss' && arenaMap?.flameVents?.exposed>clock)multiplier*=1.35;
  if((item?.element===element && element) || item?.category===(physical?'physical':'special')) multiplier*=item.power;
  if(element && arenaDefenseTypes(actor).includes(element)) multiplier*=ability==='Adaptability'?2:1.5;
  if(physical && ['Huge Power','Pure Power'].includes(ability)) multiplier*=1.5;
@@ -8825,6 +8838,7 @@ function applyEntryHazards(actor,opponent) {
  if(fraction>0) {
   const damage=Math.min(actor.hp,Math.max(1,Math.round(actor.max*fraction)));
   actor.hp-=damage;
+  if(actor.friendly)globalThis.ArenaJourney?.hazardHit(actor.name,Object.keys(hazards).join(' / '),damage);
   recordOpponentDamage(opponent,actor,damage);
  }
 }
@@ -9755,6 +9769,16 @@ function pivotMoveWeight(actor,target,move) {
    (actor.stages[moveRules(attack).category===2?2:4]>0 || actor.stages[6]>0))))return 1.8;
  return 1;
 }
+function channelFlameVent(actor,dt) {
+ const vents=arenaMap?.flameVents;
+ if(!vents?.until || !actor.friendly || actor.charge>0)return false;
+ const target=actor.raidSubstitute?vents.party:vents.calls[actor.side];
+ if(!['left','right'].includes(target) || vents[target]>=1)return false;
+ // A conscious Pokémon breaks a vent in two seconds. Substitutes follow the latest call.
+ vents[target]=Math.min(1,vents[target]+dt/2);
+ actor.moveLabel=target==='left'?'Left flame vent':'Right flame vent';actor.labelTime=.2;
+ return true;
+}
 function act(actor, opponents, dt) {
  actor.gait = null;
  if(actor.hp<=0) return;
@@ -9777,6 +9801,7 @@ function act(actor, opponents, dt) {
   return;
  }
  actor.charge=Math.max(0,actor.charge-dt);
+ if(channelFlameVent(actor,dt))return;
  applyResourceGambits(actor,opponents);
  if(actor.attack<=0 && dodgeSkill(actor,dt) || masterPressure===0 && escapeCrowding(actor,opponents,dt))return;
  if(arenaConfused(actor))opponents=[...opponents,...activeTeammates(actor).filter(member=>member!==actor)];
@@ -10719,7 +10744,7 @@ function advance(dt,realDt=dt) {
  if(sides.some(side=>!side.length)) lastDamageClock+=dt;
  advanceCombat(dt,realDt,sides);
  if(selectedGym)for(const actor of allies)if(actor.hp<=0)actor.faintedThisBattle=true;
- awardKnockoutEVs();
+ if(!globalThis.ArenaJourney?.isPractice())awardKnockoutEVs();
  refreshBerriesAfterKnockout();
  const playerReserve=allies.find(actor=>actor.hp>0);
  const enemyReserve=enemies.find(actor=>actor.hp>0);
@@ -10731,6 +10756,7 @@ function advance(dt,realDt=dt) {
  if(!playerReserve || !enemyReserve || timedOut) {
   const result=timedOut && requiresClear?-1:timedOut?compareTeamHP(allies,enemies):Number(Boolean(playerReserve))-Number(Boolean(enemyReserve));
   phase=result>0?'win':result<0?'loss':'draw';
+  if(globalThis.ArenaJourney?.finish(result,Boolean(timedOut)))return;
   if(!rogueRun && (selectedWild || selectedTrainer || selectedGym))window.ArenaTrainerCard?.recordBattle(enemies,Boolean(selectedTrainer && result>0),clock,Boolean(timedOut));
   recordArenaEvolutionBattle(result>0);
   if(rogueRun) {window.ArenaRoguelit.finish(phase==='win');return;}
@@ -11185,6 +11211,7 @@ function paint() {
   ctx.fillStyle='#0c13223b';ctx.fillRect(0,0,arenaWidth,arenaHeight);
  }
  window.ArenaCampaign?.paintTrim(ctx,arenaWidth,arenaHeight);
+ if(phase==='online-battle' && arenaMap?.flameVents?.until)globalThis.ArenaJourney?.paintVents(ctx,arenaWidth,arenaHeight,arenaMap.flameVents);
  if (phase === 'setup') {
   const {x,y} = sendOut.player;
   ctx.beginPath(); ctx.arc(x,y,30,0,2*Math.PI);
@@ -11912,6 +11939,7 @@ function raidResidualDamage(actor,amount) {
  return actor.masterRaidPhase?Math.min(amount,actor.max*.0065):amount;
 }
 const updateLogEntries=[
+ {version:'0.22.100',changes:['Follow the Road to Brock, practice a lost gym battle and pin build goals in PC.','Face three weekly Champion opponents with a locked team. Prestige clears earn a trainer-card laurel.','Direct your Pokémon against Charizard’s flame vents, challenge a friend’s saved defense and earn a guild raid banner.']},
  {version:'0.22.99',changes:['Multi-hit cooldowns now account for the full attack. Heavy moves such as Overheat lower the user’s stats once after connecting. Binding moves and low-HP finishers gain distinct roles.','Sleep lasts at most five seconds. Screens, contact shields, Leech Seed and Octolock have gaps between uses. Perish Song, Destiny Bond and Pain Split now respect raid bosses.','Physical power abilities now reward different builds. Water Bubble, Poison Heal, Rough Skin and Iron Barbs have lower peaks. Weak Armor, Iron Fist, Healer and the four starter abilities gained stronger uses.','Expert Belt, Big Root, Rocky Helmet, Covert Cloak, Light Clay and Scope Lens are available in the Item Shop, PvP loaner gear and Roguelit expeditions.','PFT recoil scales with damage dealt. Spark can refund its caster, and a weaker shield can no longer refresh a stronger shield.']},
  {version:'0.22.98',changes:['Roguelit uses the wallet coin icon for payouts, shows each recruit’s level, types and moves on separate lines, and displays expedition team sprites on a clear background.','Poke Fight Tactics now visits a Pokémon League stadium and a Poké Ball draft plaza.']},
  {version:'0.22.97',changes:['Roguelit now shows animated Pokémon, a shard currency icon and separate rows for supplies, boss rewards and route details.','Tactics carousels arrange nine mystery balls around an altar. Each displays its tier and held item until you choose.','Equip Tactics items on your Pokémon during a fight, including from the bench or by tapping an inventory item.']},
@@ -12120,7 +12148,7 @@ function automaticBattleLoopActive() {
   (typeof repeatTimer!=='undefined' && repeatTimer!==null && repeatTimer!==undefined));
 }
 function canCheckGameVersion() {
- return typeof location!=='undefined' && !automaticBattleLoopActive() && !window.isArenaMarketBusy?.() && !document.querySelector('.trade-hub-dialog[open]') && !window.ArenaCampaign?.isBusy?.() && !window.isPvpVersionContext?.() && !window.hasActiveTacticsRun?.() && !(phase==='roguelit' && typeof rogueRun!=='undefined' && rogueRun) &&
+ return typeof location!=='undefined' && !automaticBattleLoopActive() && !window.isArenaMarketBusy?.() && !document.querySelector('.trade-hub-dialog[open]') && !window.ArenaCampaign?.isBusy?.() && !window.ArenaLeague?.isBusy?.() && !window.isPvpVersionContext?.() && !window.hasActiveTacticsRun?.() && !(phase==='roguelit' && typeof rogueRun!=='undefined' && rogueRun) &&
   !['setup','battle','contract-battle'].includes(phase) && !document.querySelector('#trainer-card-dialog[open]') && !document.querySelector('.trainer-reward-dialog[open]') && !document.querySelector('.evolution-dialog[open]') &&
   (phase!=='online-battle' || window.isCompletedRaid?.());
 }
@@ -12249,9 +12277,9 @@ phase='login';
 showScreen('login');
 byId('login').hidden=true;
 requestAnimationFrame(frame);
-</script><p id="pass-battle-notice" role="status" hidden></p><p id="arena-sync-error" role="alert" hidden></p><script src="../cloud.js?v=0.22.92"></script><script>
+</script><p id="pass-battle-notice" role="status" hidden></p><p id="arena-sync-error" role="alert" hidden></p><script src="../cloud.js?v=0.22.100"></script><script>
 byId('home-events').onclick=()=>{phase='events';showScreen('events');selectedPassReward=null;renderBattlePass();};
 byId('events-back').onclick=openMenu;
 </script>
-<script src="../roguelit.js?v=0.22.99"></script><script src="../tactics.js?v=0.22.99"></script><script src="../multiplayer.js?v=0.22.92"></script>
-<script src="../trade-hub.js?v=0.22.93"></script><script src="../campaign-progression.js?v=0.22.82"></script><script src="../trainer-card.js?v=0.22.91"></script><script src="../social.js?v=0.22.92"></script></html>
+<script src="../roguelit.js?v=0.22.99"></script><script src="../tactics.js?v=0.22.99"></script><script src="../multiplayer.js?v=0.22.100"></script>
+<script src="../trade-hub.js?v=0.22.93"></script><script src="../campaign-progression.js?v=0.22.100"></script><script src="../trainer-card.js?v=0.22.100"></script><script src="../social.js?v=0.22.92"></script><script src="../arena-journey.js?v=0.22.100"></script><script src="../arena-league.js?v=0.22.100"></script></html>

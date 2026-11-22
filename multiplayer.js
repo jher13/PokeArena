@@ -377,6 +377,7 @@
   if(data.sounds?.length)soundTimeline?.collect(data.sounds,data.clock);
   const boss=data.actors.find(actor=>actor.side==='boss' && actor.raidForm?.startsWith('Mega '));
   byId('raid-boss-hud').hidden=!boss;
+  globalThis.ArenaJourney?.raidHUD(data,active.side,send);
   if(boss){
    const phaseName=['','Adapting','Meteor storm','BERSERK'][boss.masterRaidPhase];
    byId('raid-boss-name').textContent=boss.raidForm+(phaseName?' · Phase '+boss.masterRaidPhase+' · '+phaseName:'');
@@ -1328,6 +1329,7 @@
   byId('guild-directory-content').replaceChildren(
    element('p',data.membership?'Your guild · '+data.membership:'You have no guild.'),
    actions,feedback,...directorySection('Guild directory',data.guilds,g=>g.members+' members · '+g.xp+' XP',guildIcon));
+  if(data.membership){const board=element('div');byId('guild-directory-content').prepend(board);void window.ArenaLeague?.guildBoard(board);}
  }
  async function boards() {
   const data=await rpc('leaderboards');
@@ -1381,6 +1383,7 @@
     active=await rpc('join',{code:invite.code});showMatch(isCoop(invite.mode)?'Co-op':'PvP');
    })),
    ...(!data.friends.length&&!data.invites.length&&!data.trades?.length&&!direct?.length?[element('p','No new notifications.')]:[]));
+  const spars=element('div');byId('home-dialog-content').append(spars);void window.ArenaLeague?.sparInbox(spars);
  }
  byId('toolbar-messages').onclick=()=>{
   if(!cloudAccount){show('Messages',element('p','Sign in to chat with other trainers.'));return;}
@@ -1388,6 +1391,7 @@
  };
  byId('toolbar-notices').onclick=()=>open('Notifications',notifications);
  setInterval(async()=>{
+  void globalThis.ArenaLeague?.resumeFriendChallenges();
   if(phase!=='home' || !cloudAccount || cloudAccount===leavingAccount)return;
   window.ArenaSocial?.refreshUnread();
   try {

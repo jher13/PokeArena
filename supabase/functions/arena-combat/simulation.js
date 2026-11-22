@@ -53,7 +53,7 @@ const raidFormRoster={
  coop_gigantamax:['Charizard','Gengar','Lapras','Snorlax','Machamp','Corviknight'],
 };
 function initializeOnline(match) {
- const levelOverride=match.mode==='free_fight'?100:undefined;
+ const levelOverride=['free_fight','friend_spar'].includes(match.mode)?100:undefined;
  const pvp=['ranked','unranked','free_fight'].includes(match.mode);
  const host=(match.host_pick ?? []).map((name,i)=>onlineActor(name,match.host_entries,'host',i,undefined,levelOverride,null,null,pvp?match.host_pick:null));
  const guest=(match.guest_pick ?? []).map((name,i)=>onlineActor(name,match.guest_entries,'guest',i,undefined,levelOverride,null,null,pvp?match.guest_pick:null,match.mode!=='campaign'));
@@ -61,7 +61,10 @@ function initializeOnline(match) {
  const raidTeam=match.raid_seats?.flatMap((seat,index)=>{
   if(!seat?.pokemon)return [];
   const side=seat.substitute || seat.uid===match.host?'host':'raid:'+seat.uid;
-  return [onlineActor(seat.pokemon,seat.entries,side,index,undefined,undefined,null,seat.copy_data)];
+  const actor=onlineActor(seat.pokemon,seat.entries,side,index,undefined,undefined,null,seat.copy_data);
+  actor.raidSubstitute=Boolean(seat.substitute);
+  if(!actor.raidSubstitute && seat.name)actor.raidTrainer=seat.name;
+  return [actor];
  });
  const fighters=raidTeam ?? [...host,...guest];
  const bossLevel=Math.min(100,Math.ceil(Math.max(...fighters.map(a=>a.level))*1.1)+2);
@@ -108,6 +111,7 @@ function initializeOnline(match) {
  effects=[];pendingCasts=[];arenaSkillFields=[];arenaFieldSequence=0;onlineSounds=[];onlineRecalls={};
  onlineRandomState=Number.parseInt(match.id.slice(0,8),16)>>>0;
  arenaMap=raid?megaRaidArena(raid):randomArenaMap();
+ if(raid?.name==='Mega Charizard X')arenaMap.flameVents={cycle:0,next:5,until:0,exposed:0,left:0,right:0,calls:{},party:'boss'};
  if(raid?.master)Object.assign(arenaMap,{master:true,phase:1,phaseStarted:0,meteors:[],nextMeteor:0});
 }
 const combatBalanceRevision=1;
@@ -215,6 +219,30 @@ function updateMasterRaid(sides) {
  }
  arenaMap.meteors=pending;
 }
+function updateFlameVents(fighters) {
+ const v=arenaMap?.flameVents,boss=enemies[0];
+ if(!v || !boss || boss.hp<=0)return;
+ if(v.until && clock>=v.until){
+  const closed=Number(v.left>=1)+Number(v.right>=1);
+  v.until=0;v.next=clock+16;
+  if(closed===2)v.exposed=clock+5;
+  else for(const actor of fighters.filter(member=>member.hp>0)){
+   const damage=Math.min(actor.hp,defendDamage(actor,Math.ceil(actor.max*(closed===1?.07:.18)),clock));
+   actor.hp-=damage;recordOpponentDamage(boss,actor,damage);
+   effects.push({tx:actor.x,ty:actor.y,damage,multiplier:1,color:'#ff854d',impactOnly:true,life:.58});
+  }
+  v.outcome=closed;
+ } else if(!v.until && clock>=v.next) {
+  Object.assign(v,{cycle:v.cycle+1,until:clock+6,left:0,right:0,calls:{},party:'boss',outcome:null});
+ }
+}
+function assignRaidFocus(command,side) {
+ const v=arenaMap?.flameVents,request=command.raidFocus;
+ if(!v?.until || v.until<=clock || request.cycle!==v.cycle || !['left','right','boss'].includes(request.target))
+  throw Error('This vent call has ended.');
+ if(!allies.some(actor=>actor.side===side && !actor.raidSubstitute && actor.hp>0))throw Error('Your Pokémon must be in the fight.');
+ v.calls[side]=request.target;v.party=request.target;
+}
 function onlineFrame(dt,raid=false) {
  refreshBerriesAfterKnockout();
  for(const slots of trainerFields)for(const slot of slots) {
@@ -233,6 +261,7 @@ function onlineFrame(dt,raid=false) {
  const sides=combatSides();
  if(sides.some(side=>!side.length))lastDamageClock+=dt;
  updateMasterRaid(sides);
+ updateFlameVents(sides[0]);
  advanceCombat(dt,dt,sides);
  refreshBerriesAfterKnockout();
  // Co-op guardians replace themselves. PvP players choose their reserves.
@@ -256,7 +285,14 @@ function onlineFrame(dt,raid=false) {
 }
 export function simulateOnline(match,state,steps,command,side) {
  onlineSounds=[];
- if(state)loadOnlineState(state);else initializeOnline(match);
+ if(state)loadOnlineState(state);else {
+  if(match.journey)onlineRandomState=Number.parseInt(match.id.slice(0,8),16)>>>0;
+  initializeOnline(match);
+  if(match.journeyHP)allies.forEach((actor,i)=>{
+   actor.hp=clamp(match.journeyHP[i]??actor.max,0,actor.max);
+   if(actor.hp===0){const slot=trainerFields[0][i];if(slot){slot.transition=null;slot.actor=null;}}
+  });
+ }
  if(typeof command?.normalAttacks==='boolean') {
   for(const actor of [...allies,...enemies])if(actor.side===side)actor.normalAttacksEnabled=command.normalAttacks;
  } else if(command?.ai) {
@@ -271,9 +307,10 @@ export function simulateOnline(match,state,steps,command,side) {
    throw Error('Choose a revealed opponent.');
   actor.ai=normalizeBattleAI({...actor.ai,...(position!==undefined?{position}:{}),...(style!==undefined?{style}:{})});
   if(target!==undefined)actor.manualTarget=target;
- } else if(command)onlineSend(side,command.incoming,command.slot);
+ } else if(command && !command.raidFocus)onlineSend(side,command.incoming,command.slot);
  let result=null;
  for(let i=0;i<steps && !result;i++)result=onlineFrame(1/60,isCoopMode(match.mode));
+ if(command?.raidFocus && !result)assignRaidFocus(command,side);
  if(isCoopMode(match.mode) && result && result!=='draw')result=result==='host'?'coop_win':'coop_loss';
  return {state:saveOnlineState(),result};
 }
@@ -294,7 +331,7 @@ export function onlineView(state,side,mode) {
   const {name,type,singleType,copiedSecondary,addedType,side,onlineId,hp,max,level,ability,abilitySuppressed,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
    hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil,dashRecharge,defendRecharge,defendUntil,raidForm,raidSecondary,shiny,masterRaidPhase,abilityStance,abilityForm,abilityElapsed,abilityNotice,abilityNoticeUntil,disguiseBroken,disguiseBrokenAt,illusionName,substituteHP,iceFaceBroken,puppetUntil}=actor;
-  return {name,type,singleType,copiedSecondary,addedType,side,onlineId,hp,max,level:mode==='free_fight'?100:level,ability,abilitySuppressed,heldItem,moves,moveCooldowns,moveTimers,x,y,
+  return {name,type,singleType,copiedSecondary,addedType,side,onlineId,...(actor.raidSubstitute?{raidSubstitute:true}:actor.raidTrainer?{raidTrainer:actor.raidTrainer}:{}),hp,max,level:mode==='free_fight'?100:level,ability,abilitySuppressed,heldItem,moves,moveCooldowns,moveTimers,x,y,
    friendly,direction,facing,gait,motionTicks,stride,attack,attackStyle,attackSpan,attackX,attackY,
    hit,hitSpan,hitX,hitY,moveLabel,labelTime,fieldTime,ailment,stages,exhaustion,exhaustedUntil,dashRecharge,defendRecharge,defendUntil,raidForm,raidSecondary,shiny:shiny ?? Boolean(actor.profile?.shiny),masterRaidPhase,abilityStance,abilityForm,abilityElapsed,abilityNotice,abilityNoticeUntil,disguiseBroken,disguiseBrokenAt,illusionName,substituteHP,iceFaceBroken,puppetUntil};
  });
@@ -319,8 +356,9 @@ export function campaignContractMatch(entries,definition,runId) {
  if(definition.kind==='elite' && savedTeam.length!==6)throw Error('Elite contracts require a full six-Pokémon team.');
  const count=Math.min(definition.kind==='elite'?6:3,savedTeam.length);
  const host=savedTeam.slice(0,count);if(!host.length || host.some(name=>!isAvailablePokemon(name) || !progress.owned?.[name]))throw Error('Save a healthy PC team first.');
- const gym=regional.at(-1),elite=definition.kind==='elite';
- const rotation=(definition.seed>>>0)%gym.roster.length;
+ const gym=definition.gym?regional.find(entry=>entry.id===definition.gym):regional.at(-1),elite=definition.kind==='elite';
+ if(!gym)throw Error('Unknown weekly opponent.');
+ const rotation=definition.gym?0:(definition.seed>>>0)%gym.roster.length;
  const foes=Array.from({length:count},(_,i)=>gym.roster[(i+rotation)%gym.roster.length]);
  const average=host.reduce((sum,name)=>sum+progress.owned[name].level,0)/host.length;
  const level=clamp(Math.round(elite?Math.max(80,average):average-3),1,100);
@@ -329,7 +367,7 @@ export function campaignContractMatch(entries,definition,runId) {
  foes.forEach(name=>{
   const slot=gym.roster.indexOf(name),physical=dexStats[dex[name][0]-1][1]>=dexStats[dex[name][0]-1][5];
   const profile={pid:physical?3:15,ivs:Array(6).fill(elite?31:18),evs:elite?(physical?[100,252,0,158,0,0]:[100,0,0,158,0,252]):Array(6).fill(0)};
-  npcProfiles[dex[name][0]]=profile;npcProgress.owned[name]={level,xp:0};
+  npcProfiles[dex[name][0]]=profile;npcProgress.owned[name]={level:definition.prestige?100:level,xp:0};
   npcMoves[name]=gymMoves(name,gym,slot);npcProgress.ai[name]={style:elite?'Aggressive':'Balanced',position:'Auto',target:elite?'Type weakness':'Nearest'};
   const item=elite?(gymHeldItem(name)??'Leftovers'):null;
   if(item){npcProgress.held[name]=item;npcProgress.items[item]=(npcProgress.items[item]??0)+1;}
@@ -338,4 +376,33 @@ export function campaignContractMatch(entries,definition,runId) {
  return {id:seed+'-'+runId.slice(9),mode:'campaign',format:count,host_pick:host,guest_pick:foes,
   host_entries:entries,guest_entries:{'pokemon-arena-wild-progress':JSON.stringify(npcProgress),
    'pokemon-arena-profiles':JSON.stringify(npcProfiles),'pokemon-arena-moves':JSON.stringify(npcMoves)}};
+}
+
+export function championCourse(week) {
+ let seed=2166136261;
+ for(const ch of week)seed=Math.imul(seed^ch.charCodeAt(0),16777619)>>>0;
+ const options=[...gymTeams],course=[];
+ for(let i=0;i<3;i++){
+  seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+  const gym=options.splice(seed%options.length,1)[0];
+  course.push({kind:'elite',gym:gym.id,name:gym.name,region:gym.region,roster:gym.roster,seed});
+ }
+ return course;
+}
+export function journeyMatch(run) {
+ if(run.kind==='spar'){
+  return {id:run.id,journey:true,mode:'friend_spar',format:6,host_entries:run.entries,guest_entries:run.defense,
+   host_pick:JSON.parse(run.entries['pokemon-arena-team']),guest_pick:JSON.parse(run.defense['pokemon-arena-team'])};
+ }
+ const opponent=championCourse(run.week)[run.stage];
+ if(!opponent)throw Error('This gauntlet is complete.');
+ const match=campaignContractMatch(run.entries,{...opponent,prestige:run.prestige},run.id);
+ if(run.prestige){
+  const key='pokemon-arena-wild-progress',progress=JSON.parse(match.guest_entries[key]);
+  // Master gym tactics and pinned gear shape the prestige fights.
+  for(const name of match.guest_pick)progress.ai[name]={style:'Aggressive',position:gymRole(name).tank?'Frontline':'Backline',target:'Type weakness'};
+  match.guest_entries[key]=JSON.stringify(progress);
+ }
+ match.journey=true;match.journeyHP=run.hp;
+ return match;
 }

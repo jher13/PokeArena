@@ -444,7 +444,7 @@ async function waitForArenaSave(){
 }
 async function marketRpc(action,args={},service='market') {
  if(!cloudAccount)throw Error('Sign in to use the Trading Hub.');
- const {data,error}=await (await cloudClient()).rpc(service==='direct'?'arena_direct_trade':service==='campaign'?'arena_campaign':'arena_market',{action,args});
+ const {data,error}=await (await cloudClient()).rpc(service==='journey'?'arena_journey':service==='direct'?'arena_direct_trade':service==='campaign'?'arena_campaign':'arena_market',{action,args});
  if(error){error.marketRpcRejected=Boolean(error.code);throw error;}
  if(data?.status && data.status!=='ok'){
   const failure=new Error(data.message ?? 'Your PC changed. Sync or reload before trading.');failure.marketStatus=data.status;throw failure;
@@ -467,7 +467,7 @@ async function sendMarketOperation(operation) {
 window.arenaMarketRecover=async()=>{
  const operation=pendingMarketOperation();if(!operation)return;
  if(arenaMarketWorking)throw Error('A Hub transaction is still syncing.');
- const allowed=operation.service==='campaign'?['home','menu','gyms','collection','wild-regions','trainer-regions'].includes(phase):phase==='home';
+ const allowed=['campaign','journey'].includes(operation.service)?['home','menu','gyms','collection','wild-regions','trainer-regions'].includes(phase):phase==='home';
  if(!allowed || automaticBattleLoopActive())throw Error('Return to the main menu to sync this transaction.');
  arenaMarketWorking=true;document.body.setAttribute('aria-busy','true');
  try {
@@ -479,7 +479,7 @@ window.arenaMarketRecover=async()=>{
 };
 window.arenaMarketPrepare=async(service='market')=>{
  if(!cloudAccount)throw Error('Sign in to use the Trading Hub.');
- if((service==='campaign'?!['home','menu','gyms','collection','wild-regions','trainer-regions'].includes(phase):phase!=='home') || automaticBattleLoopActive())throw Error(service==='campaign'?'Finish your battle before opening regional rewards.':'Return to the main menu before trading.');
+ if((['campaign','journey'].includes(service)?!['home','menu','gyms','collection','wild-regions','trainer-regions'].includes(phase):phase!=='home') || automaticBattleLoopActive())throw Error(service==='campaign'?'Finish your battle before opening regional rewards.':'Return to the main menu before trading.');
  await window.arenaMarketRecover();await waitForArenaSave();await flushArenaSave();
  if(dirty)throw Error('Sync your latest PC changes before trading.');
 };
@@ -537,6 +537,20 @@ window.arenaMarketNotifications=async()=>{
 };
 window.arenaMarketMarkRead=ids=>marketRpc('read_notices',{ids});
 
+window.arenaJourneyBattle=async(run_id,journey,stage)=>{
+ const client=await cloudClient();
+ for(let i=0;i<65;i++){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  try{
+   const {data,error}=await client.functions.invoke('arena-combat',{body:{journey,run_id,stage},signal:controller.signal});
+   if(controller.signal.aborted)throw Error('Challenge verification timed out. Resume from the gauntlet or your notifications.');
+   if(error){const detail=await error.context?.json?.().catch(()=>null);throw Error(detail?.error??error.message);}
+   if(data?.error)throw Error(data.error);
+   if(!data?.pending)return data;
+  }finally{clearTimeout(timer);}
+ }
+ throw Error('Verification is still running. Open the challenge to resume.');
+};
 window.arenaCampaignMutate=(action,args={})=>window.arenaMarketMutate(action,args,'campaign');
 window.arenaCampaignRead=async(action='status',args={})=>{
  await waitForArenaSave();if(dirty && !saving)await flushArenaSave();

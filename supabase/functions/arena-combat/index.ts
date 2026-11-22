@@ -1,4 +1,4 @@
-import { simulateOnline, onlineView } from "./engine.js";
+import { simulateOnline, onlineView, journeyMatch, campaignEngineVersion } from "./engine.js";
 import { prepareCampaignContract, advanceCampaignVerification } from "./campaign.js";
 import { battleUser, uuid } from "./auth.ts";
 import deployment from "./region.json" with { type: "json" };
@@ -25,6 +25,18 @@ async function db(functionName: string, args: object) {
   });
   if (!response.ok) throw Error(functionName + " failed with HTTP " + response.status);
   return await response.json();
+}
+
+// A submitted spar can finish after the challenger closes the tab. Every slice is resumable.
+async function finishSparInBackground(playerId:string,runId:string) {
+  for(let slice=0;slice<40;slice++){
+    const run=await db('arena_journey_read',{player_id:playerId,run_id:runId});
+    if(!run || run.kind!=='spar' || run.status!=='playing')return;
+    const next=simulateOnline(journeyMatch(run),run.state,480,null,'host');
+    const saved=await db('arena_journey_checkpoint',{run_id:run.id,expected:run.revision,new_state:next.result?null:next.state,winner:next.result,health:null});
+    if(saved && next.result)return;
+    if(!saved)return;
+  }
 }
 
 type BattlePacket = { turn: number; result: string | null; battle: ReturnType<typeof onlineView>; serverMs?: number };
@@ -73,9 +85,29 @@ Deno.serve(async request => {
     if (!authorization?.startsWith("Bearer ")) return reply({ error: "Sign in to battle." }, 401);
     const body = await request.json();
     const authStart = performance.now();
-    const user = await battleUser(authorization, Boolean(body?.campaign));
+    const user = await battleUser(authorization, Boolean(body?.campaign || body?.journey));
     timings.auth = performance.now() - authStart;
     if (!user) return reply({ error: "Sign in to battle." }, 401);
+    if (body?.journey) {
+      if (!['prepare','verify'].includes(body.journey) || typeof body.run_id !== 'string' || !uuid.test(body.run_id))
+        return reply({error:'Invalid challenge.'},400);
+      const run = await db('arena_journey_read',{player_id:user.id,run_id:body.run_id});
+      if (!run) return reply({error:'This challenge is unavailable.'},404);
+      if (body.journey === 'prepare') {
+        if (run.kind !== 'champion' || run.status !== 'playing') return reply({error:'Choose a weekly battle first.'},409);
+        return reply({match:journeyMatch(run),version:campaignEngineVersion});
+      }
+      if (run.status !== 'playing') return reply({status:run.status,stage:run.stage});
+      if (run.kind === 'champion' && body.stage !== run.stage) return reply({status:run.status,stage:run.stage});
+      const next=simulateOnline(journeyMatch(run),run.state,480,null,'host');
+      const winner=next.result==='host' && run.kind==='champion' && next.state.enemies.some((p:{hp:number})=>p.hp>0)?'guest':next.result;
+      const committed=await db('arena_journey_checkpoint',{run_id:run.id,expected:run.revision,
+        new_state:winner?null:next.state,winner,health:winner?next.state.allies.map((p:{hp:number})=>p.hp):null});
+      if(run.kind==='spar' && committed && !winner && run.revision===0 && typeof EdgeRuntime!=='undefined'){
+        EdgeRuntime.waitUntil(finishSparInBackground(user.id,run.id).catch(()=>{}));
+      }
+      return reply(committed && winner?{complete:true,winner}:{pending:true});
+    }
     if (body?.campaign) {
       if (!['prepare','verify'].includes(body.campaign) || typeof body.run_id!=='string' || !uuid.test(body.run_id)) return reply({ error: 'Invalid contract.' }, 400);
       const run = await db('arena_campaign_read', { player_id: user.id, run_id: body.run_id });
@@ -89,7 +121,9 @@ Deno.serve(async request => {
     if (typeof body?.id !== "string" || !uuid.test(body.id)) return reply({ error: "Invalid match." }, 400);
     id = body.id;
     const command = body.command;
-    if (command && !command.ai && typeof command.normalAttacks !== "boolean" && (!/^(host|guest):[0-5]$/.test(command.incoming) ||
+    if (command?.raidFocus && (Object.keys(command).length !== 1 || !Number.isInteger(command.raidFocus.cycle) ||
+      !['left','right','boss'].includes(command.raidFocus.target))) return reply({ error: 'Invalid vent call.' }, 400);
+    if (command && !command.raidFocus && !command.ai && typeof command.normalAttacks !== "boolean" && (!/^(host|guest):[0-5]$/.test(command.incoming) ||
       !Number.isInteger(command.slot) || command.slot < 0 || command.slot > 5)) return reply({ error: "Invalid send-out." }, 400);
 
     for (let attempt = 0; attempt < 5; attempt++) {

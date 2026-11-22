@@ -317,7 +317,11 @@
   }
   else if(activeTab==='Achievements')body.append(rankStrip(rank),...achievements(titles));
   else{
-   body.append(hero(rank,titles));if(mine)body.append(editControls(titles));
+   body.append(hero(rank,titles));if(mine){
+    const edit=editControls(titles);body.append(edit);const controls=edit.querySelector('.tc-controls');
+    if(window.ArenaLeague){void window.ArenaLeague.mineEmblems(body.querySelector('.tc-hero'),controls);
+     void window.ArenaLeague.defenseControls(controls);}
+   }
    body.append(rankStrip(rank),featureCards(),summaries(),shinyGallery(),raidSection(new Set([...(model.raidClears??[]),...(model.online?.raids??[])])),
     regionsSection(model),node('small','¹ Trainer wins, Arena knockouts and fastest Trainer wins are recorded from v0.22.70.','tc-note'));
   }
@@ -348,10 +352,14 @@
   try{
    const {data,error}=await (await cloudClient()).rpc('arena_trainer_card',{trainer_name:trainerName});
    if(token!==revision||!root.open)return;if(error)throw error;
-   if(!mine){if(!data?.profile){body.replaceChildren(node('p','This trainer is offline or their profile is unavailable.'));return;}model=data.profile;}
+   if(!mine){if(!data?.profile){
+    body.replaceChildren(node('p','This trainer’s detailed profile is unavailable.'));
+    if(window.ArenaLeague){const host=node('div');body.append(host);void window.ArenaLeague.profileActions(host,trainerName,()=>root.close());}return;
+   }model=data.profile;}
    model.online=data?.online??null;
    if(!mine){
     render();
+    if(window.ArenaLeague){const host=node('div');body.prepend(host);void window.ArenaLeague.profileActions(host,trainerName,()=>root.close());}
     const available=await window.ArenaSocial?.canTrade(trainerName).catch(()=>false);
     if(token===revision && root.open)tradeButton.hidden=!available;
    }else{
