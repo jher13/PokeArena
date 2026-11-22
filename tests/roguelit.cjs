@@ -5,6 +5,7 @@ const vm=require('node:vm');
 const root=path.join(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 let cacheVersion;
+const artVersions=new Map();
 for(const [file,prefix] of [['index.html','./'],['local-test/PokeArena_Local_Test.html','../']]){
  const html=read(file);
  const script=html.match(/<script src="([^"]*?)roguelit\.js\?v=(\d+\.\d+\.\d+)"/);
@@ -12,7 +13,10 @@ for(const [file,prefix] of [['index.html','./'],['local-test/PokeArena_Local_Tes
  assert(html.includes("window.ArenaRoguelit.finish(phase==='win')"));
  assert(html.includes('id="toolbar-coin-display" class="home-pill" title="Coins"><svg class="currency-pixel"'));
  for(const asset of ['tactics-arena.webp','tactics-carousel-altar.webp']){
-  assert(html.includes(prefix+'assets/'+asset+'?v='+cacheVersion),'Current PFT art in '+file);
+  const version=html.split(prefix+'assets/'+asset+'?v=')[1]?.match(/^\d+\.\d+\.\d+/)?.[0];
+  assert(version,'Versioned PFT art in '+file);
+  if(artVersions.has(asset))assert.equal(version,artVersions.get(asset),'Hosted and local PFT art match');
+  artVersions.set(asset,version);
  }
 }
 const engine=read('supabase/functions/arena-combat/engine.js').replace(/^export /gm,'');

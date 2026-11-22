@@ -155,7 +155,12 @@ function checkOnlinePlayback(initial,cleared,id,mode,side,mirror) {
  for(const condition of [1,2,3,4,5,6]){
   const run=engine.statusCase(condition);assert(run.applied);
   assert.equal(actor(run,'initial').ailment,condition);assert.equal(actor(run,'restored').ailment,condition);
-  assert.equal(actor(run,'later').ailment,condition===2?2:null);
+  assert.equal(actor(run,'later').ailment,null);
+  if(condition===2){
+   const sleeping=engine.statusCase(2,{frames:120});
+   assert.equal(actor(sleeping,'later').ailment,2);
+   assert.equal(actor(sleeping,'final').ailment,null,'A hit wakes the target before the five-second limit');
+  }
   assert.equal(actor(run,'final').ailment,null);
   const cured=engine.statusCase(condition,{cure:true});assert.equal(actor(cured,'later').ailment,null);
  }

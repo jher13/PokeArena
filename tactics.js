@@ -597,7 +597,7 @@
   weaken:'Hits and reduces the target’s damage by 15% / 25% / 35% for 4 seconds.'
  };
  const extraSignatureText={
-  recoil:'After a damaging hit, loses 8% / 10% / 12% of its own max HP.',
+  recoil:'Takes 25% of direct damage dealt as recoil, capped at 8% / 10% / 12% of its own max HP.',
   brace:'Shields itself for 20% / 30% / 45% of max HP for 5 seconds.',
   windup:'Takes an extra half-second to recover after swinging.',
   allyHaste:'Gives the weakest teammate an attack-speed boost for 5 seconds.',
@@ -609,7 +609,7 @@
   bloom:'Heals the caster for 8% / 12% / 18% of missing HP.',blink:'Repositions away from the nearest enemy after casting.',
   thorn:'Grants the caster 15 / 25 / 40 DEF and S.DEF for 4 seconds.',
   wound:'Reduces healing received by the target by 33% for 6 seconds.',
-  spark:'Gives 8 / 12 / 18 mana to the ally with the highest current mana.',
+  spark:'Gives 8 / 12 / 18 mana to the highest-mana teammate able to gain it. If none can, the caster gains it.',
   cleanse:'Clears Burn, Wound, Sunder, Shred and damage reduction from the caster and its nearest teammate.',
   frost:'Slows the target’s attack speed for 4 seconds.',tide:'Heals all living allies for 3% / 5% / 8% of their max HP.',
   veil:'Grants the caster and weakest ally 15% / 22% / 30% attack damage reduction for 4 seconds.',
@@ -2621,10 +2621,11 @@
   const byDistance=(a,b)=>distance(unit.position,a.position)-distance(unit.position,b.position);
   const barrier=(ally,amount)=>{
    const existing=ally.signatureShieldUntil>ally.elapsed?ally.signatureShield:0;
-   if(amount>=existing)ally.shieldProvider=unit;
-   ally.signatureShield=Math.max(existing,amount);
+   if(amount<existing || amount<=0)return;
+   ally.shieldProvider=unit;
+   ally.signatureShield=amount;
    ally.signatureShieldUntil=ally.elapsed+5000;
-   if(amount>=existing && amount>0)grantFairyPower(ally,unit);
+   grantFairyPower(ally,unit);
   };
   const cleanse=ally=>{for(const key of ['burnUntil','poisonUntil','woundUntil','shredUntil','sunderUntil','weakenUntil','chillUntil','lightningUntil'])ally[key]=0;};
   const disrupted=new Set();
@@ -2643,7 +2644,7 @@
    switch(effect){
     case 'recoil': {
      if(dealt<=0)break;
-     const amount=Math.min(unit.hp,Math.round(unit.max*[.08,.10,.12][star]));
+     const amount=Math.min(unit.hp,Math.round(Math.min(dealt*.25,unit.max*[.08,.10,.12][star])));
      unit.hp-=amount;
      unit.damageTaken=(unit.damageTaken ?? 0)+amount;
      if(now!==null && amount)(unit.damageEvents ??= []).push({amount,critical:false,started:now});
@@ -2671,7 +2672,10 @@
     case 'shred': target.shredUntil=target.elapsed+4000;break;
     case 'frost': target.frostUntil=target.elapsed+4000;break;
     case 'sap': target.mana=Math.max(0,target.mana-[8,12,18][star]);break;
-    case 'spark': gainMana([...others].sort((a,b)=>b.mana-a.mana)[0] ?? unit,[8,12,18][star]);break;
+    case 'spark': {
+     const recipient=others.filter(ally=>ally.mana<60 && ally.manaLock<=0).sort((a,b)=>b.mana-a.mana)[0];
+     gainMana(recipient ?? unit,[8,12,18][star]);break;
+    }
     case 'burn': ignite(target,5,unit);break;
     case 'wound': target.woundUntil=Math.max(target.woundUntil ?? 0,target.elapsed+6000);break;
     case 'cleanse': cleanse(unit);cleanse([...others].sort(byDistance)[0] ?? unit);break;
@@ -2807,6 +2811,8 @@
     }
    }
    if(cast){
+    unit.mana=Math.min(60,(unit.overcharge?10:0)+(gear.castRefund ?? 0));
+    unit.overcharge=false;
     applySignature(unit,target,units,damage,now,dealt);
     if(gear.prankLock && !unit.prankUsed){
      unit.prankUsed=true;
@@ -2832,8 +2838,6 @@
       .sort((a,b)=>a.mana-b.mana).slice(0,1+(gear.relayExtra ?? 0));
      for(const ally of allies)gainMana(ally,gear.relayMana);
     }
-    unit.mana=Math.min(60,(unit.overcharge?10:0)+(gear.castRefund ?? 0));
-    unit.overcharge=false;
     unit.manaLock=unit.manaLockMs;
    }else gainMana(unit,unit.manaOnHit+(gear.hitMana ?? 0)+(critical>1?(gear.critMana ?? 0):0));
    const rally=unit.rallyUntil>unit.elapsed?[.15,.25,.40][unit.star-1]:0;

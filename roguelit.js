@@ -58,7 +58,7 @@
   elite:{label:'Elite encounter',detail:'Earn double shards and choose gear or training.'},
   boss:{label:'Regional boss',detail:'Knock out the boss team to earn triple shards and choose a recruit, gear or training.'}
  };
- const items=['Leftovers','Muscle Band','Wise Glasses','Shell Bell','Assault Vest','Quick Claw','Wide Lens','Sitrus Berry'];
+ const items=[...pvpLoanerItems,'Sitrus Berry'];
  const bossLoot={
   Kanto:{repeat:[['vitamins','EXP Candy 100',1],['balls','Great Ball',2]],first:['vitamins','EXP Candy 250',1]},
   Johto:{repeat:[['vitamins','EXP Candy 250',1],['balls','Ultra Ball',1]],first:['vitamins','IV Booster',1]},

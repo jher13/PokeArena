@@ -122,7 +122,7 @@ context.bankTacticsPrize=bundle=>{
 };
 context.button=(label,onclick,disabled)=>Object.assign(element('button',label),{onclick,disabled});
 const source=read('tactics.js');
-const auditExports='globalThis.audit={equipFromInventory,renderCarousel,creditBoardChallenge,goldInterest,cupSchedule,boardChallenges,sideSupplyPicker,sideSupplyFocus,drawPoolCard,roll,releaseShop,buy,field,teamSize,planAI,beginChoices,result,tacticsCoinRate,creditTacticsRound,makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
+const auditExports='globalThis.audit={equipFromInventory,renderCarousel,creditBoardChallenge,goldInterest,cupSchedule,boardChallenges,sideSupplyPicker,sideSupplyFocus,drawPoolCard,roll,releaseShop,buy,field,teamSize,planAI,beginChoices,result,tacticsCoinRate,creditTacticsRound,makeTrainer,start,battle,tick,outcome,combatTicks,combatStepMs,roster,rarities,combatRole,evolutionFamilies,collectionTraits,unitTraits,signatures,expandedSignatures,signatureEffects,signatureEffectText,extraSignatureText,traits,familyOf,stageLabel,openingRound,wildRound,megaRound,augmentRound,carouselRound,carouselOffers,draftCarousel,awardPlacement,megaRewardTier,finalRound,neutralTrainer,completeNeutral,grantTowerWard,applySignature,receiveDamage,heal,equip,sell,ignite,fusionPlan,applyFusion,setRound:round=>{run.round=round;},getRun:()=>run};';
 const accountCoinRate=html.slice(html.indexOf('function arenaAccountCoinRate()'),html.indexOf('function maximumBattleSpeed()'));
 new vm.Script(data+'\n'+accountCoinRate+'\n'+source.replace(/\}\)\(\);\s*$/,auditExports+'})();'),{filename:'tactics.js'}).runInContext(context);
 const a=context.audit;
@@ -271,6 +271,35 @@ assert.equal(towerUnits[2].signatureShield,Math.round(towerUnits[2].max*.12));
 towerUnits[2].signatureShield=0;
 a.grantTowerWard(towerUnits[1],towerUnits);
 assert.equal(towerUnits[2].signatureShield,0);
+
+{
+ const initialSeed=seed;
+ const trainer=a.makeTrainer('Spark and shields'),rival=a.makeTrainer('Target');
+ trainer.units=[{name:'Pichu',star:1,position:{x:2,y:4}},{name:'Squirtle',star:1,position:{x:3,y:4}}];
+ rival.units=[{name:'Rattata',star:1,position:{x:2,y:4}}];
+ const units=a.battle(trainer,rival),[pichu,squirtle,target]=units;
+ Object.assign(pichu,{mana:60,wait:0,overcharge:true,position:{x:2,y:3}});
+ Object.assign(target,{wait:99999,position:{x:2.5,y:3}});
+ Object.assign(squirtle,{mana:0,manaLock:4000,wait:99999});
+ pichu.gear.manaRate=0;pichu.gear.castRefund=4;
+ a.tick(units,0);
+ assert.equal(pichu.lastCast.move,'Static Sneeze');
+ assert.equal(pichu.mana,22,'Spark stacks with the opening refund when every teammate is mana-locked');
+ const hp=pichu.hp;
+ squirtle.manaLock=0;squirtle.mana=30;
+ a.applySignature(pichu,target,units,200,0,20);
+ assert.equal(squirtle.mana,38);assert.equal(pichu.hp,hp-5,'recoil uses actual damage to health');
+ const before=pichu.hp;a.applySignature(pichu,target,units,5000,0,5000);
+ assert.equal(before-pichu.hp,Math.round(pichu.max*.08),'recoil cannot exceed its star cap');
+ const after=pichu.hp;a.applySignature(pichu,target,units,100,0,0);assert.equal(pichu.hp,after);
+ pichu.elapsed=1000;pichu.signatureShield=500;pichu.signatureShieldUntil=2000;pichu.shieldProvider=pichu;
+ a.applySignature(squirtle,target,units,0,0);
+ assert.equal(pichu.signatureShieldUntil,2000);assert.equal(pichu.shieldProvider,pichu);
+ pichu.elapsed=2001;a.applySignature(squirtle,target,units,0,0);
+ assert.equal(pichu.signatureShield,squirtle.movePowers[0]);assert.equal(pichu.shieldProvider,squirtle);
+ assert.equal(pichu.signatureShieldUntil,7001);
+ seed=initialSeed;
+}
 
 const rosterForms=new Set([...a.roster.flat(),...Object.values(a.evolutionFamilies).flat(2),'Rattata','Zubat','Geodude']);
 const moveNames=new Set(), effectSets=new Set();
@@ -520,6 +549,9 @@ for(const [index,name] of roster.entries()){
 }
 console.log('Start Match, item fusion and sale, Battle Pass idempotency, healing and shielding passed.');
 console.log(rounds+' seeded rounds · '+draws+' draws/timeouts · '+(totalTicks*a.combatStepMs/rounds/1000).toFixed(1)+'s mean duration');
+const beforeSignatureAudit=seed;
+require('./pft-signature-balance.cjs')(a,rosterForms,value=>{seed=value;},process.argv.includes('--balance'));
+seed=beforeSignatureAudit;
 if(process.argv.includes('--balance'))console.table([...report].map(([group,s])=>({
  group,matches:s.samples,winPct:Math.round(s.wins/s.samples*100),damage:Math.round(s.damage/s.samples),
  heal:Math.round(s.healed/s.samples),shield:Math.round(s.shielded/s.samples),
@@ -711,6 +743,6 @@ async function verifyRaidTransform(){
 }
 Promise.all([verifyPendingRecovery(),verifyLoanerGear(),verifyOpenArenaChase(),verifyMasterRaids(),verifyRaidTransform(),verifyRaidRetry()]).then(()=>{
  console.log('Manual Capture, full-bench fusion, pending-save recovery, and server loaner gear checks passed.');
- for(const file of ['roguelit.cjs','shiny-pc.cjs','ability-adaptations.cjs','remaining-abilities.cjs','update-and-trade-client.cjs','arena-evolutions.cjs','arena-tactics.cjs','arena-maps.cjs','arena-move-effects.cjs','arena-move-audio.cjs','arena-status-effects.cjs','regional-progression-client.cjs','regional-contracts.cjs','roster-expansion.cjs','online-combat-turns.mjs'])
+ for(const file of ['roguelit.cjs','shiny-pc.cjs','arena-balance.cjs','ability-adaptations.cjs','remaining-abilities.cjs','update-and-trade-client.cjs','arena-evolutions.cjs','arena-tactics.cjs','arena-maps.cjs','arena-move-effects.cjs','arena-move-audio.cjs','arena-status-effects.cjs','regional-progression-client.cjs','regional-contracts.cjs','roster-expansion.cjs','online-combat-turns.mjs'])
   require('node:child_process').execFileSync(process.execPath,[path.join(__dirname,file)],{stdio:'inherit'});
 }).catch(error=>{console.error(error);process.exitCode=1;});

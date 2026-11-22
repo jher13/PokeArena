@@ -110,11 +110,12 @@ function initializeOnline(match) {
  arenaMap=raid?megaRaidArena(raid):randomArenaMap();
  if(raid?.master)Object.assign(arenaMap,{master:true,phase:1,phaseStarted:0,meteors:[],nextMeteor:0});
 }
+const combatBalanceRevision=1;
 const actorReferences=['ailmentSource','lastDamageBy'];
 function saveOnlineState() {
  const encodeActor=actor=>({...actor,...Object.fromEntries(actorReferences.map(key=>[key,actor[key]?.onlineId ?? null]))});
  return {
-  allies:allies.map(encodeActor),enemies:enemies.map(encodeActor),
+  balanceRevision:combatBalanceRevision,allies:allies.map(encodeActor),enemies:enemies.map(encodeActor),
   fields:trainerFields.map(slots=>slots.map(slot=>({...slot,actor:slot.actor?.onlineId ?? null,
    transition:slot.transition?{...slot.transition,outgoing:slot.transition.outgoing?.onlineId ?? null,
     incoming:slot.transition.incoming.onlineId}:null}))),
@@ -136,6 +137,16 @@ function limitLegacyTransformSlots(state) {
 }
 function loadOnlineState(state) {
  state=limitLegacyTransformSlots(state);
+ if((state.balanceRevision ?? 0)<combatBalanceRevision){
+  // Keep running timers and casts. Future uses of each slot get the current cooldown.
+  const refreshKit=kit=>({...kit,moveCooldowns:kit.moves.map(move=>moveRules(move).cooldown)});
+  const refresh=actor=>{
+   const updated=refreshKit(actor);
+   if(actor.battleTransform?.moves)updated.battleTransform=refreshKit(actor.battleTransform);
+   return updated;
+  };
+  state={...state,allies:state.allies.map(refresh),enemies:state.enemies.map(refresh)};
+ }
  ({allies,enemies,effects,clock,lastDamageClock,battleWeather,weatherTime,battleTerrain,terrainTime}=state);
  arenaMap=state.arenaMap?{...state.arenaMap,rocks:[]}:null;
  arenaSkillFields=state.arenaSkillFields ?? [];arenaFieldSequence=state.arenaFieldSequence ?? 0;

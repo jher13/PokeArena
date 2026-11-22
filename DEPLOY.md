@@ -1,3 +1,33 @@
+# Update to 0.22.99
+
+Extract the changed files over **0.22.98**. Publish both pages, the Roguelit and Tactics scripts, version manifest and Supabase combat engine together using the existing workflows. The six new held items use the existing inventory and equipment save format.
+
+All 370 PFT signatures were also checked in 1,480 mirrored solo and three-Pokémon trials. Run `node tests/release-smoke.cjs --balance` to see each signature’s results. Recoil now costs 25% of direct damage actually dealt, up to its previous max-HP cost. Spark can refund its caster when teammates cannot accept mana. Weaker shields preserve the remaining time on a stronger shield.
+
+The combat audit covered 846 moves and 311 abilities. Each build ran 4,628 seeded, 16-second singles and doubles trials plus 32 contact trials for each of the 577 damaging moves. Run `npm run audit:balance` to repeat it or `node scripts/audit-arena-balance.mjs --json` to see each entry. Contact damage assumes the move reaches its target and includes accuracy and critical rolls.
+
+| Move | Previous cooldown | New cooldown |
+| --- | ---: | ---: |
+| Population Bomb | 1.6 s | 8.1 s |
+| Surging Strikes | 1.8 s | 5.0 s |
+| Bullet Seed | 1.8 s | 3.7 s |
+| Absorb | 2.2 s | 1.5 s |
+| Mega Drain | 2.9 s | 2.2 s |
+| Pound, Tackle, Scratch | 2.3 s | 2.0 s |
+
+Overheat, Close Combat and the other self-debuffing attacks now charge their user once per successful cast. Leech Seed drains up to 16% over eight seconds. Reflect and Light Screen last ten seconds on a sixteen-second cooldown. Fissure, Guillotine, Horn Drill and Sheer Cold gain power and accuracy against opponents at or below one-third HP.
+
+Huge Power and Pure Power grant 50% more physical damage. Iron Fist grants 35% more punching damage. Poison Heal recovers 1/32 max HP per poison tick. Rough Skin and Iron Barbs can retaliate once per attacking Pokémon each second. Healer can cure its user when there is no afflicted ally in range. Tera Shift grants a 15% shield and defensive bonus on first entry. Perish Body pairs its holder with one attacker per 16 seconds. Cute Charm gives each attacker at least three seconds between infatuations it causes.
+
+| New held item | Coins | Arena effect |
+| --- | ---: | --- |
+| Expert Belt | 1,800 | Increases super-effective damage from stat-based attacks by 15%. |
+| Big Root | 950 | Increases healing from draining attacks by 30%. |
+| Rocky Helmet | 2,200 | Returns 20% of enemy contact damage, capped at 4% of the attacker’s max HP per hit. |
+| Covert Cloak | 2,200 | Blocks the secondary ailments, flinches and stat drops of damaging moves. |
+| Light Clay | 1,800 | Extends the holder’s Reflect and Light Screen from 10 to 13 seconds. |
+| Scope Lens | 1,400 | Adds one critical-hit stage. |
+
 # Update to 0.22.98
 
 Extract the changed files over **0.22.97** and publish the client scripts, pages and versioned artwork together.

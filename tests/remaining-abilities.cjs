@@ -233,9 +233,9 @@ export function checkRemainingAbilities(assert) {
   const a=make('Power Construct'),b=make(null,false),c=make(null,true,'Pikachu');field(a,b,[c]);a.hp=500;advancedAbilityTick(a,0.1);assert.equal(a.max,1250);assert.equal(a.hp,750);assert(a.powerConstructUsed);
   a.ability='Shields Down';a.hp=1000;updateAbilityStance(a);assert.equal(a.abilityStance,'Meteor');assert(!tryAilment(a,5,b));a.hp=500;updateAbilityStance(a);assert.equal(a.abilityStance,'Core');eq(factor(a,b),1.25);
   b.ability='Tera Shell';b.type='Water';assert.equal(arenaAbilityMatchup(a,b,'Thunderbolt','Electric'),0.5);b.hp=999;assert.equal(arenaAbilityMatchup(a,b,'Thunderbolt','Electric'),2);
-  b.hp=1000;b.ability=null;a.ability='Tera Shift';enter(a,b);assert.equal(a.substituteHP,250);assert.equal(a.abilityStance,'Terastal');
+  b.hp=1000;b.ability=null;a.ability='Tera Shift';enter(a,b);assert.equal(a.substituteHP,188);assert.equal(a.abilityStance,'Terastal');
   setWeather('Sun');setTerrain('Electric');a.ability='Teraform Zero';enter(a,b);assert.equal(battleWeather,null);assert.equal(battleTerrain,null);
-  a.ability='Illusion';enter(a,b);assert.equal(a.illusionName,'Pikachu');const visible=onlineView(JSON.parse(JSON.stringify(saveOnlineState())),'host','unranked').actors.find(v=>v.onlineId===a.onlineId);assert.equal(visible.illusionName,'Pikachu');assert.equal(visible.substituteHP,250);advancedAbilityOnHit(b,a,'Tackle','Normal',true,1,false);assert.equal(a.illusionName,null);
+  a.ability='Illusion';enter(a,b);assert.equal(a.illusionName,'Pikachu');const visible=onlineView(JSON.parse(JSON.stringify(saveOnlineState())),'host','unranked').actors.find(v=>v.onlineId===a.onlineId);assert.equal(visible.illusionName,'Pikachu');assert.equal(visible.substituteHP,188);advancedAbilityOnHit(b,a,'Tackle','Normal',true,1,false);assert.equal(a.illusionName,null);
  });
  const missing=Object.keys(advancedArenaAbilities).filter(name=>!covered.has(name));assert.deepEqual(missing,[],'Every remaining ability needs a behavior assertion');
  {

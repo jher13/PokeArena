@@ -1,10 +1,11 @@
 {
   "name": "pokearena",
-  "version": "0.22.98",
+  "version": "0.22.99",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node tests/release-smoke.cjs && node tests/trade-hub-sql.cjs && node tests/regional-progression-sql.cjs && node tests/roster-expansion-sql.cjs && npm run test:profile",
+    "audit:balance": "node scripts/audit-arena-balance.mjs",
     "test:evolution": "node tests/arena-evolutions.cjs",
     "test:trade": "node tests/update-and-trade-client.cjs && node tests/trade-hub-sql.cjs",
     "test:tactics": "node tests/arena-tactics.cjs",
